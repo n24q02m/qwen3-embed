@@ -8,7 +8,7 @@ from tokenizers import AddedToken, Tokenizer
 def load_special_tokens(model_dir: Path) -> dict[str, Any]:
     tokens_map_path = model_dir / "special_tokens_map.json"
     if not tokens_map_path.exists():
-        raise ValueError(f"Could not find special_tokens_map.json in {model_dir}")
+        return {}
 
     with open(str(tokens_map_path)) as tokens_map_file:
         tokens_map = json.load(tokens_map_file)
@@ -34,9 +34,9 @@ def load_tokenizer(model_dir: Path) -> tuple[Tokenizer, dict[str, int]]:
 
     with open(str(tokenizer_config_path)) as tokenizer_config_file:
         tokenizer_config = json.load(tokenizer_config_file)
-        assert "model_max_length" in tokenizer_config or "max_length" in tokenizer_config, (
-            "Models without model_max_length or max_length are not supported."
-        )
+        assert (
+            "model_max_length" in tokenizer_config or "max_length" in tokenizer_config
+        ), "Models without model_max_length or max_length are not supported."
         if "model_max_length" not in tokenizer_config:
             max_context = tokenizer_config["max_length"]
         elif "max_length" not in tokenizer_config:
@@ -49,9 +49,13 @@ def load_tokenizer(model_dir: Path) -> tuple[Tokenizer, dict[str, int]]:
     tokenizer = Tokenizer.from_file(str(tokenizer_path))
     tokenizer.enable_truncation(max_length=max_context)
     if not tokenizer.padding:
-        tokenizer.enable_padding(
-            pad_id=config.get("pad_token_id", 0), pad_token=tokenizer_config["pad_token"]
-        )
+        pad_token_id = config.get("pad_token_id")
+        if pad_token_id is None:
+            pad_token_id = 0
+        pad_token = tokenizer_config.get("pad_token", "")
+        if isinstance(pad_token, dict):
+            pad_token = pad_token.get("content", "")
+        tokenizer.enable_padding(pad_id=pad_token_id, pad_token=pad_token)
 
     for token in tokens_map.values():
         if isinstance(token, str):
@@ -69,6 +73,3 @@ def load_tokenizer(model_dir: Path) -> tuple[Tokenizer, dict[str, int]]:
             special_token_to_id[token_str] = tokenizer.token_to_id(token_str)
 
     return tokenizer, special_token_to_id
-
-
-

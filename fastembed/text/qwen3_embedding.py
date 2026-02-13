@@ -92,7 +92,7 @@ class Qwen3TextEmbedding(OnnxTextEmbedding):
     def embed(
         self,
         documents: str | Iterable[str],
-        batch_size: int = 256,
+        batch_size: int = 1,
         parallel: int | None = None,
         **kwargs: Any,
     ) -> Iterable[NumpyArray]:
@@ -100,7 +100,8 @@ class Qwen3TextEmbedding(OnnxTextEmbedding):
 
         Args:
             documents: A single document string or an iterable of documents.
-            batch_size: Batch size for encoding.
+            batch_size: Ignored -- always ``1`` because
+                the causal-LM ONNX graph has a static batch dimension.
             parallel: Number of parallel workers (``None`` = single-threaded).
             **kwargs: Extra arguments; ``dim`` (int) enables MRL truncation,
                 ``task`` (str) is used only by :meth:`query_embed`.
@@ -112,7 +113,7 @@ class Qwen3TextEmbedding(OnnxTextEmbedding):
             model_name=self.model_name,
             cache_dir=str(self.cache_dir),
             documents=documents,
-            batch_size=batch_size,
+            batch_size=1,
             parallel=parallel,
             providers=self.providers,
             cuda=self.cuda,

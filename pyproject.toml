@@ -33,7 +33,7 @@ Repository = "https://github.com/n24q02m/qwen3-embed"
 dev = [
     "pytest>=8.0",
     "ruff>=0.11",
-    "ty>=0.1",
+    "ty>=0.0.17",
 ]
 
 [build-system]
@@ -52,3 +52,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "integration: tests requiring real ONNX model download (~1.2 GB)",
+]

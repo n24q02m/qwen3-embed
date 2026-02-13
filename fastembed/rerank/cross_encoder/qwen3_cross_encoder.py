@@ -146,40 +146,40 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         texts = [self._format_rerank_input(query, doc, instruction) for doc in documents]
         return self._onnx_embed_texts(texts, **kwargs)
 
-    def onnx_embed_pairs(
-        self, pairs: list[tuple[str, str]], **kwargs: Any
-    ) -> OnnxOutputContext:
+    def onnx_embed_pairs(self, pairs: list[tuple[str, str]], **kwargs: Any) -> OnnxOutputContext:
         """Score pre-formed (query, document) pairs."""
         instruction = kwargs.pop("instruction", DEFAULT_INSTRUCTION)
-        texts = [
-            self._format_rerank_input(query, doc, instruction) for query, doc in pairs
-        ]
+        texts = [self._format_rerank_input(query, doc, instruction) for query, doc in pairs]
         return self._onnx_embed_texts(texts, **kwargs)
 
     def _onnx_embed_texts(self, texts: list[str], **kwargs: Any) -> OnnxOutputContext:
-        """Tokenise single texts (not pairs), run model, compute yes/no scores."""
+        """Tokenise and run model one text at a time (static batch=1 ONNX graph),
+        then concatenate the yes/no scores."""
         assert self.tokenizer is not None, "Tokenizer not loaded. Call load_onnx_model() first."
-        tokenized = self.tokenizer.encode_batch(texts)
 
-        input_names: set[str] = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
-        onnx_input: dict[str, NumpyArray] = {
-            "input_ids": np.array([enc.ids for enc in tokenized], dtype=np.int64),
-        }
-        if "attention_mask" in input_names:
-            onnx_input["attention_mask"] = np.array(
-                [enc.attention_mask for enc in tokenized], dtype=np.int64
-            )
-        if "token_type_ids" in input_names:
-            onnx_input["token_type_ids"] = np.zeros_like(
-                onnx_input["input_ids"], dtype=np.int64
-            )
+        all_scores: list[NumpyArray] = []
+        for text in texts:
+            tokenized = self.tokenizer.encode_batch([text])
 
-        onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
-        outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore[union-attr]
+            input_names: set[str] = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+            onnx_input: dict[str, NumpyArray] = {
+                "input_ids": np.array([tokenized[0].ids], dtype=np.int64),
+            }
+            if "attention_mask" in input_names:
+                onnx_input["attention_mask"] = np.array(
+                    [tokenized[0].attention_mask], dtype=np.int64
+                )
+            if "token_type_ids" in input_names:
+                onnx_input["token_type_ids"] = np.zeros_like(
+                    onnx_input["input_ids"], dtype=np.int64
+                )
 
-        # Causal LM output: (batch, seq_len, vocab_size) → yes/no scores
-        scores = self._compute_yes_no_scores(outputs[0])
-        return OnnxOutputContext(model_output=scores)
+            onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
+            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore[union-attr]
+            scores = self._compute_yes_no_scores(outputs[0])
+            all_scores.append(scores)
+
+        return OnnxOutputContext(model_output=np.concatenate(all_scores))
 
     # ------------------------------------------------------------------
     # Worker

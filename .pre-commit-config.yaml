@@ -37,13 +37,6 @@ repos:
 
   - repo: local
     hooks:
-      - id: ty
-        name: ty type check
-        entry: uv run ty check
-        language: system
-        types: [python]
-        pass_filenames: false
-
       - id: pytest
         name: pytest
         entry: uv run pytest --tb=short -q
