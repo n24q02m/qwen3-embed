@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/n24q02m/qwen3-embed/compare/v0.1.0...v0.2.0) (2026-02-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* Package import changed from 'from fastembed import ...' to 'from qwen3_embed import ...'. The PyPI package name remains qwen3-embed.
+
+### Features
+
+* promote dev to main (v0.2.0-beta) ([#2](https://github.com/n24q02m/qwen3-embed/issues/2)) ([4c95738](https://github.com/n24q02m/qwen3-embed/commit/4c95738222df7ae0ea339dc07d2a56d973e0365b))
+* qwen3-embed v0.1.0 - trimmed fastembed fork for Qwen3 models only ([d2a53fc](https://github.com/n24q02m/qwen3-embed/commit/d2a53fce71b55c44071717bd6722bcaf6fbcef7a))
+
 ## [0.2.0-beta](https://github.com/n24q02m/qwen3-embed/compare/v0.1.0...v0.2.0-beta) (2026-02-13)
 
 
