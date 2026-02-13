@@ -3,16 +3,16 @@ from typing import Any
 
 from loguru import logger
 
-from fastembed.common import OnnxProvider
-from fastembed.common.model_description import BaseModelDescription
-from fastembed.common.onnx_model import OnnxOutputContext
-from fastembed.common.types import Device
-from fastembed.common.utils import define_cache_dir
-from fastembed.rerank.cross_encoder.onnx_text_model import (
+from qwen3_embed.common import OnnxProvider
+from qwen3_embed.common.model_description import BaseModelDescription
+from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.types import Device
+from qwen3_embed.common.utils import define_cache_dir
+from qwen3_embed.rerank.cross_encoder.onnx_text_model import (
     OnnxCrossEncoderModel,
     TextRerankerWorker,
 )
-from fastembed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
+from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
 
 # Base class model list kept empty — Qwen3 reranker is registered
 # in qwen3_cross_encoder.py. Custom models can be added at runtime
@@ -47,8 +47,8 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
         Args:
             model_name (str): The name of the model to use.
             cache_dir (str, optional): The path to the cache directory.
-                                       Can be set using the `FASTEMBED_CACHE_PATH` env variable.
-                                       Defaults to `fastembed_cache` in the system's temp directory.
+                                       Can be set using the `qwen3_embed_CACHE_PATH` env variable.
+                                       Defaults to `qwen3_embed_cache` in the system's temp directory.
             threads (int, optional): The number of threads single onnxruntime session can use. Defaults to None.
             providers (Optional[Sequence[OnnxProvider]], optional): The list of onnxruntime providers to use.
                 Mutually exclusive with the `cuda` and `device_ids` arguments. Defaults to None.

@@ -22,7 +22,7 @@ pip install qwen3-embed
 ### Text Embedding
 
 ```python
-from fastembed import TextEmbedding
+from qwen3_embed import TextEmbedding
 
 model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B")
 
@@ -48,7 +48,7 @@ queries = list(model.query_embed(
 ### Reranking
 
 ```python
-from fastembed import TextCrossEncoder
+from qwen3_embed import TextCrossEncoder
 
 reranker = TextCrossEncoder(model_name="Qwen/Qwen3-Reranker-0.6B")
 
@@ -83,7 +83,7 @@ pair_scores = list(reranker.rerank_pairs(pairs))
 
 ```bash
 mise run setup   # Install deps + pre-commit hooks
-mise run lint    # ruff check + format --check + ty
+mise run lint    # ruff check + format --check
 mise run test    # pytest
 mise run fix     # ruff auto-fix + format
 ```

@@ -9,8 +9,8 @@ import onnxruntime as ort
 from numpy.typing import NDArray
 from tokenizers import Tokenizer
 
-from fastembed.common.types import Device, NumpyArray, OnnxProvider
-from fastembed.parallel_processor import Worker
+from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
+from qwen3_embed.parallel_processor import Worker
 
 # Holds type of the embedding result
 T = TypeVar("T")

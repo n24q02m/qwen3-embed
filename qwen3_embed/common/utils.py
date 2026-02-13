@@ -11,7 +11,7 @@ from typing import TypeVar
 import numpy as np
 from numpy.typing import NDArray
 
-from fastembed.common.types import NumpyArray
+from qwen3_embed.common.types import NumpyArray
 
 T = TypeVar("T")
 
@@ -70,11 +70,11 @@ def iter_batch[T](iterable: Iterable[T], size: int) -> Iterable[list[T]]:
 
 def define_cache_dir(cache_dir: str | None = None) -> Path:
     """
-    Define the cache directory for fastembed
+    Define the cache directory for qwen3_embed
     """
     if cache_dir is None:
-        default_cache_dir = os.path.join(tempfile.gettempdir(), "fastembed_cache")
-        cache_path = Path(os.getenv("FASTEMBED_CACHE_PATH", default_cache_dir))
+        default_cache_dir = os.path.join(tempfile.gettempdir(), "qwen3_embed_cache")
+        cache_path = Path(os.getenv("QWEN3_EMBED_CACHE_PATH", default_cache_dir))
     else:
         cache_path = Path(cache_dir)
     cache_path.mkdir(parents=True, exist_ok=True)

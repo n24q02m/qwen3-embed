@@ -2,9 +2,9 @@
 
 import pytest
 
-from fastembed.common.model_description import ModelSource, PoolingType
-from fastembed.text.custom_text_embedding import CustomTextEmbedding
-from fastembed.text.text_embedding import TextEmbedding
+from qwen3_embed.common.model_description import ModelSource, PoolingType
+from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
+from qwen3_embed.text.text_embedding import TextEmbedding
 
 
 class TestCustomModelRegistration:

@@ -1,8 +1,8 @@
 from collections.abc import Iterable
 from typing import Any
 
-from fastembed.common.model_description import BaseModelDescription
-from fastembed.common.model_management import ModelManagement
+from qwen3_embed.common.model_description import BaseModelDescription
+from qwen3_embed.common.model_management import ModelManagement
 
 
 class TextCrossEncoderBase(ModelManagement[BaseModelDescription]):

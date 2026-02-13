@@ -18,7 +18,7 @@ from huggingface_hub.utils import (
 from loguru import logger
 from tqdm import tqdm
 
-from fastembed.common.model_description import BaseModelDescription
+from qwen3_embed.common.model_description import BaseModelDescription
 
 T = TypeVar("T", bound=BaseModelDescription)
 
@@ -44,7 +44,7 @@ class ModelManagement[T: BaseModelDescription]:
         """Add a custom model to the existing embedding classes based on the passed model descriptions
 
         Model description dict should contain the fields same as in one of the model descriptions presented
-         in fastembed.common.model_description
+         in qwen3_embed.common.model_description
 
          E.g. for BaseModelDescription:
               model: str
@@ -386,7 +386,7 @@ class ModelManagement[T: BaseModelDescription]:
                     "description": "Base English model, v1.5",
                     "size_in_GB": 0.44,
                     "sources": {
-                        "url": "https://storage.googleapis.com/qdrant-fastembed/fast-bge-base-en-v1.5.tar.gz",
+                        "url": "https://storage.googleapis.com/qdrant-qwen3_embed/fast-bge-base-en-v1.5.tar.gz",
                         "hf": "qdrant/bge-base-en-v1.5-onnx-q",
                     }
                 }

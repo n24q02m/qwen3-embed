@@ -11,7 +11,7 @@ they can be skipped during fast CI runs::
 import numpy as np
 import pytest
 
-from fastembed import TextCrossEncoder, TextEmbedding
+from qwen3_embed import TextCrossEncoder, TextEmbedding
 
 # ---------------------------------------------------------------------------
 # Fixtures (shared model instances -- download once, reuse across tests)

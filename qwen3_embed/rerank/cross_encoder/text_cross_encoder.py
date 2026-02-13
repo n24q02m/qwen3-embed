@@ -2,16 +2,16 @@ from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
 
-from fastembed.common import OnnxProvider
-from fastembed.common.model_description import (
+from qwen3_embed.common import OnnxProvider
+from qwen3_embed.common.model_description import (
     BaseModelDescription,
     ModelSource,
 )
-from fastembed.common.types import Device
-from fastembed.rerank.cross_encoder.custom_text_cross_encoder import CustomTextCrossEncoder
-from fastembed.rerank.cross_encoder.onnx_text_cross_encoder import OnnxTextCrossEncoder
-from fastembed.rerank.cross_encoder.qwen3_cross_encoder import Qwen3CrossEncoder
-from fastembed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
+from qwen3_embed.common.types import Device
+from qwen3_embed.rerank.cross_encoder.custom_text_cross_encoder import CustomTextCrossEncoder
+from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import OnnxTextCrossEncoder
+from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import Qwen3CrossEncoder
+from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
 
 
 class TextCrossEncoder(TextCrossEncoderBase):

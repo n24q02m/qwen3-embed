@@ -1,10 +1,10 @@
 from collections.abc import Sequence
 from typing import Any
 
-from fastembed.common import OnnxProvider
-from fastembed.common.model_description import BaseModelDescription
-from fastembed.common.types import Device
-from fastembed.rerank.cross_encoder.onnx_text_cross_encoder import OnnxTextCrossEncoder
+from qwen3_embed.common import OnnxProvider
+from qwen3_embed.common.model_description import BaseModelDescription
+from qwen3_embed.common.types import Device
+from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import OnnxTextCrossEncoder
 
 
 class CustomTextCrossEncoder(OnnxTextCrossEncoder):

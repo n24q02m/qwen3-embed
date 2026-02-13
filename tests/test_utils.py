@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from fastembed.common.utils import last_token_pool, mean_pooling, normalize
+from qwen3_embed.common.utils import last_token_pool, mean_pooling, normalize
 
 
 class TestLastTokenPool:

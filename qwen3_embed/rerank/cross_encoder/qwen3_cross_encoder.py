@@ -17,14 +17,14 @@ from typing import Any
 
 import numpy as np
 
-from fastembed.common.model_description import BaseModelDescription, ModelSource
-from fastembed.common.onnx_model import OnnxOutputContext
-from fastembed.common.types import NumpyArray
-from fastembed.rerank.cross_encoder.onnx_text_cross_encoder import (
+from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
+from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.types import NumpyArray
+from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import (
     OnnxTextCrossEncoder,
     TextCrossEncoderWorker,
 )
-from fastembed.rerank.cross_encoder.onnx_text_model import TextRerankerWorker
+from qwen3_embed.rerank.cross_encoder.onnx_text_model import TextRerankerWorker
 
 # ---------------------------------------------------------------------------
 # Qwen3 reranker constants
@@ -75,7 +75,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
 
     Usage::
 
-        from fastembed import TextCrossEncoder
+        from qwen3_embed import TextCrossEncoder
 
         reranker = TextCrossEncoder("Qwen/Qwen3-Reranker-0.6B")
         scores = list(reranker.rerank("What is AI?", ["doc1", "doc2"]))

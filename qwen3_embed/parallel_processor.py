@@ -11,7 +11,7 @@ from multiprocessing.sharedctypes import Synchronized as BaseValue
 from queue import Empty
 from typing import Any
 
-from fastembed.common.types import Device
+from qwen3_embed.common.types import Device
 
 # Single item should be processed in less than:
 processing_timeout = 10 * 60  # seconds
