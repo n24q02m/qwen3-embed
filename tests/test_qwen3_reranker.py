@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from fastembed.rerank.cross_encoder.qwen3_cross_encoder import (
+from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import (
     DEFAULT_INSTRUCTION,
     SYSTEM_PROMPT,
     TOKEN_NO_ID,
@@ -10,7 +10,7 @@ from fastembed.rerank.cross_encoder.qwen3_cross_encoder import (
     Qwen3CrossEncoder,
     supported_qwen3_reranker_models,
 )
-from fastembed.rerank.cross_encoder.text_cross_encoder import TextCrossEncoder
+from qwen3_embed.rerank.cross_encoder.text_cross_encoder import TextCrossEncoder
 
 
 class TestQwen3CrossEncoderRegistry:

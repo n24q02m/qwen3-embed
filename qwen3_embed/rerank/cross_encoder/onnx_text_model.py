@@ -7,16 +7,16 @@ from typing import Any
 import numpy as np
 from tokenizers import Encoding
 
-from fastembed.common.onnx_model import (
+from qwen3_embed.common.onnx_model import (
     EmbeddingWorker,
     OnnxModel,
     OnnxOutputContext,
     OnnxProvider,
 )
-from fastembed.common.preprocessor_utils import load_tokenizer
-from fastembed.common.types import Device, NumpyArray
-from fastembed.common.utils import iter_batch
-from fastembed.parallel_processor import ParallelWorkerPool
+from qwen3_embed.common.preprocessor_utils import load_tokenizer
+from qwen3_embed.common.types import Device, NumpyArray
+from qwen3_embed.common.utils import iter_batch
+from qwen3_embed.parallel_processor import ParallelWorkerPool
 
 
 class OnnxCrossEncoderModel(OnnxModel[float]):
@@ -108,9 +108,8 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
             pairs = [pairs]
             is_small = True
 
-        if isinstance(pairs, list):
-            if len(pairs) < batch_size:
-                is_small = True
+        if isinstance(pairs, list) and len(pairs) < batch_size:
+            is_small = True
 
         if parallel is None or is_small:
             if not hasattr(self, "model") or self.model is None:

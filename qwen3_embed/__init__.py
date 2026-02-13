@@ -1,7 +1,7 @@
 import importlib.metadata
 
-from fastembed.rerank.cross_encoder import TextCrossEncoder
-from fastembed.text import TextEmbedding
+from qwen3_embed.rerank.cross_encoder import TextCrossEncoder
+from qwen3_embed.text import TextEmbedding
 
 try:
     version = importlib.metadata.version("qwen3-embed")

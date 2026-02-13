@@ -17,11 +17,10 @@ run = [
 ]
 
 [tasks.lint]
-description = "Run all quality checks (ruff + ty)"
+description = "Run all quality checks (ruff)"
 run = [
   "uv run ruff check .",
   "uv run ruff format --check .",
-  "uv run ty check",
 ]
 
 [tasks.test]

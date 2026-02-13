@@ -2,14 +2,14 @@ from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
 
-from fastembed.common.model_description import DenseModelDescription, ModelSource, PoolingType
-from fastembed.common.types import Device, NumpyArray, OnnxProvider
-from fastembed.text.custom_text_embedding import CustomTextEmbedding
-from fastembed.text.onnx_embedding import OnnxTextEmbedding
-from fastembed.text.pooled_embedding import PooledEmbedding
-from fastembed.text.pooled_normalized_embedding import PooledNormalizedEmbedding
-from fastembed.text.qwen3_embedding import Qwen3TextEmbedding
-from fastembed.text.text_embedding_base import TextEmbeddingBase
+from qwen3_embed.common.model_description import DenseModelDescription, ModelSource, PoolingType
+from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
+from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
+from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding
+from qwen3_embed.text.pooled_embedding import PooledEmbedding
+from qwen3_embed.text.pooled_normalized_embedding import PooledNormalizedEmbedding
+from qwen3_embed.text.qwen3_embedding import Qwen3TextEmbedding
+from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
 
 class TextEmbedding(TextEmbeddingBase):

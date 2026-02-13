@@ -2,15 +2,15 @@ import warnings
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 import numpy as np
 import onnxruntime as ort
 from numpy.typing import NDArray
 from tokenizers import Tokenizer
 
-from fastembed.common.types import Device, NumpyArray, OnnxProvider
-from fastembed.parallel_processor import Worker
+from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
+from qwen3_embed.parallel_processor import Worker
 
 # Holds type of the embedding result
 T = TypeVar("T")
@@ -24,7 +24,7 @@ class OnnxOutputContext:
     metadata: dict[str, Any] | None = None
 
 
-class OnnxModel(Generic[T]):
+class OnnxModel[T]:
     EXPOSED_SESSION_OPTIONS = ("enable_cpu_mem_arena",)
 
     @classmethod
@@ -122,6 +122,7 @@ class OnnxModel(Generic[T]):
                     "If you are using CUDA 12.x, install onnxruntime-gpu via "
                     "`pip install onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/`",
                     RuntimeWarning,
+                    stacklevel=2,
                 )
 
     @classmethod
@@ -150,9 +151,9 @@ class OnnxModel(Generic[T]):
             None
         """
         for option in extra_options:
-            assert (
-                option in cls.EXPOSED_SESSION_OPTIONS
-            ), f"{option} is unknown or not exposed (exposed options: {cls.EXPOSED_SESSION_OPTIONS})"
+            assert option in cls.EXPOSED_SESSION_OPTIONS, (
+                f"{option} is unknown or not exposed (exposed options: {cls.EXPOSED_SESSION_OPTIONS})"
+            )
         if "enable_cpu_mem_arena" in extra_options:
             session_options.enable_cpu_mem_arena = extra_options["enable_cpu_mem_arena"]
 
@@ -163,7 +164,7 @@ class OnnxModel(Generic[T]):
         raise NotImplementedError("Subclasses must implement this method")
 
 
-class EmbeddingWorker(Worker, Generic[T]):
+class EmbeddingWorker[T](Worker):
     def init_embedding(
         self,
         model_name: str,

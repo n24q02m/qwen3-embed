@@ -8,11 +8,11 @@ import numpy as np
 from numpy.typing import NDArray
 from tokenizers import Encoding, Tokenizer
 
-from fastembed.common.onnx_model import EmbeddingWorker, OnnxModel, OnnxOutputContext, T
-from fastembed.common.preprocessor_utils import load_tokenizer
-from fastembed.common.types import Device, NumpyArray, OnnxProvider
-from fastembed.common.utils import iter_batch
-from fastembed.parallel_processor import ParallelWorkerPool
+from qwen3_embed.common.onnx_model import EmbeddingWorker, OnnxModel, OnnxOutputContext, T
+from qwen3_embed.common.preprocessor_utils import load_tokenizer
+from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
+from qwen3_embed.common.utils import iter_batch
+from qwen3_embed.parallel_processor import ParallelWorkerPool
 
 
 class OnnxTextModel(OnnxModel[T]):
@@ -122,9 +122,8 @@ class OnnxTextModel(OnnxModel[T]):
             documents = [documents]
             is_small = True
 
-        if isinstance(documents, list):
-            if len(documents) < batch_size:
-                is_small = True
+        if isinstance(documents, list) and len(documents) < batch_size:
+            is_small = True
 
         if parallel is None or is_small:
             if not hasattr(self, "model") or self.model is None:

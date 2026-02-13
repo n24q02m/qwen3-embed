@@ -5,15 +5,15 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from fastembed.common import OnnxProvider
-from fastembed.common.model_description import (
+from qwen3_embed.common import OnnxProvider
+from qwen3_embed.common.model_description import (
     DenseModelDescription,
     PoolingType,
 )
-from fastembed.common.onnx_model import OnnxOutputContext
-from fastembed.common.types import Device, NumpyArray
-from fastembed.common.utils import last_token_pool, mean_pooling, normalize
-from fastembed.text.onnx_embedding import OnnxTextEmbedding
+from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.types import Device, NumpyArray
+from qwen3_embed.common.utils import last_token_pool, mean_pooling, normalize
+from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding
 
 
 @dataclass(frozen=True)

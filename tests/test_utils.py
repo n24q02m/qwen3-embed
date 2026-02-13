@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from fastembed.common.utils import last_token_pool, mean_pooling, normalize
+from qwen3_embed.common.utils import last_token_pool, mean_pooling, normalize
 
 
 class TestLastTokenPool:
@@ -46,9 +46,7 @@ class TestLastTokenPool:
 
     def test_no_padding(self) -> None:
         """No padding at all: all masks = 1 → last position."""
-        hidden_states = np.array(
-            [[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]], dtype=np.float32
-        )
+        hidden_states = np.array([[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]], dtype=np.float32)
         attention_mask = np.array([[1, 1, 1]], dtype=np.int64)
 
         result = last_token_pool(hidden_states, attention_mask)

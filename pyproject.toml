@@ -1,6 +1,6 @@
 [project]
 name = "qwen3-embed"
-version = "0.1.0"
+version = "0.2.0-beta"
 description = "Lightweight Qwen3 text embedding & reranking via ONNX Runtime (fork of fastembed)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -33,7 +33,7 @@ Repository = "https://github.com/n24q02m/qwen3-embed"
 dev = [
     "pytest>=8.0",
     "ruff>=0.11",
-    "ty>=0.1",
+    "ty>=0.0.17",
 ]
 
 [build-system]
@@ -41,14 +41,18 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["fastembed"]
+packages = ["qwen3_embed"]
 
 [tool.ruff]
 line-length = 99
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]  # redundant with ruff format
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "integration: tests requiring real ONNX model download (~1.2 GB)",
+]

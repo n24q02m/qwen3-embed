@@ -2,8 +2,8 @@
 
 import numpy as np
 
-from fastembed.common.model_description import PoolingType
-from fastembed.common.utils import last_token_pool, normalize
+from qwen3_embed.common.model_description import PoolingType
+from qwen3_embed.common.utils import last_token_pool, normalize
 
 
 class TestLastTokenPool:

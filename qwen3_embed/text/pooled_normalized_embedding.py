@@ -1,12 +1,12 @@
 from collections.abc import Iterable
 from typing import Any
 
-from fastembed.common.model_description import DenseModelDescription
-from fastembed.common.onnx_model import OnnxOutputContext
-from fastembed.common.types import NumpyArray
-from fastembed.common.utils import normalize
-from fastembed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
-from fastembed.text.pooled_embedding import PooledEmbedding
+from qwen3_embed.common.model_description import DenseModelDescription
+from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.types import NumpyArray
+from qwen3_embed.common.utils import normalize
+from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
+from qwen3_embed.text.pooled_embedding import PooledEmbedding
 
 # Base class model list kept empty — mean+normalize pooling models can
 # be added at runtime via CustomTextEmbedding.add_model(pooling=PoolingType.MEAN, normalization=True).

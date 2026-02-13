@@ -1,6 +1,6 @@
 # qwen3-embed
 
-Lightweight Qwen3 text embedding & reranking via ONNX Runtime. Trimmed fork of [fastembed](https://github.com/qdrant/fastembed) -- chi giu lai Qwen3 models, bo het phan con lai.
+Lightweight Qwen3 text embedding & reranking via ONNX Runtime. Trimmed fork of [fastembed](https://github.com/qdrant/fastembed), keeping only Qwen3 models.
 
 ## Supported Models
 
@@ -14,7 +14,7 @@ ONNX weights: [n24q02m/Qwen3-Embedding-0.6B-ONNX](https://huggingface.co/n24q02m
 ## Installation
 
 ```bash
-pip install git+https://github.com/n24q02m/qwen3-embed.git
+pip install qwen3-embed
 ```
 
 ## Usage
@@ -22,7 +22,7 @@ pip install git+https://github.com/n24q02m/qwen3-embed.git
 ### Text Embedding
 
 ```python
-from fastembed import TextEmbedding
+from qwen3_embed import TextEmbedding
 
 model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B")
 
@@ -48,7 +48,7 @@ queries = list(model.query_embed(
 ### Reranking
 
 ```python
-from fastembed import TextCrossEncoder
+from qwen3_embed import TextCrossEncoder
 
 reranker = TextCrossEncoder(model_name="Qwen/Qwen3-Reranker-0.6B")
 
@@ -83,7 +83,7 @@ pair_scores = list(reranker.rerank_pairs(pairs))
 
 ```bash
 mise run setup   # Install deps + pre-commit hooks
-mise run lint    # ruff check + format --check + ty
+mise run lint    # ruff check + format --check
 mise run test    # pytest
 mise run fix     # ruff auto-fix + format
 ```
