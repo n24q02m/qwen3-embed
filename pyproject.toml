@@ -33,7 +33,7 @@ Repository = "https://github.com/n24q02m/qwen3-embed"
 dev = [
     "pytest>=8.0",
     "ruff>=0.11",
-    "pre-commit>=4.0",
+    "ty>=0.1",
 ]
 
 [build-system]
