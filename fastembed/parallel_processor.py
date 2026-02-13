@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from collections.abc import Iterable
 from copy import deepcopy
-from enum import Enum
+from enum import StrEnum
 from multiprocessing import Queue, get_context
 from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
@@ -19,7 +19,7 @@ processing_timeout = 10 * 60  # seconds
 max_internal_batch_size = 200
 
 
-class QueueSignals(str, Enum):
+class QueueSignals(StrEnum):
     stop = "stop"
     confirm = "confirm"
     error = "error"

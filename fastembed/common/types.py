@@ -1,21 +1,21 @@
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 
 
-class Device(str, Enum):
+class Device(StrEnum):
     CPU = "cpu"
     CUDA = "cuda"
     AUTO = "auto"
 
 
-PathInput: TypeAlias = str | Path
+type PathInput = str | Path
 
-OnnxProvider: TypeAlias = str | tuple[str, dict[Any, Any]]
-NumpyArray: TypeAlias = (
+type OnnxProvider = str | tuple[str, dict[Any, Any]]
+type NumpyArray = (
     NDArray[np.float64]
     | NDArray[np.float32]
     | NDArray[np.float16]

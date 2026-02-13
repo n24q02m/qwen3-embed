@@ -48,6 +48,7 @@ line-length = 99
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]  # redundant with ruff format
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

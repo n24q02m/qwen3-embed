@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
@@ -46,7 +46,7 @@ class SparseModelDescription(BaseModelDescription):
     vocab_size: int | None = None
 
 
-class PoolingType(str, Enum):
+class PoolingType(StrEnum):
     CLS = "CLS"
     MEAN = "MEAN"
     LAST_TOKEN = "LAST_TOKEN"

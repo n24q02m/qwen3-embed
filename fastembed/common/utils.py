@@ -55,7 +55,7 @@ def mean_pooling(input_array: NumpyArray, attention_mask: NDArray[np.int64]) -> 
     return pooled_embeddings
 
 
-def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
+def iter_batch[T](iterable: Iterable[T], size: int) -> Iterable[list[T]]:
     """
     >>> list(iter_batch([1,2,3,4,5], 3))
     [[1, 2, 3], [4, 5]]

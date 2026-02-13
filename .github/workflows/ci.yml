@@ -25,13 +25,7 @@ jobs:
       - run: uv sync --group dev
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - name: Run tests
-        run: |
-          if [ -d "tests" ] && [ "$(ls -A tests/*.py 2>/dev/null)" ]; then
-            uv run pytest --tb=short
-          else
-            echo "No tests found, skipping..."
-          fi
+      - run: uv run pytest -m "not integration" --tb=short
 
   dependency-review:
     name: Dependency Review

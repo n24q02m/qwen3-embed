@@ -5,7 +5,7 @@ import tarfile
 import time
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 import requests
 from huggingface_hub import list_repo_tree, model_info, snapshot_download
@@ -23,7 +23,7 @@ from fastembed.common.model_description import BaseModelDescription
 T = TypeVar("T", bound=BaseModelDescription)
 
 
-class ModelManagement(Generic[T]):
+class ModelManagement[T: BaseModelDescription]:
     METADATA_FILE = "files_metadata.json"
 
     @classmethod
@@ -118,12 +118,15 @@ class ModelManagement(Generic[T]):
 
         show_progress = bool(total_size_in_bytes and show_progress)
 
-        with tqdm(
-            total=total_size_in_bytes,
-            unit="iB",
-            unit_scale=True,
-            disable=not show_progress,
-        ) as progress_bar, open(output_path, "wb") as file:
+        with (
+            tqdm(
+                total=total_size_in_bytes,
+                unit="iB",
+                unit_scale=True,
+                disable=not show_progress,
+            ) as progress_bar,
+            open(output_path, "wb") as file,
+        ):
             for chunk in response.iter_content(chunk_size=1024):
                 if chunk:  # Filter out keep-alive new chunks
                     progress_bar.update(len(chunk))
@@ -314,7 +317,7 @@ class ModelManagement(Generic[T]):
             # and raise the error again
             if "tmp" in cache_dir:
                 shutil.rmtree(cache_dir)
-            raise ValueError(f"An error occurred while decompressing {targz_path}: {e}")
+            raise ValueError(f"An error occurred while decompressing {targz_path}: {e}") from e
 
         return cache_dir
 

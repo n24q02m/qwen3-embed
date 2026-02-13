@@ -179,7 +179,8 @@ class TestEmbeddingSemanticQuality:
         )[0]
 
         docs = [
-            "Gradient descent is an optimization algorithm used to minimize the loss function in machine learning models.",
+            "Gradient descent is an optimization algorithm used to minimize"
+            " the loss function in machine learning models.",
             "The mountain descent took the hikers three hours to complete.",
         ]
         doc_embs = list(embedding_model.embed(docs))
@@ -233,9 +234,9 @@ class TestEmbeddingEdgeCases:
         # All embeddings should be unique
         for i in range(len(embeddings)):
             for j in range(i + 1, len(embeddings)):
-                assert not np.array_equal(
-                    embeddings[i], embeddings[j]
-                ), f"Embeddings {i} and {j} are identical"
+                assert not np.array_equal(embeddings[i], embeddings[j]), (
+                    f"Embeddings {i} and {j} are identical"
+                )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -302,7 +303,8 @@ class TestRerankerQuality:
             reranker_model.rerank(
                 "What is gradient descent?",
                 [
-                    "Gradient descent is an optimization algorithm that iteratively adjusts parameters to minimize a loss function.",
+                    "Gradient descent is an optimization algorithm that iteratively"
+                    " adjusts parameters to minimize a loss function.",
                     "The weather forecast predicts rain for tomorrow afternoon.",
                 ],
             )
@@ -428,6 +430,6 @@ class TestRetrievalPipeline:
 
         # Python doc should rank first after reranking (simplicity -> beginners)
         best_reranked = top4_docs[np.argmax(rerank_scores)]
-        assert (
-            "Python" in best_reranked
-        ), f"Expected Python doc to rank first for beginners query, got: {best_reranked}"
+        assert "Python" in best_reranked, (
+            f"Expected Python doc to rank first for beginners query, got: {best_reranked}"
+        )
