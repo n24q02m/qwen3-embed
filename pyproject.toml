@@ -25,6 +25,9 @@ dependencies = [
     "loguru>=0.7.2",
 ]
 
+[project.optional-dependencies]
+gguf = ["llama-cpp-python>=0.3"]
+
 [project.urls]
 Homepage = "https://github.com/n24q02m/qwen3-embed"
 Repository = "https://github.com/n24q02m/qwen3-embed"
