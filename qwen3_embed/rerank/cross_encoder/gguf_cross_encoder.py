@@ -54,8 +54,8 @@ supported_qwen3_reranker_gguf_models: list[BaseModelDescription] = [
         ),
         license="apache-2.0",
         size_in_GB=0.48,
-        sources=ModelSource(hf="n24q02m/Qwen3-Reranker-0.6B-ONNX"),
-        model_file="gguf/qwen3-reranker-0.6b-q4-k-m.gguf",
+        sources=ModelSource(hf="n24q02m/Qwen3-Reranker-0.6B-GGUF"),
+        model_file="qwen3-reranker-0.6b-q4-k-m.gguf",
     ),
 ]
 
