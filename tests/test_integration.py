@@ -31,28 +31,28 @@ def reranker_model():
     return TextCrossEncoder(model_name=RERANKER_MODEL)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 # Embedding: Basic operations
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 
 @pytest.mark.integration
 class TestEmbeddingBasic:
     """Core embedding functionality."""
 
-    def test_single_document(self, embedding_model):
+    def test_embed_when_single_document_returns_one_embedding(self, embedding_model):
         embeddings = list(embedding_model.embed("Hello world"))
         assert len(embeddings) == 1
         assert embeddings[0].shape == (1024,)
 
-    def test_multiple_documents(self, embedding_model):
+    def test_embed_when_multiple_documents_returns_multiple_embeddings(self, embedding_model):
         docs = ["First document.", "Second document.", "Third document."]
         embeddings = list(embedding_model.embed(docs))
         assert len(embeddings) == 3
         for emb in embeddings:
             assert emb.shape == (1024,)
 
-    def test_embeddings_are_normalized(self, embedding_model):
+    def test_embed_when_called_returns_normalized_embeddings(self, embedding_model):
         docs = [
             "Short text",
             "A somewhat longer text with more words to process",
@@ -63,12 +63,12 @@ class TestEmbeddingBasic:
             norm = np.linalg.norm(emb)
             assert abs(norm - 1.0) < 1e-3, f"Expected unit norm, got {norm}"
 
-    def test_empty_string(self, embedding_model):
+    def test_embed_when_empty_string_returns_valid_embedding(self, embedding_model):
         embeddings = list(embedding_model.embed(""))
         assert len(embeddings) == 1
         assert embeddings[0].shape == (1024,)
 
-    def test_deterministic_output(self, embedding_model):
+    def test_embed_when_called_twice_returns_identical_output(self, embedding_model):
         """Same input should produce identical embeddings."""
         text = "Deterministic test input"
         emb1 = list(embedding_model.embed(text))[0]
@@ -76,9 +76,9 @@ class TestEmbeddingBasic:
         np.testing.assert_array_equal(emb1, emb2)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 # Embedding: MRL (Matryoshka Representation Learning)
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 
 @pytest.mark.integration
@@ -86,17 +86,17 @@ class TestEmbeddingMRL:
     """MRL dimension truncation."""
 
     @pytest.mark.parametrize("dim", [32, 64, 128, 256, 512, 1024])
-    def test_mrl_dimensions(self, embedding_model, dim):
+    def test_embed_when_dim_specified_returns_truncated_embedding(self, embedding_model, dim):
         embeddings = list(embedding_model.embed("Test MRL dimensions", dim=dim))
         assert embeddings[0].shape == (dim,)
 
     @pytest.mark.parametrize("dim", [32, 64, 128, 256, 512, 1024])
-    def test_mrl_normalized(self, embedding_model, dim):
+    def test_embed_when_dim_specified_returns_normalized_embedding(self, embedding_model, dim):
         embeddings = list(embedding_model.embed("Normalization check", dim=dim))
         norm = np.linalg.norm(embeddings[0])
         assert abs(norm - 1.0) < 1e-3
 
-    def test_mrl_prefix_consistency(self, embedding_model):
+    def test_embed_when_dim_specified_returns_prefix_of_full_embedding(self, embedding_model):
         """Lower-dim MRL should be a prefix of the full embedding (pre-normalization)."""
         text = "Prefix consistency test"
         full = list(embedding_model.embed(text))[0]  # dim=1024, normalized
@@ -108,16 +108,16 @@ class TestEmbeddingMRL:
         np.testing.assert_allclose(prefix_normed, small, atol=1e-5)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 # Embedding: Semantic quality
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 
 @pytest.mark.integration
 class TestEmbeddingSemanticQuality:
     """Verify the model produces semantically meaningful embeddings."""
 
-    def test_similar_texts_closer(self, embedding_model):
+    def test_embed_when_texts_are_similar_returns_higher_similarity(self, embedding_model):
         """Semantically similar texts should have higher cosine similarity."""
         anchor = "Machine learning is a branch of artificial intelligence."
         similar = "AI and ML are closely related fields in computer science."
@@ -132,7 +132,7 @@ class TestEmbeddingSemanticQuality:
             f"dissimilar text similarity ({sim_far:.4f})"
         )
 
-    def test_query_retrieval_ranking(self, embedding_model):
+    def test_query_embed_when_ranking_returns_correct_document(self, embedding_model):
         """Query embedding should rank the correct document highest."""
         query_emb = list(
             embedding_model.query_embed("What programming language is used for data science?")
@@ -150,7 +150,7 @@ class TestEmbeddingSemanticQuality:
         best_idx = np.argmax(sims)
         assert best_idx == 0, f"Expected doc[0] (Python/data science), got doc[{best_idx}]"
 
-    def test_multilingual_similarity(self, embedding_model):
+    def test_embed_when_multilingual_returns_high_similarity(self, embedding_model):
         """Cross-language texts with same meaning should be similar."""
         en = "Artificial intelligence is transforming the world."
         zh = "AI dang thay doi the gioi."  # Vietnamese
@@ -163,7 +163,7 @@ class TestEmbeddingSemanticQuality:
         # Cross-lingual similarity should beat unrelated English text
         assert sim_cross > sim_unrelated
 
-    def test_instruction_improves_retrieval(self, embedding_model):
+    def test_query_embed_when_instruction_provided_improves_retrieval(self, embedding_model):
         """Query embedding with instruction should improve domain-specific retrieval."""
         query_text = "gradient descent"
 
@@ -196,16 +196,16 @@ class TestEmbeddingSemanticQuality:
         assert margin_instruct > 0, "Instructed query should rank ML doc higher"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 # Embedding: Edge cases
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 
 @pytest.mark.integration
 class TestEmbeddingEdgeCases:
     """Stress tests and edge cases."""
 
-    def test_very_long_text(self, embedding_model):
+    def test_embed_when_text_is_very_long_returns_valid_embedding(self, embedding_model):
         """Text exceeding model's context window should be truncated, not crash."""
         long_text = "This is a test sentence. " * 500  # ~3.5k tokens, exceeds typical context
         embeddings = list(embedding_model.embed(long_text))
@@ -213,7 +213,7 @@ class TestEmbeddingEdgeCases:
         assert embeddings[0].shape == (1024,)
         assert abs(np.linalg.norm(embeddings[0]) - 1.0) < 1e-3
 
-    def test_special_characters(self, embedding_model):
+    def test_embed_when_special_characters_returns_valid_embedding(self, embedding_model):
         """Special chars, unicode, emojis should not crash."""
         texts = [
             "Hello! @#$%^&*() [brackets] {braces}",
@@ -226,7 +226,7 @@ class TestEmbeddingEdgeCases:
             assert not np.any(np.isnan(emb)), "NaN in embedding"
             assert not np.any(np.isinf(emb)), "Inf in embedding"
 
-    def test_batch_of_ten(self, embedding_model):
+    def test_embed_when_batch_of_ten_returns_unique_embeddings(self, embedding_model):
         """Larger batch processed correctly with batch_size=1."""
         docs = [f"Document number {i} about topic {chr(65 + i)}." for i in range(10)]
         embeddings = list(embedding_model.embed(docs))
@@ -239,21 +239,21 @@ class TestEmbeddingEdgeCases:
                 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 # Reranker: Basic operations
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 
 @pytest.mark.integration
 class TestRerankerBasic:
     """Core reranker functionality."""
 
-    def test_single_document(self, reranker_model):
+    def test_rerank_when_single_document_returns_one_score(self, reranker_model):
         scores = list(reranker_model.rerank("test query", ["test document"]))
         assert len(scores) == 1
         assert 0.0 <= scores[0] <= 1.0
 
-    def test_multiple_documents(self, reranker_model):
+    def test_rerank_when_multiple_documents_returns_multiple_scores(self, reranker_model):
         query = "What is deep learning?"
         docs = [
             "Deep learning uses neural networks with many layers.",
@@ -266,7 +266,7 @@ class TestRerankerBasic:
         for score in scores:
             assert 0.0 <= score <= 1.0
 
-    def test_scores_in_valid_range(self, reranker_model):
+    def test_rerank_when_called_returns_scores_in_valid_range(self, reranker_model):
         """All scores should be valid probabilities [0, 1]."""
         scores = list(
             reranker_model.rerank(
@@ -279,7 +279,7 @@ class TestRerankerBasic:
             assert not np.isnan(score)
             assert not np.isinf(score)
 
-    def test_deterministic_scores(self, reranker_model):
+    def test_rerank_when_called_twice_returns_identical_scores(self, reranker_model):
         """Same input should produce identical scores."""
         query = "What is Python?"
         docs = ["Python is a programming language."]
@@ -288,16 +288,18 @@ class TestRerankerBasic:
         assert abs(s1[0] - s2[0]) < 1e-6
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 # Reranker: Ranking quality
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 
 @pytest.mark.integration
 class TestRerankerQuality:
     """Verify the reranker correctly distinguishes relevant from irrelevant."""
 
-    def test_relevant_vs_irrelevant(self, reranker_model):
+    def test_rerank_when_comparing_relevant_vs_irrelevant_returns_higher_score(
+        self, reranker_model
+    ):
         """Clearly relevant document should score much higher."""
         scores = list(
             reranker_model.rerank(
@@ -313,7 +315,7 @@ class TestRerankerQuality:
         assert scores[0] > 0.8, f"Relevant doc should score high, got {scores[0]}"
         assert scores[1] < 0.2, f"Irrelevant doc should score low, got {scores[1]}"
 
-    def test_ranking_order(self, reranker_model):
+    def test_rerank_when_ranking_returns_correct_order(self, reranker_model):
         """Documents should be ranked by semantic relevance."""
         query = "How does photosynthesis work?"
         docs = [
@@ -331,7 +333,7 @@ class TestRerankerQuality:
         assert scores[0] > scores[1]
         assert scores[1] > scores[2] or scores[1] > scores[3]
 
-    def test_rerank_pairs(self, reranker_model):
+    def test_rerank_pairs_when_called_returns_consistent_scores(self, reranker_model):
         """rerank_pairs should produce consistent scores."""
         pairs = [
             ("What is Python?", "Python is a high-level programming language."),
@@ -343,7 +345,7 @@ class TestRerankerQuality:
         assert scores[0] > scores[1], "Programming > Desert for Python query"
         assert scores[2] > 0.8, "Paris/France should be highly relevant"
 
-    def test_custom_instruction(self, reranker_model):
+    def test_rerank_when_custom_instruction_provided_returns_valid_scores(self, reranker_model):
         """Custom instruction should work without errors."""
         scores = list(
             reranker_model.rerank(
@@ -356,23 +358,23 @@ class TestRerankerQuality:
         assert 0.0 <= scores[0] <= 1.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 # Reranker: Edge cases
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 
 @pytest.mark.integration
 class TestRerankerEdgeCases:
     """Stress tests for the reranker."""
 
-    def test_long_document(self, reranker_model):
+    def test_rerank_when_long_document_returns_valid_score(self, reranker_model):
         """Long document should be truncated, not crash."""
         long_doc = "This is about machine learning. " * 500
         scores = list(reranker_model.rerank("What is ML?", [long_doc]))
         assert len(scores) == 1
         assert 0.0 <= scores[0] <= 1.0
 
-    def test_special_characters_in_query(self, reranker_model):
+    def test_rerank_when_special_characters_in_query_returns_valid_score(self, reranker_model):
         """Special characters should not break scoring."""
         scores = list(
             reranker_model.rerank(
@@ -383,23 +385,25 @@ class TestRerankerEdgeCases:
         assert len(scores) == 1
         assert not np.isnan(scores[0])
 
-    def test_identical_query_and_doc(self, reranker_model):
+    def test_rerank_when_query_equals_document_returns_high_score(self, reranker_model):
         """When query == document, should score very high."""
         text = "Neural networks are computational models."
         scores = list(reranker_model.rerank(text, [text]))
         assert scores[0] > 0.5, f"Identical text should score high, got {scores[0]}"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 # Cross-cutting: Embedding + Reranker pipeline
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 
 @pytest.mark.integration
 class TestRetrievalPipeline:
     """End-to-end retrieval pipeline: embed -> retrieve -> rerank."""
 
-    def test_full_pipeline(self, embedding_model, reranker_model):
+    def test_pipeline_when_end_to_end_returns_correct_result(
+        self, embedding_model, reranker_model
+    ):
         """Simulate a real retrieval-then-rerank pipeline."""
         corpus = [
             "Python is a programming language known for its simplicity.",
