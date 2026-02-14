@@ -95,8 +95,11 @@ class OnnxTextModel(OnnxModel[T]):
         onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
 
         model_output = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore[union-attr]
+        result = model_output[0]
+        if result.dtype == np.float16:
+            result = result.astype(np.float32)
         return OnnxOutputContext(
-            model_output=model_output[0],
+            model_output=result,
             attention_mask=onnx_input.get("attention_mask", attention_mask),
             input_ids=onnx_input.get("input_ids", input_ids),
         )

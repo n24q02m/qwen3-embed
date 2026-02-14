@@ -37,3 +37,4 @@ jobs:
         with:
           fail-on-severity: moderate
           comment-summary-in-pr: always
+          allow-ghsas: GHSA-w8v5-vhqr-4h9v # diskcache pickle - no patch, transitive dep of llama-cpp-python

@@ -9,6 +9,7 @@ from qwen3_embed.common.model_description import (
 )
 from qwen3_embed.common.types import Device
 from qwen3_embed.rerank.cross_encoder.custom_text_cross_encoder import CustomTextCrossEncoder
+from qwen3_embed.rerank.cross_encoder.gguf_cross_encoder import Qwen3CrossEncoderGGUF
 from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import OnnxTextCrossEncoder
 from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import Qwen3CrossEncoder
 from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
@@ -17,6 +18,7 @@ from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEn
 class TextCrossEncoder(TextCrossEncoderBase):
     CROSS_ENCODER_REGISTRY: list[type[TextCrossEncoderBase]] = [
         Qwen3CrossEncoder,
+        Qwen3CrossEncoderGGUF,
         OnnxTextCrossEncoder,
         CustomTextCrossEncoder,
     ]

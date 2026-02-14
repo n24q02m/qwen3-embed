@@ -5,6 +5,7 @@ from typing import Any
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource, PoolingType
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
+from qwen3_embed.text.gguf_embedding import Qwen3TextEmbeddingGGUF
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding
 from qwen3_embed.text.pooled_embedding import PooledEmbedding
 from qwen3_embed.text.pooled_normalized_embedding import PooledNormalizedEmbedding
@@ -15,6 +16,7 @@ from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 class TextEmbedding(TextEmbeddingBase):
     EMBEDDINGS_REGISTRY: list[type[TextEmbeddingBase]] = [
         Qwen3TextEmbedding,
+        Qwen3TextEmbeddingGGUF,
         OnnxTextEmbedding,
         PooledNormalizedEmbedding,
         PooledEmbedding,

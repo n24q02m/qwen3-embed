@@ -4,17 +4,36 @@ Lightweight Qwen3 text embedding & reranking via ONNX Runtime. Trimmed fork of [
 
 ## Supported Models
 
+### ONNX (default)
+
 | Model | Type | Dims | Max Tokens | Size |
 |-------|------|------|------------|------|
-| `Qwen/Qwen3-Embedding-0.6B` | Embedding | 32-1024 (MRL) | 32768 | 0.57 GB |
-| `Qwen/Qwen3-Reranker-0.6B` | Reranker | - | 40960 | 0.57 GB |
+| `Qwen/Qwen3-Embedding-0.6B` | Embedding | 32-1024 (MRL) | 32768 | 573 MB |
+| `Qwen/Qwen3-Embedding-0.6B-Q4F16` | Embedding | 32-1024 (MRL) | 32768 | 517 MB |
+| `Qwen/Qwen3-Reranker-0.6B` | Reranker | - | 40960 | 573 MB |
+| `Qwen/Qwen3-Reranker-0.6B-Q4F16` | Reranker | - | 40960 | 518 MB |
 
-ONNX weights: [n24q02m/Qwen3-Embedding-0.6B-ONNX](https://huggingface.co/n24q02m/Qwen3-Embedding-0.6B-ONNX), [n24q02m/Qwen3-Reranker-0.6B-ONNX](https://huggingface.co/n24q02m/Qwen3-Reranker-0.6B-ONNX)
+### GGUF (optional, requires `llama-cpp-python`)
+
+| Model | Type | Dims | Max Tokens | Size |
+|-------|------|------|------------|------|
+| `Qwen/Qwen3-Embedding-0.6B-GGUF` | Embedding | 32-1024 (MRL) | 32768 | 378 MB |
+| `Qwen/Qwen3-Reranker-0.6B-GGUF` | Reranker | - | 40960 | 378 MB |
+
+### HuggingFace Repos
+
+| Format | Embedding | Reranker |
+|--------|-----------|---------|
+| ONNX | [n24q02m/Qwen3-Embedding-0.6B-ONNX](https://huggingface.co/n24q02m/Qwen3-Embedding-0.6B-ONNX) | [n24q02m/Qwen3-Reranker-0.6B-ONNX](https://huggingface.co/n24q02m/Qwen3-Reranker-0.6B-ONNX) |
+| GGUF | [n24q02m/Qwen3-Embedding-0.6B-GGUF](https://huggingface.co/n24q02m/Qwen3-Embedding-0.6B-GGUF) | [n24q02m/Qwen3-Reranker-0.6B-GGUF](https://huggingface.co/n24q02m/Qwen3-Reranker-0.6B-GGUF) |
 
 ## Installation
 
 ```bash
 pip install qwen3-embed
+
+# For GGUF support
+pip install qwen3-embed[gguf]
 ```
 
 ## Usage
@@ -24,7 +43,14 @@ pip install qwen3-embed
 ```python
 from qwen3_embed import TextEmbedding
 
+# INT8 (default)
 model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B")
+
+# Q4F16 (smaller, slightly less accurate)
+model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B-Q4F16")
+
+# GGUF (requires: pip install qwen3-embed[gguf])
+model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B-GGUF")
 
 documents = [
     "Qwen3 is a multilingual embedding model.",
@@ -76,6 +102,7 @@ pair_scores = list(reranker.rerank_pairs(pairs))
 - **MRL support**: Matryoshka Representation Learning allows truncating embeddings to any dimension from 32 to 1024 while preserving quality.
 - **Instruction-aware**: Query embedding supports task instructions for better retrieval performance.
 - **Causal LM reranking**: Reranker uses yes/no logit scoring via causal language model, producing calibrated [0, 1] scores.
+- **Multiple backends**: ONNX Runtime (INT8, Q4F16) and GGUF (Q4_K_M via llama-cpp-python).
 - **CPU-only, no PyTorch**: Runs on ONNX Runtime -- no GPU or heavy ML framework required.
 - **Multilingual**: Both models support multi-language inputs.
 

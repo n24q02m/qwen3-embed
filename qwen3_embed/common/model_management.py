@@ -238,7 +238,7 @@ class ModelManagement[T: BaseModelDescription]:
         repo_revision = model_info(hf_source_repo).sha
         repo_tree = list(list_repo_tree(hf_source_repo, revision=repo_revision, repo_type="model"))
 
-        allowed_extensions = {".json", ".onnx", ".txt"}
+        allowed_extensions = {".json", ".onnx", ".gguf", ".txt"}
         repo_files = (
             [
                 f
