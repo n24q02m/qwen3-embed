@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.1-beta](https://github.com/n24q02m/qwen3-embed/compare/v0.2.0...v0.2.1-beta) (2026-02-14)
+
+
+### Features
+
+* add Q4F16 ONNX and GGUF model variant support ([8cc81c0](https://github.com/n24q02m/qwen3-embed/commit/8cc81c0ed10a3968758ba252dbc948aedc16cab1))
+
+
+### Documentation
+
+* update README with Q4F16 and GGUF variants ([c17f975](https://github.com/n24q02m/qwen3-embed/commit/c17f97541d579bda276b7138ed650deb1e7561d3))
+
 ## [0.2.0](https://github.com/n24q02m/qwen3-embed/compare/v0.1.0...v0.2.0) (2026-02-13)
 
 
