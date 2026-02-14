@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/n24q02m/qwen3-embed/compare/v0.2.0...v0.2.1) (2026-02-14)
+
+
+### Features
+
+* promote dev to main (v0.2.1-beta) ([#5](https://github.com/n24q02m/qwen3-embed/issues/5)) ([8d8dbc1](https://github.com/n24q02m/qwen3-embed/commit/8d8dbc12ce60aec6b68b3c85ca5146b43de18f80))
+
 ## [0.2.1-beta](https://github.com/n24q02m/qwen3-embed/compare/v0.2.0...v0.2.1-beta) (2026-02-14)
 
 
