@@ -50,7 +50,6 @@ packages = ["qwen3_embed"]
 version_toml = ["pyproject.toml:project.version"]
 tag_format = "v{version}"
 commit_message = "chore(release): v{version}"
-build_command = "uv build"
 major_on_zero = false
 
 [tool.semantic_release.changelog]
