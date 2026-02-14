@@ -9,7 +9,7 @@ from qwen3_embed.common.utils import last_token_pool, normalize
 class TestLastTokenPool:
     """Test last_token_pool with various padding scenarios."""
 
-    def test_right_padding(self):
+    def test_last_token_pool_when_right_padding_returns_correct_last_token(self):
         """Right-padding: last non-pad token varies per sample."""
         hidden = np.array(
             [
@@ -26,11 +26,11 @@ class TestLastTokenPool:
             dtype=np.int64,
         )
         result = last_token_pool(hidden, mask)
-        # Sample 0: last valid = index 1 → [3, 4]
-        # Sample 1: last valid = index 2 → [9, 10]
+        # Sample 0: last valid = index 1 -> [3, 4]
+        # Sample 1: last valid = index 2 -> [9, 10]
         np.testing.assert_array_equal(result, [[3, 4], [9, 10]])
 
-    def test_left_padding(self):
+    def test_last_token_pool_when_left_padding_returns_correct_last_token(self):
         """Left-padding: all samples end at the last position."""
         hidden = np.array(
             [
@@ -47,17 +47,17 @@ class TestLastTokenPool:
             dtype=np.int64,
         )
         result = last_token_pool(hidden, mask)
-        # Left-padding: last column is all-1 → use hidden[:, -1]
+        # Left-padding: last column is all-1 -> use hidden[:, -1]
         np.testing.assert_array_equal(result, [[3, 4], [9, 10]])
 
-    def test_single_token(self):
+    def test_last_token_pool_when_single_token_returns_correct_token(self):
         """Single-token sequence (edge case)."""
         hidden = np.array([[[42, 43]]], dtype=np.float32)
         mask = np.array([[1]], dtype=np.int64)
         result = last_token_pool(hidden, mask)
         np.testing.assert_array_equal(result, [[42, 43]])
 
-    def test_batch_size_one(self):
+    def test_last_token_pool_when_batch_size_one_returns_correct_token(self):
         """Batch of size 1 with right-padding."""
         hidden = np.array([[[1, 0], [2, 0], [0, 0]]], dtype=np.float32)
         mask = np.array([[1, 1, 0]], dtype=np.int64)
@@ -68,11 +68,11 @@ class TestLastTokenPool:
 class TestPoolingType:
     """Verify PoolingType enum includes LAST_TOKEN."""
 
-    def test_last_token_exists(self):
+    def test_pooling_type_when_checked_has_last_token(self):
         assert hasattr(PoolingType, "LAST_TOKEN")
         assert PoolingType.LAST_TOKEN == "LAST_TOKEN"
 
-    def test_all_pooling_types(self):
+    def test_pooling_type_when_enumerated_contains_expected_types(self):
         expected = {"CLS", "MEAN", "LAST_TOKEN", "DISABLED"}
         actual = {pt.value for pt in PoolingType}
         assert actual == expected
@@ -81,13 +81,13 @@ class TestPoolingType:
 class TestNormalize:
     """Sanity check for L2 normalize."""
 
-    def test_unit_vectors(self):
+    def test_normalize_when_called_returns_unit_vectors(self):
         x = np.array([[3.0, 4.0]], dtype=np.float32)
         result = normalize(x)
         np.testing.assert_allclose(result, [[0.6, 0.8]], atol=1e-6)
         np.testing.assert_allclose(np.linalg.norm(result, axis=1), [1.0], atol=1e-6)
 
-    def test_zero_vector(self):
+    def test_normalize_when_zero_vector_returns_valid_shape(self):
         """Zero vector should not raise (eps prevents division by zero)."""
         x = np.array([[0.0, 0.0]], dtype=np.float32)
         result = normalize(x)
