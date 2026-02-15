@@ -27,7 +27,7 @@ class TestSecurity:
         # effectively wrapping the underlying tarfile error.
         # The underlying error is tarfile.OutsideDestinationError which contains "outside the destination"
         with pytest.raises(ValueError, match="outside the destination"):
-             ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
 
         # Verify evil.txt was NOT created in tmp_path (parent of cache)
         # Note: tmp_path is the base for 'cache', so ../evil.txt relative to cache
