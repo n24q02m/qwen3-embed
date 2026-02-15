@@ -33,4 +33,5 @@ Thumbs.db
 # Fastembed cache
 **/local_cache/
 
-temp/
+
+.env

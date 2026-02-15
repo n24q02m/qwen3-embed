@@ -15,7 +15,7 @@ class TestCustomModelRegistration:
         CustomTextEmbedding.SUPPORTED_MODELS.clear()
         CustomTextEmbedding.POSTPROCESSING_MAPPING.clear()
 
-    def test_register_cls_pooling_model(self):
+    def test_add_custom_model_cls_pooling_registers_model(self):
         TextEmbedding.add_custom_model(
             model="test/cls-model",
             pooling=PoolingType.CLS,
@@ -26,7 +26,7 @@ class TestCustomModelRegistration:
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/cls-model" for m in models)
 
-    def test_register_mean_pooling_model(self):
+    def test_add_custom_model_mean_pooling_registers_model(self):
         TextEmbedding.add_custom_model(
             model="test/mean-model",
             pooling=PoolingType.MEAN,
@@ -37,7 +37,7 @@ class TestCustomModelRegistration:
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/mean-model" for m in models)
 
-    def test_register_last_token_pooling_model(self):
+    def test_add_custom_model_last_token_pooling_registers_model(self):
         TextEmbedding.add_custom_model(
             model="test/last-token-model",
             pooling=PoolingType.LAST_TOKEN,
@@ -48,7 +48,7 @@ class TestCustomModelRegistration:
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/last-token-model" for m in models)
 
-    def test_duplicate_model_raises(self):
+    def test_add_custom_model_duplicate_name_raises_value_error(self):
         TextEmbedding.add_custom_model(
             model="test/duplicate",
             pooling=PoolingType.CLS,
