@@ -1,7 +1,10 @@
-import tarfile
-import pytest
 import io
+import tarfile
+
+import pytest
+
 from qwen3_embed.common.model_management import ModelManagement
+
 
 class TestSecurity:
     @pytest.fixture
