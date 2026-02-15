@@ -46,6 +46,15 @@ class OnnxModel[T]:
     def __init__(self) -> None:
         self.model: ort.InferenceSession | None = None
         self.tokenizer: Tokenizer | None = None
+        self._model_input_names: set[str] | None = None
+
+    @property
+    def model_input_names(self) -> set[str]:
+        if self._model_input_names is None:
+            if self.model is None:
+                raise ValueError("Model has not been loaded yet.")
+            self._model_input_names = {node.name for node in self.model.get_inputs()}
+        return self._model_input_names
 
     def _preprocess_onnx_input(
         self, onnx_input: dict[str, NumpyArray], **kwargs: Any
