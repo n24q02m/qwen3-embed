@@ -30,6 +30,7 @@ class TestSecurity:
 
             # Add it to the tarball
             import io
+
             tar.addfile(tarinfo, io.BytesIO(b"exploit"))
 
         # Attempt to decompress
@@ -43,4 +44,6 @@ class TestSecurity:
         exploit_path = tmp_path / exploit_file_name
 
         # Ensure it was NOT written
-        assert not exploit_path.exists(), "Zip Slip vulnerability detected: File written outside target directory!"
+        assert not exploit_path.exists(), (
+            "Zip Slip vulnerability detected: File written outside target directory!"
+        )
