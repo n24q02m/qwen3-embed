@@ -103,8 +103,53 @@ pair_scores = list(reranker.rerank_pairs(pairs))
 - **Instruction-aware**: Query embedding supports task instructions for better retrieval performance.
 - **Causal LM reranking**: Reranker uses yes/no logit scoring via causal language model, producing calibrated [0, 1] scores.
 - **Multiple backends**: ONNX Runtime (INT8, Q4F16) and GGUF (Q4_K_M via llama-cpp-python).
-- **CPU-only, no PyTorch**: Runs on ONNX Runtime -- no GPU or heavy ML framework required.
+- **GPU optional, no PyTorch**: Runs on ONNX Runtime or llama-cpp-python -- no heavy ML framework required. Auto-detects GPU (CUDA, DirectML) when available.
 - **Multilingual**: Both models support multi-language inputs.
+
+## GPU Acceleration
+
+Both ONNX and GGUF backends auto-detect GPU when available (`Device.AUTO` is the default).
+
+### ONNX
+
+Requires `onnxruntime-gpu` (CUDA) or `onnxruntime-directml` (Windows) instead of `onnxruntime`:
+
+```bash
+pip install onnxruntime-gpu  # NVIDIA CUDA
+# or
+pip install onnxruntime-directml  # Windows AMD/Intel/NVIDIA
+```
+
+```python
+from qwen3_embed import TextEmbedding, Device
+
+# Auto-detect GPU (default)
+model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B")
+
+# Force CPU
+model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B", cuda=Device.CPU)
+
+# Force CUDA
+model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B", cuda=Device.CUDA)
+```
+
+### GGUF
+
+GPU is handled by `llama-cpp-python`. Install with CUDA support:
+
+```bash
+CMAKE_ARGS="-DGGML_CUDA=on" pip install qwen3-embed[gguf]
+```
+
+```python
+from qwen3_embed import TextEmbedding, Device
+
+# Auto-detect GPU (default, offloads all layers)
+model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B-GGUF")
+
+# Force CPU only
+model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B-GGUF", cuda=Device.CPU)
+```
 
 ## Development
 
