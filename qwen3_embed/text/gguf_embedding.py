@@ -114,7 +114,9 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
 
         from llama_cpp import Llama
 
-        n_gpu = -1 if (cuda is True or cuda == Device.CUDA) else 0
+        # AUTO/-1: offload all layers to GPU if available, fallback to CPU
+        # CPU/False/0: force CPU only
+        n_gpu = 0 if (cuda is False or cuda == Device.CPU) else -1
         self._llm = Llama(
             model_path=str(model_path),
             embedding=True,
