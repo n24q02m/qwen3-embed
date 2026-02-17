@@ -14,7 +14,7 @@ from qwen3_embed.rerank.cross_encoder.onnx_text_model import (
 )
 from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
 
-# Base class model list kept empty — Qwen3 reranker is registered
+# Base class model list kept empty - Qwen3 reranker is registered
 # in qwen3_cross_encoder.py. Custom models can be added at runtime
 # via CustomTextCrossEncoder.add_model().
 supported_onnx_models: list[BaseModelDescription] = []

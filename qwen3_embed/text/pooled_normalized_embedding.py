@@ -8,7 +8,7 @@ from qwen3_embed.common.utils import normalize
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
 from qwen3_embed.text.pooled_embedding import PooledEmbedding
 
-# Base class model list kept empty — mean+normalize pooling models can
+# Base class model list kept empty - mean+normalize pooling models can
 # be added at runtime via CustomTextEmbedding.add_model(pooling=PoolingType.MEAN, normalization=True).
 supported_pooled_normalized_models: list[DenseModelDescription] = []
 
