@@ -24,4 +24,4 @@ class TestSecurity(unittest.TestCase):
 
         # Verify extractall was called with filter='data'
         # This will fail if filter='data' is not used
-        mock_tar.extractall.assert_called_with(path=cache_dir, filter='data')
+        mock_tar.extractall.assert_called_with(path=cache_dir, filter="data")
