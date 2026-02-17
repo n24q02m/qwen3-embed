@@ -6,6 +6,7 @@ from typing import Any, TypeVar
 
 import numpy as np
 import onnxruntime as ort
+from loguru import logger
 from numpy.typing import NDArray
 from tokenizers import Tokenizer
 
@@ -80,6 +81,8 @@ class OnnxModel[T]:
                 stacklevel=6,
             )
 
+        dml_available = "DmlExecutionProvider" in available_providers
+
         if providers is not None:
             onnx_providers = list(providers)
         elif explicit_cuda or (cuda == Device.AUTO and cuda_available):
@@ -87,6 +90,8 @@ class OnnxModel[T]:
                 onnx_providers = ["CUDAExecutionProvider"]
             else:
                 onnx_providers = [("CUDAExecutionProvider", {"device_id": device_id})]
+        elif cuda == Device.AUTO and dml_available:
+            onnx_providers = ["DmlExecutionProvider"]
         else:
             onnx_providers = ["CPUExecutionProvider"]
 
@@ -113,6 +118,7 @@ class OnnxModel[T]:
         self.model = ort.InferenceSession(
             str(model_path), providers=onnx_providers, sess_options=so
         )
+        logger.info(f"ONNX session created with providers: {self.model.get_providers()}")
         if "CUDAExecutionProvider" in requested_provider_names:
             assert self.model is not None
             current_providers = self.model.get_providers()
@@ -151,9 +157,9 @@ class OnnxModel[T]:
             None
         """
         for option in extra_options:
-            assert option in cls.EXPOSED_SESSION_OPTIONS, (
-                f"{option} is unknown or not exposed (exposed options: {cls.EXPOSED_SESSION_OPTIONS})"
-            )
+            assert (
+                option in cls.EXPOSED_SESSION_OPTIONS
+            ), f"{option} is unknown or not exposed (exposed options: {cls.EXPOSED_SESSION_OPTIONS})"
         if "enable_cpu_mem_arena" in extra_options:
             session_options.enable_cpu_mem_arena = extra_options["enable_cpu_mem_arena"]
 
