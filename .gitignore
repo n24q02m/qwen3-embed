@@ -34,3 +34,4 @@ Thumbs.db
 **/local_cache/
 
 temp/
+.env

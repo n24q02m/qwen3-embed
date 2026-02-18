@@ -16,17 +16,17 @@ from qwen3_embed.rerank.cross_encoder.text_cross_encoder import TextCrossEncoder
 class TestQwen3CrossEncoderRegistry:
     """Verify Qwen3 reranker models are properly registered."""
 
-    def test_qwen3_in_registry(self):
+    def test_qwen3_cross_encoder_is_in_registry(self):
         """Qwen3CrossEncoder should be in the TextCrossEncoder registry."""
         assert Qwen3CrossEncoder in TextCrossEncoder.CROSS_ENCODER_REGISTRY
 
-    def test_qwen3_models_listed(self):
+    def test_list_supported_models_contains_qwen3_reranker(self):
         """Qwen3 reranker models should appear in list_supported_models."""
         models = TextCrossEncoder.list_supported_models()
         qwen3_models = [m for m in models if "Qwen3" in m["model"]]
         assert len(qwen3_models) >= 1
 
-    def test_qwen3_reranker_description(self):
+    def test_supported_qwen3_reranker_models_has_correct_description(self):
         """Verify Qwen3-Reranker-0.6B model description fields."""
         desc = supported_qwen3_reranker_models[0]
         assert desc.model == "n24q02m/Qwen3-Reranker-0.6B-ONNX"
@@ -37,7 +37,7 @@ class TestQwen3CrossEncoderRegistry:
 class TestQwen3ChatTemplate:
     """Verify chat template formatting for reranking."""
 
-    def test_format_rerank_input(self):
+    def test_format_rerank_input_returns_correct_template(self):
         result = Qwen3CrossEncoder._format_rerank_input(
             query="What is AI?",
             document="AI is artificial intelligence.",
@@ -52,7 +52,7 @@ class TestQwen3ChatTemplate:
         assert "<think>" in result
         assert "</think>" in result
 
-    def test_custom_instruction(self):
+    def test_format_rerank_input_uses_custom_instruction(self):
         result = Qwen3CrossEncoder._format_rerank_input(
             query="q",
             document="d",
@@ -64,7 +64,7 @@ class TestQwen3ChatTemplate:
 class TestYesNoScoring:
     """Test the yes/no softmax scoring logic."""
 
-    def test_strong_yes(self):
+    def test_compute_yes_no_scores_strong_yes_returns_high_score(self):
         """When yes-logit >> no-logit, score should be close to 1.0."""
         # (batch=1, seq_len=3, vocab_size=20000)
         vocab_size = 20000
@@ -76,7 +76,7 @@ class TestYesNoScoring:
         assert scores.shape == (1,)
         assert scores[0] > 0.99
 
-    def test_strong_no(self):
+    def test_compute_yes_no_scores_strong_no_returns_low_score(self):
         """When no-logit >> yes-logit, score should be close to 0.0."""
         vocab_size = 20000
         output = np.zeros((1, 3, vocab_size), dtype=np.float32)
@@ -86,7 +86,7 @@ class TestYesNoScoring:
         scores = Qwen3CrossEncoder._compute_yes_no_scores(output)
         assert scores[0] < 0.01
 
-    def test_equal_logits(self):
+    def test_compute_yes_no_scores_equal_logits_returns_half(self):
         """When yes==no logits, score should be 0.5."""
         vocab_size = 20000
         output = np.zeros((1, 3, vocab_size), dtype=np.float32)
@@ -96,7 +96,7 @@ class TestYesNoScoring:
         scores = Qwen3CrossEncoder._compute_yes_no_scores(output)
         np.testing.assert_allclose(scores[0], 0.5, atol=1e-6)
 
-    def test_batch_scoring(self):
+    def test_compute_yes_no_scores_batch_returns_correct_scores(self):
         """Batch of 3 samples with varying relevance."""
         vocab_size = 20000
         output = np.zeros((3, 5, vocab_size), dtype=np.float32)
@@ -119,7 +119,7 @@ class TestYesNoScoring:
         assert scores[1] < 0.01
         np.testing.assert_allclose(scores[2], 0.5, atol=1e-6)
 
-    def test_numerical_stability(self):
+    def test_compute_yes_no_scores_large_logits_handles_stability(self):
         """Large logit values should not cause overflow."""
         vocab_size = 20000
         output = np.zeros((1, 3, vocab_size), dtype=np.float32)

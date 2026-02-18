@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   # ============================================================================
-  # Release: PSR phân tích commits → bump version → CHANGELOG → tag → Release
+  # Release: PSR analyzes commits -> bump version -> CHANGELOG -> tag -> Release
   # ============================================================================
   release:
     name: Semantic Release
