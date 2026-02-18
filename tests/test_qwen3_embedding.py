@@ -31,7 +31,7 @@ class TestQwen3TextEmbeddingRegistry:
     def test_qwen3_model_description(self):
         """Verify Qwen3-Embedding-0.6B model description fields."""
         desc = supported_qwen3_models[0]
-        assert desc.model == "Qwen/Qwen3-Embedding-0.6B"
+        assert desc.model == "n24q02m/Qwen3-Embedding-0.6B-ONNX"
         assert desc.dim == 1024
         assert desc.license == "apache-2.0"
         assert "last-token" in desc.description.lower() or "MRL" in desc.description
@@ -40,7 +40,7 @@ class TestQwen3TextEmbeddingRegistry:
         """TextEmbedding default model should be Qwen3."""
         sig = inspect.signature(TextEmbedding.__init__)
         default_model = sig.parameters["model_name"].default
-        assert default_model == "Qwen/Qwen3-Embedding-0.6B"
+        assert default_model == "n24q02m/Qwen3-Embedding-0.6B-ONNX"
 
 
 class TestQwen3InstructionFormat:

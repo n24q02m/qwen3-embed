@@ -24,7 +24,7 @@ from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 # ---------------------------------------------------------------------------
 supported_qwen3_gguf_models: list[DenseModelDescription] = [
     DenseModelDescription(
-        model="Qwen/Qwen3-Embedding-0.6B-GGUF",
+        model="n24q02m/Qwen3-Embedding-0.6B-GGUF",
         dim=1024,
         description=(
             "Qwen3 text embedding (0.6B) with last-token pooling and MRL support "
@@ -71,7 +71,7 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
 
         from qwen3_embed import TextEmbedding
 
-        model = TextEmbedding("Qwen/Qwen3-Embedding-0.6B-GGUF")
+        model = TextEmbedding("n24q02m/Qwen3-Embedding-0.6B-GGUF")
         embeddings = list(model.embed(["Hello world"]))
 
         # MRL: reduce dimension
@@ -84,7 +84,7 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
 
     def __init__(
         self,
-        model_name: str = "Qwen/Qwen3-Embedding-0.6B-GGUF",
+        model_name: str = "n24q02m/Qwen3-Embedding-0.6B-GGUF",
         cache_dir: str | None = None,
         threads: int | None = None,
         # Accept but ignore ONNX-specific args for compatibility with TextEmbedding dispatcher

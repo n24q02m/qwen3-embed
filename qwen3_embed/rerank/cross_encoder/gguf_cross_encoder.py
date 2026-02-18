@@ -46,7 +46,7 @@ RERANK_TEMPLATE = (
 # ---------------------------------------------------------------------------
 supported_qwen3_reranker_gguf_models: list[BaseModelDescription] = [
     BaseModelDescription(
-        model="Qwen/Qwen3-Reranker-0.6B-GGUF",
+        model="n24q02m/Qwen3-Reranker-0.6B-GGUF",
         description=(
             "Qwen3 reranker (0.6B) using causal LM yes/no scoring. "
             "GGUF Q4_K_M quantized. Multilingual, 40960 input tokens, "
@@ -86,7 +86,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
 
         from qwen3_embed import TextCrossEncoder
 
-        reranker = TextCrossEncoder("Qwen/Qwen3-Reranker-0.6B-GGUF")
+        reranker = TextCrossEncoder("n24q02m/Qwen3-Reranker-0.6B-GGUF")
         scores = list(reranker.rerank("What is AI?", ["doc1", "doc2"]))
     """
 
@@ -96,7 +96,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
 
     def __init__(
         self,
-        model_name: str = "Qwen/Qwen3-Reranker-0.6B-GGUF",
+        model_name: str = "n24q02m/Qwen3-Reranker-0.6B-GGUF",
         cache_dir: str | None = None,
         threads: int | None = None,
         # Accept but ignore ONNX-specific args for compatibility with TextCrossEncoder dispatcher

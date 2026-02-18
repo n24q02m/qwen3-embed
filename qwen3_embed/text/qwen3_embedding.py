@@ -26,7 +26,7 @@ from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbedding
 # ---------------------------------------------------------------------------
 supported_qwen3_models: list[DenseModelDescription] = [
     DenseModelDescription(
-        model="Qwen/Qwen3-Embedding-0.6B",
+        model="n24q02m/Qwen3-Embedding-0.6B-ONNX",
         dim=1024,
         description=(
             "Qwen3 text embedding (0.6B) with last-token pooling and MRL support "
@@ -39,7 +39,7 @@ supported_qwen3_models: list[DenseModelDescription] = [
         model_file="onnx/model_quantized.onnx",
     ),
     DenseModelDescription(
-        model="Qwen/Qwen3-Embedding-0.6B-Q4F16",
+        model="n24q02m/Qwen3-Embedding-0.6B-ONNX-Q4F16",
         dim=1024,
         description=(
             "Qwen3 text embedding (0.6B) with last-token pooling and MRL support "
@@ -70,7 +70,7 @@ class Qwen3TextEmbedding(OnnxTextEmbedding):
 
         from qwen3_embed import TextEmbedding
 
-        model = TextEmbedding("Qwen/Qwen3-Embedding-0.6B")
+        model = TextEmbedding("n24q02m/Qwen3-Embedding-0.6B-ONNX")
         embeddings = list(model.embed(["Hello world"]))
 
         # MRL: reduce dimension

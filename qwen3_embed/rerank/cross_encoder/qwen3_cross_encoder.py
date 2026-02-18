@@ -54,7 +54,7 @@ RERANK_TEMPLATE = (
 # ---------------------------------------------------------------------------
 supported_qwen3_reranker_models: list[BaseModelDescription] = [
     BaseModelDescription(
-        model="Qwen/Qwen3-Reranker-0.6B",
+        model="n24q02m/Qwen3-Reranker-0.6B-ONNX",
         description=(
             "Qwen3 reranker (0.6B) using causal LM yes/no scoring. "
             "INT8 dynamic quantized. Multilingual, 40960 input tokens, "
@@ -66,7 +66,7 @@ supported_qwen3_reranker_models: list[BaseModelDescription] = [
         model_file="onnx/model_quantized.onnx",
     ),
     BaseModelDescription(
-        model="Qwen/Qwen3-Reranker-0.6B-Q4F16",
+        model="n24q02m/Qwen3-Reranker-0.6B-ONNX-Q4F16",
         description=(
             "Qwen3 reranker (0.6B) using causal LM yes/no scoring. "
             "INT4 weights + FP16 activations (Q4F16). Multilingual, "
@@ -90,7 +90,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
 
         from qwen3_embed import TextCrossEncoder
 
-        reranker = TextCrossEncoder("Qwen/Qwen3-Reranker-0.6B")
+        reranker = TextCrossEncoder("n24q02m/Qwen3-Reranker-0.6B-ONNX")
         scores = list(reranker.rerank("What is AI?", ["doc1", "doc2"]))
 
         # Custom instruction

@@ -17,8 +17,8 @@ from qwen3_embed import TextCrossEncoder, TextEmbedding
 # Fixtures (shared model instances -- download once, reuse across tests)
 # ---------------------------------------------------------------------------
 
-EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-0.6B"
-RERANKER_MODEL = "Qwen/Qwen3-Reranker-0.6B"
+EMBEDDING_MODEL = "n24q02m/Qwen3-Embedding-0.6B-ONNX"
+RERANKER_MODEL = "n24q02m/Qwen3-Reranker-0.6B-ONNX"
 
 
 @pytest.fixture(scope="module")
@@ -234,9 +234,9 @@ class TestEmbeddingEdgeCases:
         # All embeddings should be unique
         for i in range(len(embeddings)):
             for j in range(i + 1, len(embeddings)):
-                assert not np.array_equal(embeddings[i], embeddings[j]), (
-                    f"Embeddings {i} and {j} are identical"
-                )
+                assert not np.array_equal(
+                    embeddings[i], embeddings[j]
+                ), f"Embeddings {i} and {j} are identical"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -430,6 +430,6 @@ class TestRetrievalPipeline:
 
         # Python doc should rank first after reranking (simplicity -> beginners)
         best_reranked = top4_docs[np.argmax(rerank_scores)]
-        assert "Python" in best_reranked, (
-            f"Expected Python doc to rank first for beginners query, got: {best_reranked}"
-        )
+        assert (
+            "Python" in best_reranked
+        ), f"Expected Python doc to rank first for beginners query, got: {best_reranked}"

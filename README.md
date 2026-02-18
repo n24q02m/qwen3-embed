@@ -8,17 +8,17 @@ Lightweight Qwen3 text embedding & reranking via ONNX Runtime. Trimmed fork of [
 
 | Model | Type | Dims | Max Tokens | Size |
 |-------|------|------|------------|------|
-| `Qwen/Qwen3-Embedding-0.6B` | Embedding | 32-1024 (MRL) | 32768 | 573 MB |
-| `Qwen/Qwen3-Embedding-0.6B-Q4F16` | Embedding | 32-1024 (MRL) | 32768 | 517 MB |
-| `Qwen/Qwen3-Reranker-0.6B` | Reranker | - | 40960 | 573 MB |
-| `Qwen/Qwen3-Reranker-0.6B-Q4F16` | Reranker | - | 40960 | 518 MB |
+| `n24q02m/Qwen3-Embedding-0.6B-ONNX` | Embedding | 32-1024 (MRL) | 32768 | 573 MB |
+| `n24q02m/Qwen3-Embedding-0.6B-ONNX-Q4F16` | Embedding | 32-1024 (MRL) | 32768 | 517 MB |
+| `n24q02m/Qwen3-Reranker-0.6B-ONNX` | Reranker | - | 40960 | 573 MB |
+| `n24q02m/Qwen3-Reranker-0.6B-ONNX-Q4F16` | Reranker | - | 40960 | 518 MB |
 
 ### GGUF (optional, requires `llama-cpp-python`)
 
 | Model | Type | Dims | Max Tokens | Size |
 |-------|------|------|------------|------|
-| `Qwen/Qwen3-Embedding-0.6B-GGUF` | Embedding | 32-1024 (MRL) | 32768 | 378 MB |
-| `Qwen/Qwen3-Reranker-0.6B-GGUF` | Reranker | - | 40960 | 378 MB |
+| `n24q02m/Qwen3-Embedding-0.6B-GGUF` | Embedding | 32-1024 (MRL) | 32768 | 378 MB |
+| `n24q02m/Qwen3-Reranker-0.6B-GGUF` | Reranker | - | 40960 | 378 MB |
 
 ### HuggingFace Repos
 
@@ -44,13 +44,13 @@ pip install qwen3-embed[gguf]
 from qwen3_embed import TextEmbedding
 
 # INT8 (default)
-model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B")
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX")
 
 # Q4F16 (smaller, slightly less accurate)
-model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B-Q4F16")
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX-Q4F16")
 
 # GGUF (requires: pip install qwen3-embed[gguf])
-model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B-GGUF")
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-GGUF")
 
 documents = [
     "Qwen3 is a multilingual embedding model.",
@@ -76,7 +76,7 @@ queries = list(model.query_embed(
 ```python
 from qwen3_embed import TextCrossEncoder
 
-reranker = TextCrossEncoder(model_name="Qwen/Qwen3-Reranker-0.6B")
+reranker = TextCrossEncoder(model_name="n24q02m/Qwen3-Reranker-0.6B-ONNX")
 
 query = "What is Qwen3?"
 documents = [
@@ -124,13 +124,13 @@ pip install onnxruntime-directml  # Windows AMD/Intel/NVIDIA
 from qwen3_embed import TextEmbedding, Device
 
 # Auto-detect GPU (default)
-model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B")
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX")
 
 # Force CPU
-model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B", cuda=Device.CPU)
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX", cuda=Device.CPU)
 
 # Force CUDA
-model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B", cuda=Device.CUDA)
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX", cuda=Device.CUDA)
 ```
 
 ### GGUF
@@ -145,10 +145,10 @@ CMAKE_ARGS="-DGGML_CUDA=on" pip install qwen3-embed[gguf]
 from qwen3_embed import TextEmbedding, Device
 
 # Auto-detect GPU (default, offloads all layers)
-model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B-GGUF")
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-GGUF")
 
 # Force CPU only
-model = TextEmbedding(model_name="Qwen/Qwen3-Embedding-0.6B-GGUF", cuda=Device.CPU)
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-GGUF", cuda=Device.CPU)
 ```
 
 ## Development

@@ -78,7 +78,7 @@ class TextEmbedding(TextEmbeddingBase):
 
     def __init__(
         self,
-        model_name: str = "Qwen/Qwen3-Embedding-0.6B",
+        model_name: str = "n24q02m/Qwen3-Embedding-0.6B-ONNX",
         cache_dir: str | None = None,
         threads: int | None = None,
         providers: Sequence[OnnxProvider] | None = None,

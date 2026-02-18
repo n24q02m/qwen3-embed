@@ -29,7 +29,7 @@ class TestQwen3CrossEncoderRegistry:
     def test_qwen3_reranker_description(self):
         """Verify Qwen3-Reranker-0.6B model description fields."""
         desc = supported_qwen3_reranker_models[0]
-        assert desc.model == "Qwen/Qwen3-Reranker-0.6B"
+        assert desc.model == "n24q02m/Qwen3-Reranker-0.6B-ONNX"
         assert desc.license == "apache-2.0"
         assert "yes/no" in desc.description.lower() or "causal" in desc.description.lower()
 
