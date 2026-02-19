@@ -1,5 +1,7 @@
 import pytest
+
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
+
 
 def test_create_DenseModelDescription_with_missing_dim_raises_AssertionError():
     """
@@ -13,8 +15,9 @@ def test_create_DenseModelDescription_with_missing_dim_raises_AssertionError():
             description="Test Description",
             license="MIT",
             size_in_GB=0.1,
-            dim=None
+            dim=None,
         )
+
 
 def test_create_ModelSource_with_missing_sources_raises_ValueError():
     """
