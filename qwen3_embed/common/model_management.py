@@ -25,6 +25,7 @@ T = TypeVar("T", bound=BaseModelDescription)
 
 class ModelManagement[T: BaseModelDescription]:
     METADATA_FILE = "files_metadata.json"
+    REQUEST_TIMEOUT = 30  # Default timeout in seconds for HTTP requests
 
     @classmethod
     def list_supported_models(cls) -> list[dict[str, Any]]:
@@ -100,7 +101,7 @@ class ModelManagement[T: BaseModelDescription]:
 
         if os.path.exists(output_path):
             return output_path
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=cls.REQUEST_TIMEOUT)
 
         # Handle HTTP errors
         if response.status_code == 403:
