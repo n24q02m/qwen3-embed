@@ -164,7 +164,7 @@ class ParallelWorkerPool:
             read = 0
             for idx, item in enumerate(stream):
                 self.check_worker_health()
-                if pushed - read < self.queue_size:
+                if idx - read < self.queue_size:
                     try:
                         out_item = self.output_queue.get_nowait()
                     except Empty:
@@ -182,12 +182,20 @@ class ParallelWorkerPool:
                         raise RuntimeError("Thread unexpectedly terminated")
                     yield out_item
                     read += 1
+                pushed = idx + 1
 
                 self.input_queue.put((idx, item))
-                pushed += 1
 
             for _ in range(self.num_workers):
                 self.input_queue.put(QueueSignals.stop)
+            while read < pushed:
+                self.check_worker_health()
+                out_item = self.output_queue.get(timeout=processing_timeout)
+                if out_item == QueueSignals.error:
+                    self.join_or_terminate()
+                    raise RuntimeError("Thread unexpectedly terminated")
+                yield out_item
+                read += 1
 
         finally:
             self.join()
