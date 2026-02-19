@@ -1,5 +1,7 @@
 import pytest
-from qwen3_embed.common.model_description import ModelSource, DenseModelDescription
+
+from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
+
 
 def test_model_source_validation_no_source() -> None:
     """ModelSource should raise ValueError if both hf and url are None."""
