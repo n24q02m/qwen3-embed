@@ -139,8 +139,9 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
         """
         return onnx_input
 
+    @staticmethod
     def _post_process_onnx_output(
-        self, output: OnnxOutputContext, **kwargs: Any
+        output: OnnxOutputContext, **kwargs: Any
     ) -> Iterable[NumpyArray]:
         embeddings = output.model_output
 
