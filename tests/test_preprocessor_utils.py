@@ -1,6 +1,9 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
 from qwen3_embed.common.preprocessor_utils import load_tokenizer
+
 
 def test_load_tokenizer_missing_config(tmp_path: Path):
     with pytest.raises(ValueError, match="Could not find config.json"):
