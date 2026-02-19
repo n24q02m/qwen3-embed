@@ -167,7 +167,10 @@ class OnnxTextModel(OnnxModel[T]):
             self.load_onnx_model()  # loads the tokenizer as well
 
         token_num = 0
-        assert self.tokenizer is not None
+        if self.tokenizer is None:
+            raise ValueError(
+                "Tokenizer not initialized. Ensure load_onnx_model() is called and sets self.tokenizer."
+            )
         texts = [texts] if isinstance(texts, str) else texts
         for batch in iter_batch(texts, batch_size):
             for tokens in self.tokenizer.encode_batch(batch):
