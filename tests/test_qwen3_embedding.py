@@ -70,7 +70,7 @@ class TestQwen3PostProcessing:
         output = OnnxOutputContext(model_output=model_output, attention_mask=attention_mask)
 
         result = np.array(
-            list(Qwen3TextEmbedding._post_process_onnx_output(None, output))  # type: ignore[arg-type]
+            list(Qwen3TextEmbedding._post_process_onnx_output(output))  # type: ignore[arg-type]
         )
 
         assert result.shape == (2, 4)
@@ -84,7 +84,7 @@ class TestQwen3PostProcessing:
         output = OnnxOutputContext(model_output=model_output, attention_mask=attention_mask)
 
         result = np.array(
-            list(Qwen3TextEmbedding._post_process_onnx_output(None, output, dim=2))  # type: ignore[arg-type]
+            list(Qwen3TextEmbedding._post_process_onnx_output(output, dim=2))  # type: ignore[arg-type]
         )
         assert result.shape == (1, 2)
         np.testing.assert_allclose(np.linalg.norm(result[0]), 1.0, atol=1e-6)
@@ -93,4 +93,4 @@ class TestQwen3PostProcessing:
         """Should raise if attention_mask is None."""
         output = OnnxOutputContext(model_output=np.zeros((1, 3, 4)), attention_mask=None)
         with pytest.raises(ValueError, match="attention_mask"):
-            list(Qwen3TextEmbedding._post_process_onnx_output(None, output))  # type: ignore[arg-type]
+            list(Qwen3TextEmbedding._post_process_onnx_output(output))  # type: ignore[arg-type]
