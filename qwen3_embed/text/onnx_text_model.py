@@ -79,10 +79,12 @@ class OnnxTextModel(OnnxModel[T]):
         documents: list[str],
         **kwargs: Any,
     ) -> OnnxOutputContext:
+        if getattr(self, "model", None) is None:
+            raise ValueError("Model not loaded. Please call load_onnx_model() first.")
         encoded = self.tokenize(documents, **kwargs)
         input_ids = np.array([e.ids for e in encoded])
         attention_mask = np.array([e.attention_mask for e in encoded])
-        input_names = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+        input_names = {node.name for node in self.model.get_inputs()}
         onnx_input: dict[str, NumpyArray] = {
             "input_ids": np.array(input_ids, dtype=np.int64),
         }
@@ -94,7 +96,7 @@ class OnnxTextModel(OnnxModel[T]):
             )
         onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
 
-        model_output = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore[union-attr]
+        model_output = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
         result = model_output[0]
         if result.dtype == np.float16:
             result = result.astype(np.float32)
