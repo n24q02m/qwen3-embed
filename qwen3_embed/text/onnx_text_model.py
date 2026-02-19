@@ -79,10 +79,12 @@ class OnnxTextModel(OnnxModel[T]):
         documents: list[str],
         **kwargs: Any,
     ) -> OnnxOutputContext:
+        if self.model is None or self.tokenizer is None:
+            raise ValueError("Model is not loaded. Please load the model before embedding.")
         encoded = self.tokenize(documents, **kwargs)
         input_ids = np.array([e.ids for e in encoded])
         attention_mask = np.array([e.attention_mask for e in encoded])
-        input_names = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+        input_names = {node.name for node in self.model.get_inputs()}
         onnx_input: dict[str, NumpyArray] = {
             "input_ids": np.array(input_ids, dtype=np.int64),
         }
