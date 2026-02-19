@@ -46,6 +46,7 @@ class OnnxModel[T]:
 
     def __init__(self) -> None:
         self.model: ort.InferenceSession | None = None
+        self.model_input_names: set[str] | None = None
         self.tokenizer: Tokenizer | None = None
 
     def _preprocess_onnx_input(
@@ -118,6 +119,7 @@ class OnnxModel[T]:
         self.model = ort.InferenceSession(
             str(model_path), providers=onnx_providers, sess_options=so
         )
+        self.model_input_names = {node.name for node in self.model.get_inputs()}
         logger.info(f"ONNX session created with providers: {self.model.get_providers()}")
         if "CUDAExecutionProvider" in requested_provider_names:
             assert self.model is not None
@@ -157,9 +159,9 @@ class OnnxModel[T]:
             None
         """
         for option in extra_options:
-            assert (
-                option in cls.EXPOSED_SESSION_OPTIONS
-            ), f"{option} is unknown or not exposed (exposed options: {cls.EXPOSED_SESSION_OPTIONS})"
+            assert option in cls.EXPOSED_SESSION_OPTIONS, (
+                f"{option} is unknown or not exposed (exposed options: {cls.EXPOSED_SESSION_OPTIONS})"
+            )
         if "enable_cpu_mem_arena" in extra_options:
             session_options.enable_cpu_mem_arena = extra_options["enable_cpu_mem_arena"]
 
