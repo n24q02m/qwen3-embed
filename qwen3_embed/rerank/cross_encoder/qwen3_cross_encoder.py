@@ -168,7 +168,8 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     def _onnx_embed_texts(self, texts: list[str], **kwargs: Any) -> OnnxOutputContext:
         """Tokenise and run model one text at a time (static batch=1 ONNX graph),
         then concatenate the yes/no scores."""
-        assert self.tokenizer is not None, "Tokenizer not loaded. Call load_onnx_model() first."
+        if self.tokenizer is None:
+            raise ValueError("Tokenizer not loaded. Call load_onnx_model() first.")
 
         all_scores: list[NumpyArray] = []
         for text in texts:
