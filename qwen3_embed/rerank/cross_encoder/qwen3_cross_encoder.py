@@ -169,12 +169,13 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         """Tokenise and run model one text at a time (static batch=1 ONNX graph),
         then concatenate the yes/no scores."""
         assert self.tokenizer is not None, "Tokenizer not loaded. Call load_onnx_model() first."
+        assert self.model is not None, "Model not loaded. Call load_onnx_model() first."
 
         all_scores: list[NumpyArray] = []
         for text in texts:
             tokenized = self.tokenizer.encode_batch([text])
 
-            input_names: set[str] = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+            input_names: set[str] = {node.name for node in self.model.get_inputs()}
             onnx_input: dict[str, NumpyArray] = {
                 "input_ids": np.array([tokenized[0].ids], dtype=np.int64),
             }
@@ -188,7 +189,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
                 )
 
             onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
-            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore[union-attr]
+            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
             model_output = outputs[0]
             if model_output.dtype == np.float16:
                 model_output = model_output.astype(np.float32)
