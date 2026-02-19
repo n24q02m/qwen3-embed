@@ -234,9 +234,9 @@ class TestEmbeddingEdgeCases:
         # All embeddings should be unique
         for i in range(len(embeddings)):
             for j in range(i + 1, len(embeddings)):
-                assert not np.array_equal(
-                    embeddings[i], embeddings[j]
-                ), f"Embeddings {i} and {j} are identical"
+                assert not np.array_equal(embeddings[i], embeddings[j]), (
+                    f"Embeddings {i} and {j} are identical"
+                )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -430,6 +430,6 @@ class TestRetrievalPipeline:
 
         # Python doc should rank first after reranking (simplicity -> beginners)
         best_reranked = top4_docs[np.argmax(rerank_scores)]
-        assert (
-            "Python" in best_reranked
-        ), f"Expected Python doc to rank first for beginners query, got: {best_reranked}"
+        assert "Python" in best_reranked, (
+            f"Expected Python doc to rank first for beginners query, got: {best_reranked}"
+        )
