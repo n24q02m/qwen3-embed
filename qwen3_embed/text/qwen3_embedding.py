@@ -84,8 +84,9 @@ class Qwen3TextEmbedding(OnnxTextEmbedding):
     def _list_supported_models(cls) -> list[DenseModelDescription]:
         return supported_qwen3_models
 
+    @staticmethod
     def _post_process_onnx_output(
-        self, output: OnnxOutputContext, **kwargs: Any
+        output: OnnxOutputContext, **kwargs: Any
     ) -> Iterable[NumpyArray]:
         if output.attention_mask is None:
             raise ValueError("attention_mask must be provided for last-token pooling")
