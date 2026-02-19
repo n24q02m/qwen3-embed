@@ -46,7 +46,8 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
             extra_session_options=extra_session_options,
         )
         self.tokenizer, _ = load_tokenizer(model_dir=model_dir)
-        assert self.tokenizer is not None
+        if self.tokenizer is None:
+            raise ValueError("Tokenizer failed to load.")
 
     def tokenize(self, pairs: list[tuple[str, str]], **_: Any) -> list[Encoding]:
         return self.tokenizer.encode_batch(pairs)  # type: ignore[union-attr]
@@ -172,7 +173,8 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
             self.load_onnx_model()  # loads the tokenizer as well
 
         token_num = 0
-        assert self.tokenizer is not None
+        if self.tokenizer is None:
+            raise ValueError("Tokenizer not loaded. Please call load_onnx_model() first.")
         for batch in iter_batch(pairs, batch_size):
             for tokens in self.tokenizer.encode_batch(batch):
                 token_num += sum(tokens.attention_mask)
