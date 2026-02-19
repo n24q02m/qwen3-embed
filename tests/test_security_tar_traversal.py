@@ -45,7 +45,10 @@ def test_decompress_to_cache_with_malicious_tar_raises_value_error(tmp_path):
 
     # Verify that the malicious file was NOT created outside target_dir
     evil_path = base_dir / "evil.txt"
-    assert not evil_path.exists(), "Vulnerability exploited: File written outside target directory!"
+    assert not evil_path.exists(), (
+        "Vulnerability exploited: File written outside target directory!"
+    )
+
 
 def test_decompress_to_cache_with_valid_tar_extracts_correctly(tmp_path):
     """
@@ -67,6 +70,7 @@ def test_decompress_to_cache_with_valid_tar_extracts_correctly(tmp_path):
 
     assert (target_dir / "good.txt").exists()
     assert (target_dir / "good.txt").read_text() == "good content"
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
