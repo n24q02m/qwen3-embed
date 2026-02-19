@@ -189,26 +189,20 @@ class ParallelWorkerPool:
             for _ in range(self.num_workers):
                 self.input_queue.put(QueueSignals.stop)
 
-            while read < pushed:
-                self.check_worker_health()
-                out_item = self.output_queue.get(timeout=processing_timeout)
-                if out_item == QueueSignals.error:
-                    self.join_or_terminate()
-                    raise RuntimeError("Thread unexpectedly terminated")
-                yield out_item
-                read += 1
         finally:
-            assert self.input_queue is not None, "Input queue is None"
-            assert self.output_queue is not None, "Output queue is None"
             self.join()
-            self.input_queue.close()
-            self.output_queue.close()
-            if self.emergency_shutdown:
-                self.input_queue.cancel_join_thread()
-                self.output_queue.cancel_join_thread()
-            else:
-                self.input_queue.join_thread()
-                self.output_queue.join_thread()
+            if self.input_queue is not None:
+                self.input_queue.close()
+                if self.emergency_shutdown:
+                    self.input_queue.cancel_join_thread()
+                else:
+                    self.input_queue.join_thread()
+            if self.output_queue is not None:
+                self.output_queue.close()
+                if self.emergency_shutdown:
+                    self.output_queue.cancel_join_thread()
+                else:
+                    self.output_queue.join_thread()
 
     def check_worker_health(self) -> None:
         """
