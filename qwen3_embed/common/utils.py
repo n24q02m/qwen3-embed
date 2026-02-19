@@ -1,7 +1,7 @@
+import contextlib
 import os
 import re
 import sys
-import tempfile
 import unicodedata
 from collections.abc import Iterable
 from itertools import islice
@@ -70,14 +70,35 @@ def iter_batch[T](iterable: Iterable[T], size: int) -> Iterable[list[T]]:
 
 def define_cache_dir(cache_dir: str | None = None) -> Path:
     """
-    Define the cache directory for qwen3_embed
+    Define the cache directory for qwen3_embed.
+    Defaults to user-specific cache directory (~/.cache/qwen3_embed on Linux)
+    instead of insecure /tmp.
     """
     if cache_dir is None:
-        default_cache_dir = os.path.join(tempfile.gettempdir(), "qwen3_embed_cache")
-        cache_path = Path(os.getenv("QWEN3_EMBED_CACHE_PATH", default_cache_dir))
+        if os.getenv("QWEN3_EMBED_CACHE_PATH"):
+            cache_path = Path(os.getenv("QWEN3_EMBED_CACHE_PATH"))
+        else:
+            # Default to user-specific cache directory
+            if sys.platform == "win32":
+                cache_path = (
+                    Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+                    / "qwen3_embed"
+                )
+            elif sys.platform == "darwin":
+                cache_path = Path.home() / "Library" / "Caches" / "qwen3_embed"
+            else:
+                # Linux/Unix
+                cache_base = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
+                cache_path = cache_base / "qwen3_embed"
     else:
         cache_path = Path(cache_dir)
+
     cache_path.mkdir(parents=True, exist_ok=True)
+
+    # Set secure permissions (0o700) on POSIX systems
+    if os.name == "posix":
+        with contextlib.suppress(OSError):
+            os.chmod(cache_path, 0o700)
 
     return cache_path
 
