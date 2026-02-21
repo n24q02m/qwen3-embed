@@ -52,15 +52,14 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         return self.tokenizer.encode_batch(pairs)  # type: ignore[union-attr]
 
     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
-        input_names: set[str] = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
         inputs: dict[str, NumpyArray] = {
             "input_ids": np.array([enc.ids for enc in tokenized_input], dtype=np.int64),
         }
-        if "token_type_ids" in input_names:
+        if "token_type_ids" in self.model_input_names:
             inputs["token_type_ids"] = np.array(
                 [enc.type_ids for enc in tokenized_input], dtype=np.int64
             )
-        if "attention_mask" in input_names:
+        if "attention_mask" in self.model_input_names:
             inputs["attention_mask"] = np.array(
                 [enc.attention_mask for enc in tokenized_input], dtype=np.int64
             )
