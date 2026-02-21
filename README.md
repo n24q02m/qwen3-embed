@@ -1,5 +1,9 @@
 # qwen3-embed
 
+[![CI](https://github.com/n24q02m/qwen3-embed/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/qwen3-embed/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/qwen3-embed)](https://pypi.org/project/qwen3-embed/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Lightweight Qwen3 text embedding & reranking via ONNX Runtime. Trimmed fork of [fastembed](https://github.com/qdrant/fastembed), keeping only Qwen3 models.
 
 ## Supported Models
