@@ -2,20 +2,23 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| Version | Supported |
+|---------|-----------|
+| latest  | Yes       |
+| < latest | No       |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+If you discover a security vulnerability, please report it responsibly:
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+1. **Do NOT** open a public issue
+2. Email **n24q02m@gmail.com** with details
+3. Include steps to reproduce if possible
+4. Allow reasonable time for a fix before disclosure
+
+## Security Measures
+
+- Dependencies are regularly updated via Dependabot
+- All code changes require review before merging
+- CodeQL analysis runs on every push
+- No secrets are hardcoded in the repository
