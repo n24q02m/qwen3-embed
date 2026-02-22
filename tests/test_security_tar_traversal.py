@@ -1,8 +1,10 @@
-import tarfile
 import io
+import tarfile
+
 import pytest
-from pathlib import Path
+
 from qwen3_embed.common.model_management import ModelManagement
+
 
 def create_malicious_tar(filename: str):
     with tarfile.open(filename, "w:gz") as tar:
@@ -11,6 +13,7 @@ def create_malicious_tar(filename: str):
         t = tarfile.TarInfo("../pwned.txt")
         t.size = len(b"hacked")
         tar.addfile(t, io.BytesIO(b"hacked"))
+
 
 def test_tar_slip_vulnerability(tmp_path):
     tar_path = tmp_path / "evil.tar.gz"
