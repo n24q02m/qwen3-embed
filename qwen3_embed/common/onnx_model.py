@@ -47,6 +47,7 @@ class OnnxModel[T]:
     def __init__(self) -> None:
         self.model: ort.InferenceSession | None = None
         self.tokenizer: Tokenizer | None = None
+        self.model_input_names: set[str] = set()
 
     def _preprocess_onnx_input(
         self, onnx_input: dict[str, NumpyArray], **kwargs: Any
@@ -118,6 +119,7 @@ class OnnxModel[T]:
         self.model = ort.InferenceSession(
             str(model_path), providers=onnx_providers, sess_options=so
         )
+        self.model_input_names = {node.name for node in self.model.get_inputs()}
         logger.info(f"ONNX session created with providers: {self.model.get_providers()}")
         if "CUDAExecutionProvider" in requested_provider_names:
             assert self.model is not None
