@@ -5,7 +5,6 @@ from qwen3_embed.common.model_management import ModelManagement
 
 
 class TestModelManagement(unittest.TestCase):
-
     @patch("qwen3_embed.common.model_management.requests.get")
     @patch("qwen3_embed.common.model_management.tqdm")
     @patch("builtins.open", new_callable=mock_open)
@@ -46,8 +45,8 @@ class TestModelManagement(unittest.TestCase):
         # Since requests is not mocked here, if it was called it would likely fail or hang,
         # but to be safe we can mock it to ensure it's NOT called.
         with patch("qwen3_embed.common.model_management.requests.get") as mock_get:
-             ModelManagement.download_file_from_gcs(url, output_path)
-             mock_get.assert_not_called()
+            ModelManagement.download_file_from_gcs(url, output_path)
+            mock_get.assert_not_called()
 
     @patch("qwen3_embed.common.model_management.requests.get")
     def test_download_file_from_gcs_403(self, mock_get):
@@ -67,8 +66,10 @@ class TestModelManagement(unittest.TestCase):
     @patch("qwen3_embed.common.model_management.requests.get")
     @patch("qwen3_embed.common.model_management.tqdm")
     @patch("builtins.open", new_callable=mock_open)
-    @patch("builtins.print") # Capture print output
-    def test_download_file_from_gcs_zero_content_length(self, mock_print, mock_file, mock_tqdm, mock_get):
+    @patch("builtins.print")  # Capture print output
+    def test_download_file_from_gcs_zero_content_length(
+        self, mock_print, mock_file, mock_tqdm, mock_get
+    ):
         mock_response = MagicMock()
         mock_response.status_code = 200
         # Missing content-length or 0
@@ -83,13 +84,15 @@ class TestModelManagement(unittest.TestCase):
             ModelManagement.download_file_from_gcs(url, output_path)
 
         # Verify warning printed
-        mock_print.assert_called_with(f"Warning: Content-length header is missing or zero in the response from {url}.")
+        mock_print.assert_called_with(
+            f"Warning: Content-length header is missing or zero in the response from {url}."
+        )
 
         # tqdm should be disabled because total_size is 0
         # The implementation calculates show_progress = bool(total_size_in_bytes and show_progress)
         # So disable=True (since disable=not show_progress)
         args, kwargs = mock_tqdm.call_args
-        self.assertTrue(kwargs.get('disable'))
+        self.assertTrue(kwargs.get("disable"))
 
     @patch("qwen3_embed.common.model_management.requests.get")
     @patch("qwen3_embed.common.model_management.tqdm")
@@ -109,4 +112,4 @@ class TestModelManagement(unittest.TestCase):
 
         # tqdm should be disabled
         args, kwargs = mock_tqdm.call_args
-        self.assertTrue(kwargs.get('disable'))
+        self.assertTrue(kwargs.get("disable"))
