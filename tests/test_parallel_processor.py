@@ -8,10 +8,12 @@ from qwen3_embed.parallel_processor import ParallelWorkerPool, Worker
 
 # --- Helper Workers ---
 
+
 class SquareWorker(Worker):
     """
     A simple worker that squares integers.
     """
+
     @classmethod
     def start(cls, **kwargs: Any) -> "SquareWorker":
         return cls()
@@ -20,10 +22,12 @@ class SquareWorker(Worker):
         for idx, item in items:
             yield idx, item * item
 
+
 class FailingWorker(Worker):
     """
     A worker that raises an exception on a specific input value.
     """
+
     def __init__(self, failure_val: int):
         self.failure_val = failure_val
 
@@ -38,10 +42,12 @@ class FailingWorker(Worker):
                 raise ValueError(f"Intentional failure on {item}")
             yield idx, item
 
+
 class SlowWorker(Worker):
     """
     A worker that sleeps a bit to simulate work.
     """
+
     @classmethod
     def start(cls, **kwargs: Any) -> "SlowWorker":
         return cls()
@@ -51,7 +57,9 @@ class SlowWorker(Worker):
             time.sleep(0.001)
             yield idx, item
 
+
 # --- Tests ---
+
 
 def test_ordered_map_basic():
     """
@@ -65,6 +73,7 @@ def test_ordered_map_basic():
     results = list(pool.ordered_map(input_data))
     assert results == expected
 
+
 def test_ordered_map_empty():
     """
     Test ordered map with empty input.
@@ -72,6 +81,7 @@ def test_ordered_map_empty():
     pool = ParallelWorkerPool(num_workers=2, worker=SquareWorker)
     results = list(pool.ordered_map([]))
     assert results == []
+
 
 def test_ordered_map_generator():
     """
@@ -83,6 +93,7 @@ def test_ordered_map_generator():
 
     results = list(pool.ordered_map(input_gen))
     assert results == expected
+
 
 def test_worker_exception():
     """
@@ -105,6 +116,7 @@ def test_worker_exception():
         # We need to pass the failure_val. The pool passes its **kwargs to worker.start()
         list(pool.ordered_map(input_data, failure_val=5))
 
+
 def test_many_items():
     """
     Test processing more items than the internal buffer size to ensure
@@ -123,6 +135,7 @@ def test_many_items():
 
     results = list(pool.ordered_map(input_data))
     assert results == expected
+
 
 def test_worker_initialization():
     """
