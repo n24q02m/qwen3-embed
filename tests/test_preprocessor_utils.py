@@ -11,11 +11,9 @@ def create_test_files(tmp_path):
     """
     Helper fixture to create necessary tokenizer files in a temporary directory.
     """
+
     def _create_files(
-        config=None,
-        tokenizer_config=None,
-        special_tokens_map=None,
-        files_to_skip=None
+        config=None, tokenizer_config=None, special_tokens_map=None, files_to_skip=None
     ):
         if files_to_skip is None:
             files_to_skip = set()
@@ -55,6 +53,7 @@ def create_test_files(tmp_path):
 
     return _create_files
 
+
 def test_load_tokenizer_success(create_test_files):
     model_dir = create_test_files()
     tokenizer, special_tokens = load_tokenizer(model_dir)
@@ -74,28 +73,35 @@ def test_load_tokenizer_success(create_test_files):
     assert tokenizer.padding["pad_id"] == 0
     assert tokenizer.padding["pad_token"] == "<pad>"
 
+
 def test_load_tokenizer_missing_config(create_test_files):
     model_dir = create_test_files(files_to_skip={"config.json"})
     with pytest.raises(ValueError, match="Could not find config.json"):
         load_tokenizer(model_dir)
+
 
 def test_load_tokenizer_missing_tokenizer_json(create_test_files):
     model_dir = create_test_files(files_to_skip={"tokenizer.json"})
     with pytest.raises(ValueError, match="Could not find tokenizer.json"):
         load_tokenizer(model_dir)
 
+
 def test_load_tokenizer_missing_tokenizer_config(create_test_files):
     model_dir = create_test_files(files_to_skip={"tokenizer_config.json"})
     with pytest.raises(ValueError, match="Could not find tokenizer_config.json"):
         load_tokenizer(model_dir)
+
 
 def test_load_tokenizer_invalid_max_length(create_test_files):
     # Pass a tokenizer_config without max_length or model_max_length
     invalid_config = {"pad_token": "<pad>"}
     model_dir = create_test_files(tokenizer_config=invalid_config)
 
-    with pytest.raises(AssertionError, match="Models without model_max_length or max_length are not supported."):
+    with pytest.raises(
+        AssertionError, match="Models without model_max_length or max_length are not supported."
+    ):
         load_tokenizer(model_dir)
+
 
 def test_load_tokenizer_with_special_tokens(create_test_files):
     special_map = {"cls_token": "[CLS]", "sep_token": {"content": "[SEP]", "lstrip": False}}
@@ -113,10 +119,14 @@ def test_load_tokenizer_with_special_tokens(create_test_files):
     assert "[SEP]" in special_tokens
     assert special_tokens["[CLS]"] == tokenizer.token_to_id("[CLS]")
 
+
 def test_load_tokenizer_padding_logic(create_test_files):
     # Test with custom pad token and ID
     config = {"pad_token_id": 99}
-    tokenizer_config = {"model_max_length": 128, "pad_token": "<unk>"} # Using <unk> as pad for test
+    tokenizer_config = {
+        "model_max_length": 128,
+        "pad_token": "<unk>",
+    }  # Using <unk> as pad for test
 
     model_dir = create_test_files(config=config, tokenizer_config=tokenizer_config)
     tokenizer, _ = load_tokenizer(model_dir)
@@ -124,6 +134,7 @@ def test_load_tokenizer_padding_logic(create_test_files):
     assert tokenizer.padding["pad_id"] == 99
     assert tokenizer.padding["pad_token"] == "<unk>"
     assert tokenizer.truncation["max_length"] == 128
+
 
 def test_load_tokenizer_max_length_precedence(create_test_files):
     # Test precedence: max_length vs model_max_length (min is taken)
