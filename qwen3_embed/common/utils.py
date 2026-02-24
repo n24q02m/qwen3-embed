@@ -1,7 +1,7 @@
+import contextlib
 import os
 import re
 import sys
-import tempfile
 import unicodedata
 from collections.abc import Iterable
 from itertools import islice
@@ -73,11 +73,22 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
     Define the cache directory for qwen3_embed
     """
     if cache_dir is None:
-        default_cache_dir = os.path.join(tempfile.gettempdir(), "qwen3_embed_cache")
-        cache_path = Path(os.getenv("QWEN3_EMBED_CACHE_PATH", default_cache_dir))
+        if os.environ.get("QWEN3_EMBED_CACHE_PATH"):
+            cache_path = Path(os.environ["QWEN3_EMBED_CACHE_PATH"])
+        else:
+            xdg_cache_home = os.environ.get("XDG_CACHE_HOME")
+            if xdg_cache_home:
+                base_path = Path(xdg_cache_home)
+            else:
+                base_path = Path.home() / ".cache"
+
+            cache_path = base_path / "qwen3_embed"
     else:
         cache_path = Path(cache_dir)
     cache_path.mkdir(parents=True, exist_ok=True)
+
+    with contextlib.suppress(OSError):
+        cache_path.chmod(0o700)
 
     return cache_path
 
