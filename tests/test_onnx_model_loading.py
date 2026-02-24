@@ -20,6 +20,7 @@ class ConcreteOnnxModel(OnnxModel):
     def onnx_embed(self, *args, **kwargs):
         return OnnxOutputContext(model_output=MagicMock())
 
+
 class TestOnnxModelLoading(unittest.TestCase):
     def setUp(self):
         self.model = ConcreteOnnxModel()
@@ -46,15 +47,13 @@ class TestOnnxModelLoading(unittest.TestCase):
         self.mock_get_providers.return_value = ["CPUExecutionProvider"]
 
         self.model._load_onnx_model(
-            model_dir=self.model_dir,
-            model_file=self.model_file,
-            threads=None
+            model_dir=self.model_dir, model_file=self.model_file, threads=None
         )
 
         self.mock_session.assert_called_with(
             str(self.model_dir / self.model_file),
             providers=["CPUExecutionProvider"],
-            sess_options=self.mock_session_options.return_value
+            sess_options=self.mock_session_options.return_value,
         )
 
     def test_load_explicit_providers(self):
@@ -65,13 +64,13 @@ class TestOnnxModelLoading(unittest.TestCase):
             model_dir=self.model_dir,
             model_file=self.model_file,
             threads=None,
-            providers=["MyProvider"]
+            providers=["MyProvider"],
         )
 
         self.mock_session.assert_called_with(
             str(self.model_dir / self.model_file),
             providers=["MyProvider"],
-            sess_options=self.mock_session_options.return_value
+            sess_options=self.mock_session_options.return_value,
         )
 
     def test_load_threads(self):
@@ -79,9 +78,7 @@ class TestOnnxModelLoading(unittest.TestCase):
         self.mock_get_providers.return_value = ["CPUExecutionProvider"]
 
         self.model._load_onnx_model(
-            model_dir=self.model_dir,
-            model_file=self.model_file,
-            threads=4
+            model_dir=self.model_dir, model_file=self.model_file, threads=4
         )
 
         so = self.mock_session_options.return_value
@@ -95,16 +92,13 @@ class TestOnnxModelLoading(unittest.TestCase):
         self.mock_session.return_value.get_providers.return_value = ["CUDAExecutionProvider"]
 
         self.model._load_onnx_model(
-            model_dir=self.model_dir,
-            model_file=self.model_file,
-            threads=None,
-            cuda=True
+            model_dir=self.model_dir, model_file=self.model_file, threads=None, cuda=True
         )
 
         self.mock_session.assert_called_with(
             str(self.model_dir / self.model_file),
             providers=["CUDAExecutionProvider"],
-            sess_options=self.mock_session_options.return_value
+            sess_options=self.mock_session_options.return_value,
         )
 
     def test_load_cuda_auto_available(self):
@@ -114,16 +108,13 @@ class TestOnnxModelLoading(unittest.TestCase):
         self.mock_session.return_value.get_providers.return_value = ["CUDAExecutionProvider"]
 
         self.model._load_onnx_model(
-            model_dir=self.model_dir,
-            model_file=self.model_file,
-            threads=None,
-            cuda=Device.AUTO
+            model_dir=self.model_dir, model_file=self.model_file, threads=None, cuda=Device.AUTO
         )
 
         self.mock_session.assert_called_with(
             str(self.model_dir / self.model_file),
             providers=["CUDAExecutionProvider"],
-            sess_options=self.mock_session_options.return_value
+            sess_options=self.mock_session_options.return_value,
         )
 
     def test_load_cuda_auto_unavailable(self):
@@ -131,16 +122,13 @@ class TestOnnxModelLoading(unittest.TestCase):
         self.mock_get_providers.return_value = ["CPUExecutionProvider"]
 
         self.model._load_onnx_model(
-            model_dir=self.model_dir,
-            model_file=self.model_file,
-            threads=None,
-            cuda=Device.AUTO
+            model_dir=self.model_dir, model_file=self.model_file, threads=None, cuda=Device.AUTO
         )
 
         self.mock_session.assert_called_with(
             str(self.model_dir / self.model_file),
             providers=["CPUExecutionProvider"],
-            sess_options=self.mock_session_options.return_value
+            sess_options=self.mock_session_options.return_value,
         )
 
     def test_load_dml_auto(self):
@@ -148,16 +136,13 @@ class TestOnnxModelLoading(unittest.TestCase):
         self.mock_get_providers.return_value = ["DmlExecutionProvider", "CPUExecutionProvider"]
 
         self.model._load_onnx_model(
-            model_dir=self.model_dir,
-            model_file=self.model_file,
-            threads=None,
-            cuda=Device.AUTO
+            model_dir=self.model_dir, model_file=self.model_file, threads=None, cuda=Device.AUTO
         )
 
         self.mock_session.assert_called_with(
             str(self.model_dir / self.model_file),
             providers=["DmlExecutionProvider"],
-            sess_options=self.mock_session_options.return_value
+            sess_options=self.mock_session_options.return_value,
         )
 
     def test_load_providers_validation_error(self):
@@ -169,7 +154,7 @@ class TestOnnxModelLoading(unittest.TestCase):
                 model_dir=self.model_dir,
                 model_file=self.model_file,
                 threads=None,
-                providers=["InvalidProvider"]
+                providers=["InvalidProvider"],
             )
 
     def test_load_cuda_and_providers_warning(self):
@@ -184,14 +169,14 @@ class TestOnnxModelLoading(unittest.TestCase):
                 model_file=self.model_file,
                 threads=None,
                 cuda=True,
-                providers=["CUDAExecutionProvider"]
+                providers=["CUDAExecutionProvider"],
             )
 
         # It should still proceed with providers if cuda check passes/fails, but logic prioritizes providers if passed
         self.mock_session.assert_called_with(
             str(self.model_dir / self.model_file),
             providers=["CUDAExecutionProvider"],
-            sess_options=self.mock_session_options.return_value
+            sess_options=self.mock_session_options.return_value,
         )
 
     def test_load_cuda_fallback_warning(self):
@@ -204,10 +189,7 @@ class TestOnnxModelLoading(unittest.TestCase):
 
         with self.assertWarns(RuntimeWarning):
             self.model._load_onnx_model(
-                model_dir=self.model_dir,
-                model_file=self.model_file,
-                threads=None,
-                cuda=True
+                model_dir=self.model_dir, model_file=self.model_file, threads=None, cuda=True
             )
 
     def test_load_device_id(self):
@@ -221,13 +203,13 @@ class TestOnnxModelLoading(unittest.TestCase):
             model_file=self.model_file,
             threads=None,
             cuda=True,
-            device_id=1
+            device_id=1,
         )
 
         self.mock_session.assert_called_with(
             str(self.model_dir / self.model_file),
             providers=[("CUDAExecutionProvider", {"device_id": 1})],
-            sess_options=self.mock_session_options.return_value
+            sess_options=self.mock_session_options.return_value,
         )
 
     def test_load_extra_session_options(self):
@@ -240,11 +222,12 @@ class TestOnnxModelLoading(unittest.TestCase):
             model_dir=self.model_dir,
             model_file=self.model_file,
             threads=None,
-            extra_session_options=extra_options
+            extra_session_options=extra_options,
         )
 
         so = self.mock_session_options.return_value
         self.assertFalse(so.enable_cpu_mem_arena)
+
 
 if __name__ == "__main__":
     unittest.main()
