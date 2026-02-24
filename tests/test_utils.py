@@ -1,8 +1,12 @@
 """Unit tests for last_token_pool and other utility functions."""
 
-import numpy as np
+import tempfile
+from pathlib import Path
 
-from qwen3_embed.common.utils import last_token_pool, mean_pooling, normalize
+import numpy as np
+import pytest
+
+from qwen3_embed.common.utils import define_cache_dir, last_token_pool, mean_pooling, normalize
 
 
 class TestLastTokenPool:
@@ -108,3 +112,56 @@ class TestMeanPooling:
 
         result = mean_pooling(model_output, mask)
         np.testing.assert_allclose(result[0], [3.0, 6.0])
+
+
+class TestDefineCacheDir:
+    """Tests for define_cache_dir."""
+
+    def test_default_behavior(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Should use default temp dir if no env var or arg is provided."""
+        monkeypatch.delenv("QWEN3_EMBED_CACHE_PATH", raising=False)
+
+        path = define_cache_dir()
+
+        expected_default = Path(tempfile.gettempdir()) / "qwen3_embed_cache"
+        assert path == expected_default
+        assert path.exists()
+        assert path.is_dir()
+
+    def test_env_var_override(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """Environment variable QWEN3_EMBED_CACHE_PATH should override default."""
+        custom_cache = tmp_path / "env_cache"
+        monkeypatch.setenv("QWEN3_EMBED_CACHE_PATH", str(custom_cache))
+
+        path = define_cache_dir()
+
+        assert path == custom_cache
+        assert path.exists()
+        assert path.is_dir()
+
+    def test_explicit_argument(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """Explicit argument should define cache directory."""
+        # Ensure env var doesn't interfere
+        monkeypatch.delenv("QWEN3_EMBED_CACHE_PATH", raising=False)
+
+        explicit_cache = tmp_path / "explicit_cache"
+        path = define_cache_dir(str(explicit_cache))
+
+        assert path == explicit_cache
+        assert path.exists()
+        assert path.is_dir()
+
+    def test_arg_overrides_env_var(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """Explicit argument should take precedence over environment variable."""
+        env_cache = tmp_path / "env_cache"
+        explicit_cache = tmp_path / "arg_cache"
+
+        monkeypatch.setenv("QWEN3_EMBED_CACHE_PATH", str(env_cache))
+
+        path = define_cache_dir(str(explicit_cache))
+
+        assert path == explicit_cache
+        assert path.exists()
+        # Verify that the env path was NOT created by this call
+        # (It shouldn't be created unless something else created it)
+        assert not env_cache.exists()
