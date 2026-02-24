@@ -1,7 +1,10 @@
 import json
-import pytest
 from pathlib import Path
+
+import pytest
+
 from qwen3_embed.common.preprocessor_utils import load_special_tokens
+
 
 class TestLoadSpecialTokens:
     """Tests for load_special_tokens utility."""
