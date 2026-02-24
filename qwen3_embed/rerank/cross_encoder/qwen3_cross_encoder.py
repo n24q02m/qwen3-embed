@@ -171,10 +171,10 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         assert self.tokenizer is not None, "Tokenizer not loaded. Call load_onnx_model() first."
 
         all_scores: list[NumpyArray] = []
+        input_names = set(self.model_input_names)
         for text in texts:
             tokenized = self.tokenizer.encode_batch([text])
 
-            input_names: set[str] = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
             onnx_input: dict[str, NumpyArray] = {
                 "input_ids": np.array([tokenized[0].ids], dtype=np.int64),
             }

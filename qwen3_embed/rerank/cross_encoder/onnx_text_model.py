@@ -52,7 +52,7 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         return self.tokenizer.encode_batch(pairs)  # type: ignore[union-attr]
 
     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
-        input_names: set[str] = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+        input_names: set[str] = set(self.model_input_names)
         inputs: dict[str, NumpyArray] = {
             "input_ids": np.array([enc.ids for enc in tokenized_input], dtype=np.int64),
         }
