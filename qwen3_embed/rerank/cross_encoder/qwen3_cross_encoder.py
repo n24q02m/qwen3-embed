@@ -49,6 +49,9 @@ RERANK_TEMPLATE = (
     "<|im_start|>assistant\n<think>\n\n</think>\n\n"
 )
 
+# Tokens that must be stripped from user input to prevent prompt injection
+FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
+
 # ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
@@ -109,12 +112,24 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     # Chat template formatting
     # ------------------------------------------------------------------
     @staticmethod
+    def _sanitize_input(text: str) -> str:
+        """Strip forbidden special tokens from user input."""
+        for token in FORBIDDEN_TOKENS:
+            text = text.replace(token, "")
+        return text
+
+    @staticmethod
     def _format_rerank_input(
         query: str,
         document: str,
         instruction: str = DEFAULT_INSTRUCTION,
     ) -> str:
         """Build the chat-template string for a single query-document pair."""
+        # Sanitize inputs to prevent injection
+        query = Qwen3CrossEncoder._sanitize_input(query)
+        document = Qwen3CrossEncoder._sanitize_input(document)
+        instruction = Qwen3CrossEncoder._sanitize_input(instruction)
+
         return RERANK_TEMPLATE.format(
             system=SYSTEM_PROMPT,
             instruction=instruction,
