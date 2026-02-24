@@ -1,11 +1,10 @@
 import unittest
-from unittest.mock import MagicMock, patch
 from pathlib import Path
-import warnings
-import onnxruntime as ort
+from unittest.mock import MagicMock, patch
 
 from qwen3_embed.common.onnx_model import OnnxModel, OnnxOutputContext
 from qwen3_embed.common.types import Device
+
 
 # Concrete implementation for testing abstract OnnxModel
 class ConcreteOnnxModel(OnnxModel):
