@@ -1,9 +1,6 @@
 from collections.abc import Iterable
 from typing import Any
 
-import numpy as np
-from numpy.typing import NDArray
-
 from qwen3_embed.common.model_description import DenseModelDescription
 from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
@@ -19,12 +16,6 @@ class PooledEmbedding(OnnxTextEmbedding):
     @classmethod
     def _get_worker_class(cls) -> type[OnnxTextEmbeddingWorker]:
         return PooledEmbeddingWorker
-
-    @classmethod
-    def mean_pooling(
-        cls, model_output: NumpyArray, attention_mask: NDArray[np.int64]
-    ) -> NumpyArray:
-        return mean_pooling(model_output, attention_mask)
 
     @classmethod
     def _list_supported_models(cls) -> list[DenseModelDescription]:
@@ -43,7 +34,7 @@ class PooledEmbedding(OnnxTextEmbedding):
 
         embeddings = output.model_output
         attn_mask = output.attention_mask
-        return self.mean_pooling(embeddings, attn_mask)
+        return mean_pooling(embeddings, attn_mask)
 
 
 class PooledEmbeddingWorker(OnnxTextEmbeddingWorker):
