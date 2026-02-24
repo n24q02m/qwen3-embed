@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from qwen3_embed.common.utils import last_token_pool, mean_pooling, normalize
+from qwen3_embed.common.utils import iter_batch, last_token_pool, mean_pooling, normalize
 
 
 class TestLastTokenPool:
@@ -108,3 +108,38 @@ class TestMeanPooling:
 
         result = mean_pooling(model_output, mask)
         np.testing.assert_allclose(result[0], [3.0, 6.0])
+
+
+class TestIterBatch:
+    """Tests for iter_batch utility."""
+
+    def test_empty_iterable(self) -> None:
+        """Empty iterable should yield nothing."""
+        result = list(iter_batch([], 3))
+        assert result == []
+
+    def test_smaller_than_batch(self) -> None:
+        """Iterable smaller than batch size should yield one batch."""
+        result = list(iter_batch([1, 2], 3))
+        assert result == [[1, 2]]
+
+    def test_exact_batching(self) -> None:
+        """Iterable length exactly divisible by batch size."""
+        result = list(iter_batch([1, 2, 3, 4, 5, 6], 3))
+        assert result == [[1, 2, 3], [4, 5, 6]]
+
+    def test_partial_batching(self) -> None:
+        """Iterable length not exactly divisible by batch size."""
+        result = list(iter_batch([1, 2, 3, 4, 5], 3))
+        assert result == [[1, 2, 3], [4, 5]]
+
+    def test_generator_input(self) -> None:
+        """Should handle generator input correctly."""
+        gen = (x for x in range(5))
+        result = list(iter_batch(gen, 2))
+        assert result == [[0, 1], [2, 3], [4]]
+
+    def test_batch_size_one(self) -> None:
+        """Batch size of 1 should yield individual elements wrapped in lists."""
+        result = list(iter_batch([1, 2, 3], 1))
+        assert result == [[1], [2], [3]]
