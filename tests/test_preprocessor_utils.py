@@ -1,8 +1,10 @@
 import json
+
 import pytest
-from pathlib import Path
 from tokenizers import Tokenizer, models
+
 from qwen3_embed.common.preprocessor_utils import load_tokenizer
+
 
 @pytest.fixture
 def create_test_files(tmp_path):
