@@ -174,7 +174,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         for text in texts:
             tokenized = self.tokenizer.encode_batch([text])
 
-            input_names: set[str] = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+            input_names = self.model_input_names
             onnx_input: dict[str, NumpyArray] = {
                 "input_ids": np.array([tokenized[0].ids], dtype=np.int64),
             }
