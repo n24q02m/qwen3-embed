@@ -77,11 +77,7 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
             cache_path = Path(os.environ["QWEN3_EMBED_CACHE_PATH"])
         else:
             xdg_cache_home = os.environ.get("XDG_CACHE_HOME")
-            if xdg_cache_home:
-                base_path = Path(xdg_cache_home)
-            else:
-                base_path = Path.home() / ".cache"
-
+            base_path = Path(xdg_cache_home) if xdg_cache_home else Path.home() / ".cache"
             cache_path = base_path / "qwen3_embed"
     else:
         cache_path = Path(cache_dir)
