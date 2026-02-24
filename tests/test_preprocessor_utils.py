@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from qwen3_embed.common.preprocessor_utils import load_special_tokens
 
 
