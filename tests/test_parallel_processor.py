@@ -1,6 +1,9 @@
-import pytest
 import time
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
+
+import pytest
+
 from qwen3_embed.parallel_processor import ParallelWorkerPool, Worker
 
 # --- Helper Workers ---
