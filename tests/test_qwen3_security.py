@@ -1,11 +1,8 @@
 """Security tests for Qwen3 Cross Encoder."""
 
 from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import (
-    DEFAULT_INSTRUCTION,
-    Qwen3CrossEncoder,
-    SYSTEM_PROMPT,
-    RERANK_TEMPLATE,
     FORBIDDEN_TOKENS,
+    Qwen3CrossEncoder,
 )
 
 
