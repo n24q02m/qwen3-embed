@@ -149,7 +149,7 @@ class TextCrossEncoder(TextCrossEncoderBase):
     ) -> None:
         registered_models = cls._list_supported_models()
         for registered_model in registered_models:
-            if model == registered_model.model:
+            if model.lower() == registered_model.model.lower():
                 raise ValueError(
                     f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
                     f"please use another model name"
