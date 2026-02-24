@@ -52,18 +52,29 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         return self.tokenizer.encode_batch(pairs)  # type: ignore[union-attr]
 
     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
-        input_names: set[str] = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+        if not self.model_input_names:
+            self.model_input_names = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+        input_names = self.model_input_names
+
+        input_ids_list = []
+        attention_mask_list = []
+        token_type_ids_list = []
+
+        has_token_type_ids = "token_type_ids" in input_names
+
+        for enc in tokenized_input:
+            input_ids_list.append(enc.ids)
+            attention_mask_list.append(enc.attention_mask)
+            if has_token_type_ids:
+                token_type_ids_list.append(enc.type_ids)
+
         inputs: dict[str, NumpyArray] = {
-            "input_ids": np.array([enc.ids for enc in tokenized_input], dtype=np.int64),
+            "input_ids": np.array(input_ids_list, dtype=np.int64),
         }
-        if "token_type_ids" in input_names:
-            inputs["token_type_ids"] = np.array(
-                [enc.type_ids for enc in tokenized_input], dtype=np.int64
-            )
         if "attention_mask" in input_names:
-            inputs["attention_mask"] = np.array(
-                [enc.attention_mask for enc in tokenized_input], dtype=np.int64
-            )
+            inputs["attention_mask"] = np.array(attention_mask_list, dtype=np.int64)
+        if has_token_type_ids:
+            inputs["token_type_ids"] = np.array(token_type_ids_list, dtype=np.int64)
         return inputs
 
     def onnx_embed(self, query: str, documents: list[str], **kwargs: Any) -> OnnxOutputContext:
