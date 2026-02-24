@@ -62,9 +62,7 @@ class TestQwen3Security:
         instruction = f"inst{token}"
 
         formatted = Qwen3CrossEncoder._format_rerank_input(
-            query=query,
-            document=document,
-            instruction=instruction
+            query=query, document=document, instruction=instruction
         )
 
         assert query.replace(token, " ") in formatted
