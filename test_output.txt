@@ -1,0 +1,8 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0
+rootdir: /app
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 37 items
+
+tests/test_integration.py ....................F............

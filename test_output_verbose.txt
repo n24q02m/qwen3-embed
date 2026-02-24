@@ -1,0 +1,42 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- /app/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /app
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collecting ... collected 37 items
+
+tests/test_integration.py::TestEmbeddingBasic::test_single_document PASSED [  2%]
+tests/test_integration.py::TestEmbeddingBasic::test_multiple_documents PASSED [  5%]
+tests/test_integration.py::TestEmbeddingBasic::test_embeddings_are_normalized PASSED [  8%]
+tests/test_integration.py::TestEmbeddingBasic::test_empty_string PASSED  [ 10%]
+tests/test_integration.py::TestEmbeddingBasic::test_deterministic_output PASSED [ 13%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_dimensions[32] PASSED [ 16%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_dimensions[64] PASSED [ 18%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_dimensions[128] PASSED [ 21%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_dimensions[256] PASSED [ 24%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_dimensions[512] PASSED [ 27%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_dimensions[1024] PASSED [ 29%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_normalized[32] PASSED [ 32%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_normalized[64] PASSED [ 35%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_normalized[128] PASSED [ 37%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_normalized[256] PASSED [ 40%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_normalized[512] PASSED [ 43%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_normalized[1024] PASSED [ 45%]
+tests/test_integration.py::TestEmbeddingMRL::test_mrl_prefix_consistency PASSED [ 48%]
+tests/test_integration.py::TestEmbeddingSemanticQuality::test_similar_texts_closer PASSED [ 51%]
+tests/test_integration.py::TestEmbeddingSemanticQuality::test_query_retrieval_ranking PASSED [ 54%]
+tests/test_integration.py::TestEmbeddingSemanticQuality::test_multilingual_similarity FAILED [ 56%]
+tests/test_integration.py::TestEmbeddingSemanticQuality::test_instruction_improves_retrieval PASSED [ 59%]
+tests/test_integration.py::TestEmbeddingEdgeCases::test_very_long_text PASSED [ 62%]
+tests/test_integration.py::TestEmbeddingEdgeCases::test_special_characters PASSED [ 64%]
+tests/test_integration.py::TestEmbeddingEdgeCases::test_batch_of_ten PASSED [ 67%]
+tests/test_integration.py::TestRerankerBasic::test_single_document PASSED [ 70%]
+tests/test_integration.py::TestRerankerBasic::test_multiple_documents PASSED [ 72%]
+tests/test_integration.py::TestRerankerBasic::test_scores_in_valid_range PASSED [ 75%]
+tests/test_integration.py::TestRerankerBasic::test_deterministic_scores PASSED [ 78%]
+tests/test_integration.py::TestRerankerQuality::test_relevant_vs_irrelevant PASSED [ 81%]
+tests/test_integration.py::TestRerankerQuality::test_ranking_order PASSED [ 83%]
+tests/test_integration.py::TestRerankerQuality::test_rerank_pairs PASSED [ 86%]
+tests/test_integration.py::TestRerankerQuality::test_custom_instruction PASSED [ 89%]
+tests/test_integration.py::TestRerankerEdgeCases::test_long_document
