@@ -82,7 +82,7 @@ class OnnxTextModel(OnnxModel[T]):
         encoded = self.tokenize(documents, **kwargs)
         input_ids = np.array([e.ids for e in encoded])
         attention_mask = np.array([e.attention_mask for e in encoded])
-        input_names = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+        input_names = self.model_input_names
         onnx_input: dict[str, NumpyArray] = {
             "input_ids": np.array(input_ids, dtype=np.int64),
         }
