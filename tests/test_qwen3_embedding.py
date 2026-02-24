@@ -94,3 +94,50 @@ class TestQwen3PostProcessing:
         output = OnnxOutputContext(model_output=np.zeros((1, 3, 4)), attention_mask=None)
         with pytest.raises(ValueError, match="attention_mask"):
             list(Qwen3TextEmbedding._post_process_onnx_output(None, output))  # type: ignore[arg-type]
+
+
+class TestQwen3QueryEmbedGenerator:
+    """Verify query_embed handles generators correctly."""
+
+    def test_query_embed_generator_support(self):
+        """query_embed should accept a generator and consume it lazily."""
+        from collections.abc import Iterable
+        from unittest.mock import patch
+
+        # Mock __init__ to avoid loading model
+        with patch.object(Qwen3TextEmbedding, "__init__", return_value=None):
+            model = Qwen3TextEmbedding()
+
+            # Mock embed to simply yield the input documents so we can inspect them
+            captured_docs = []
+
+            def mock_embed(documents, **kwargs):
+                # Verify documents is a generator/iterator, not a list
+                # Note: It might be an iterator, not specifically a generator type, but definitely not a list
+                # The key optimization is that it is NOT a list
+                assert isinstance(documents, Iterable)
+                assert not isinstance(documents, list)
+
+                for doc in documents:
+                    captured_docs.append(doc)
+                    yield np.zeros(10)  # Dummy embedding
+
+            with patch.object(model, "embed", side_effect=mock_embed):
+                queries = (f"q{i}" for i in range(3))
+
+                # Call query_embed
+                result_generator = model.query_embed(queries, task="test_task")
+
+                # Verify it returns a generator (or iterator)
+                assert isinstance(result_generator, Iterable)
+
+                # Nothing should be captured yet (lazy evaluation)
+                assert len(captured_docs) == 0
+
+                # Consume the result
+                list(result_generator)
+
+                # Now documents should have been processed
+                assert len(captured_docs) == 3
+                expected_query = QUERY_INSTRUCTION_TEMPLATE.format(task="test_task", text="q0")
+                assert captured_docs[0] == expected_query
