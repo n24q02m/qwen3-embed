@@ -157,7 +157,7 @@ class Qwen3TextEmbedding(OnnxTextEmbedding):
         if isinstance(query, str):
             queries = [QUERY_INSTRUCTION_TEMPLATE.format(task=task, text=query)]
         else:
-            queries = [QUERY_INSTRUCTION_TEMPLATE.format(task=task, text=q) for q in query]
+            queries = (QUERY_INSTRUCTION_TEMPLATE.format(task=task, text=q) for q in query)
         yield from self.embed(queries, **kwargs)
 
     def passage_embed(self, texts: Iterable[str], **kwargs: Any) -> Iterable[NumpyArray]:
