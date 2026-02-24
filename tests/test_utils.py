@@ -70,6 +70,33 @@ class TestLastTokenPool:
         result = last_token_pool(hidden_states, attention_mask)
         assert result.shape == (batch_size, hidden_dim)
 
+    def test_mixed_padding(self) -> None:
+        """Mixed padding: some samples left-padded, some right-padded."""
+        hidden_states = np.array(
+            [
+                [[0.0], [1.0], [2.0]],  # Left padded (valid: 1, 2)
+                [[3.0], [4.0], [5.0]],  # Right padded (valid: 3, 4)
+            ]
+        )
+        attention_mask = np.array([[0, 1, 1], [1, 1, 0]], dtype=np.int64)
+
+        result = last_token_pool(hidden_states, attention_mask)
+
+        # Sample 0: last non-pad = index 2 → [2.0]
+        np.testing.assert_array_equal(result[0], [2.0])
+        # Sample 1: last non-pad = index 1 → [4.0]
+        np.testing.assert_array_equal(result[1], [4.0])
+
+    def test_all_padding(self) -> None:
+        """Edge case: all padding (mask is all zeros). Returns last token as fallback."""
+        hidden_states = np.array([[[1.0], [2.0], [3.0]]])
+        attention_mask = np.array([[0, 0, 0]], dtype=np.int64)
+
+        # Current implementation: argmax of [0,0,0] is 0.
+        # Index = len - 1 - 0 = len - 1. Returns last token.
+        result = last_token_pool(hidden_states, attention_mask)
+        np.testing.assert_array_equal(result[0], [3.0])
+
 
 class TestNormalize:
     """Tests for L2 normalization."""

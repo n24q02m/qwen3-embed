@@ -33,9 +33,12 @@ def last_token_pool(input_array: NumpyArray, attention_mask: NDArray[np.int64]) 
     if left_padding:
         return input_array[:, -1]
 
-    sequence_lengths = attention_mask.sum(axis=1).astype(np.int64) - 1
-    batch_size = input_array.shape[0]
-    return input_array[np.arange(batch_size), sequence_lengths]
+    batch_size, seq_len = attention_mask.shape
+    # Find the index of the last '1' in the attention mask for each row
+    # argmax returns the *first* occurrence of the max value.
+    # By reversing the mask, we find the first '1' from the end.
+    last_token_indices = seq_len - 1 - np.argmax(attention_mask[:, ::-1], axis=1)
+    return input_array[np.arange(batch_size), last_token_indices]
 
 
 def normalize(input_array: NumpyArray, p: int = 2, dim: int = 1, eps: float = 1e-12) -> NumpyArray:
