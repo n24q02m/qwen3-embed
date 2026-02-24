@@ -42,6 +42,10 @@ DEFAULT_INSTRUCTION = (
     "Given a query and a document, judge whether the document is relevant to the query."
 )
 
+# Qwen3 uses these tokens for chat formatting.
+# We must prevent users from injecting them to avoid prompt injection.
+FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
+
 RERANK_TEMPLATE = (
     "<|im_start|>system\n{system}<|im_end|>\n"
     "<|im_start|>user\n<Instruct>: {instruction}\n"
@@ -109,12 +113,23 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     # Chat template formatting
     # ------------------------------------------------------------------
     @staticmethod
+    def _sanitize_input(text: str) -> str:
+        """Remove forbidden tokens to prevent prompt injection."""
+        for token in FORBIDDEN_TOKENS:
+            text = text.replace(token, " ")
+        return text
+
+    @staticmethod
     def _format_rerank_input(
         query: str,
         document: str,
         instruction: str = DEFAULT_INSTRUCTION,
     ) -> str:
         """Build the chat-template string for a single query-document pair."""
+        query = Qwen3CrossEncoder._sanitize_input(query)
+        document = Qwen3CrossEncoder._sanitize_input(document)
+        instruction = Qwen3CrossEncoder._sanitize_input(instruction)
+
         return RERANK_TEMPLATE.format(
             system=SYSTEM_PROMPT,
             instruction=instruction,
