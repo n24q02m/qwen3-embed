@@ -1,8 +1,7 @@
 import json
-import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+
 from qwen3_embed.common.model_management import ModelManagement
+
 
 # Mock RepoFile since we don't want to rely on external library details for unit testing logic
 class MockRepoFile:
