@@ -1,8 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, patch, mock_open
-import requests
-import os
+from unittest.mock import MagicMock, mock_open, patch
+
 from qwen3_embed.common.model_management import ModelManagement
+
 
 class TestModelManagement(unittest.TestCase):
 
