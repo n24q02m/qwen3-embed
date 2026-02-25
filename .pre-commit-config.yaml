@@ -37,9 +37,27 @@ repos:
 
   - repo: local
     hooks:
+      - id: ty
+        name: ty type check
+        entry: uv run ty check
+        language: system
+        types: [python]
+        pass_filenames: false
+
       - id: pytest
         name: pytest
         entry: uv run pytest -m "not integration" --tb=short -q
         language: system
         types: [python]
         pass_filenames: false
+
+  # ============================================================================
+  # Commit Message Enforcement
+  # ============================================================================
+  - repo: local
+    hooks:
+      - id: enforce-commit
+        name: Enforce feat and fix commit prefixes
+        entry: bash scripts/enforce-commit.sh
+        language: system
+        stages: [commit-msg]
