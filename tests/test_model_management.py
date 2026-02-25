@@ -1,8 +1,9 @@
 import tarfile
+
 import pytest
-import os
-from pathlib import Path
+
 from qwen3_embed.common.model_management import ModelManagement
+
 
 def test_zip_slip_prevention(tmp_path):
     """
@@ -31,6 +32,7 @@ def test_zip_slip_prevention(tmp_path):
 
     # Verify the file was NOT created outside (in tmp_path)
     assert not (tmp_path / target_file).exists()
+
 
 def test_valid_decompression(tmp_path):
     """
