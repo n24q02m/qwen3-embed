@@ -35,6 +35,7 @@ Repository = "https://github.com/n24q02m/qwen3-embed"
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=7.0.0",
     "ruff>=0.11",
     "ty>=0.0.17",
 ]
