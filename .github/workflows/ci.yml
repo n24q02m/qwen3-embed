@@ -15,6 +15,11 @@ jobs:
     name: Lint & Test
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v6
         with:
@@ -39,6 +44,11 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@v6
       - uses: actions/dependency-review-action@v4
         with:
