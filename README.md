@@ -1,9 +1,11 @@
-# qwen3-embed
+# Qwen3 Embed
+
+**Lightweight Qwen3 text embedding and reranking via ONNX Runtime**
 
 [![CI](https://github.com/n24q02m/qwen3-embed/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/qwen3-embed/actions/workflows/ci.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/n24q02m/qwen3-embed?logo=codecov&logoColor=white)](https://codecov.io/gh/n24q02m/qwen3-embed)
 [![PyPI](https://img.shields.io/pypi/v/qwen3-embed?logo=pypi&logoColor=white)](https://pypi.org/project/qwen3-embed/)
-[![License: Apache-2.0](https://img.shields.io/github/license/n24q02m/qwen3-embed)](https://opensource.org/licenses/Apache-2.0)
+[![License: Apache-2.0](https://img.shields.io/github/license/n24q02m/qwen3-embed)](LICENSE)
 
 [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](#)
 [![ONNX Runtime](https://img.shields.io/badge/ONNX_Runtime-005CED?logo=onnx&logoColor=white)](#)
@@ -11,7 +13,7 @@
 [![semantic-release](https://img.shields.io/badge/semantic--release-e10079?logo=semantic-release&logoColor=white)](https://github.com/python-semantic-release/python-semantic-release)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-1A1F6C?logo=renovatebot&logoColor=white)](https://developer.mend.io/)
 
-Lightweight Qwen3 text embedding & reranking via ONNX Runtime. Trimmed fork of [fastembed](https://github.com/qdrant/fastembed), keeping only Qwen3 models.
+Trimmed fork of [fastembed](https://github.com/qdrant/fastembed), keeping only Qwen3 models.
 
 ## Supported Models
 
@@ -171,6 +173,10 @@ mise run test    # pytest
 mise run fix     # ruff auto-fix + format
 ```
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md)
+
 ## License
 
-Apache-2.0. Original fastembed by [Qdrant](https://github.com/qdrant/fastembed).
+Apache-2.0 - See [LICENSE](LICENSE). Original fastembed by [Qdrant](https://github.com/qdrant/fastembed).
