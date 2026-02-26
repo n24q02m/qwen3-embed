@@ -1,6 +1,7 @@
 import tarfile
-import pytest
+
 from qwen3_embed.common.model_management import ModelManagement
+
 
 def test_tarfile_traversal_vulnerability(tmp_path):
     malicious_tar_path = tmp_path / "malicious.tar.gz"
@@ -8,6 +9,7 @@ def test_tarfile_traversal_vulnerability(tmp_path):
         t = tarfile.TarInfo(name="../pwned.txt")
         t.size = len(b"hacked")
         import io
+
         tar.addfile(t, io.BytesIO(b"hacked"))
 
     cache_dir = tmp_path / "cache"
@@ -30,7 +32,7 @@ def test_tarfile_traversal_vulnerability(tmp_path):
     # Since we are on Python 3.14, 'data' is the default. The vulnerability exists for users on <3.14.
     # To properly test this, we should mock tarfile.open to ensure extractall is called with filter='data'.
 
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
 
     with patch("tarfile.open") as mock_open:
         mock_tar = MagicMock()
@@ -40,4 +42,4 @@ def test_tarfile_traversal_vulnerability(tmp_path):
 
         # This assertion should FAIL if we haven't implemented the fix yet.
         # The current code likely calls extractall(path=cache_dir) without filter='data'.
-        mock_tar.extractall.assert_called_with(path=str(cache_dir), filter='data')
+        mock_tar.extractall.assert_called_with(path=str(cache_dir), filter="data")
