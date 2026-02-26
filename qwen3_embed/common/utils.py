@@ -1,3 +1,4 @@
+import contextlib
 import os
 import re
 import sys
@@ -78,6 +79,9 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
     else:
         cache_path = Path(cache_dir)
     cache_path.mkdir(parents=True, exist_ok=True)
+
+    with contextlib.suppress(OSError):
+        os.chmod(cache_path, 0o700)
 
     return cache_path
 
