@@ -307,9 +307,11 @@ class ModelManagement[T: BaseModelDescription]:
         try:
             # Open the tar.gz file
             with tarfile.open(targz_path, "r:gz") as tar:
-                # Extract all files into the cache directory
+                # Extract all files into the cache directory securely using data filter
+                # Prevents path traversal vulnerabilities from malicious archives
                 tar.extractall(
                     path=cache_dir,
+                    filter="data",
                 )
         except tarfile.TarError as e:
             # If any error occurs while opening or extracting the tar.gz file,
