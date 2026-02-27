@@ -47,8 +47,8 @@ def normalize(input_array: NumpyArray, p: int = 2, dim: int = 1, eps: float = 1e
 
 
 def mean_pooling(input_array: NumpyArray, attention_mask: NDArray[np.int64]) -> NumpyArray:
-    input_mask_expanded = np.expand_dims(attention_mask, axis=-1).astype(np.int64)
-    input_mask_expanded = np.tile(input_mask_expanded, (1, 1, input_array.shape[-1]))
+    # Use broadcasting instead of np.tile, and cast mask to input dtype to avoid type promotion overhead
+    input_mask_expanded = np.expand_dims(attention_mask, axis=-1).astype(input_array.dtype)
     sum_embeddings = np.sum(input_array * input_mask_expanded, axis=1)
     sum_mask = np.sum(input_mask_expanded, axis=1)
     pooled_embeddings = sum_embeddings / np.maximum(sum_mask, 1e-9)
