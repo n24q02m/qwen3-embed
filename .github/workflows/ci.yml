@@ -3,8 +3,17 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   push:
     branches: [main]
+  issue_comment:
+    types:
+      - created
+      - edited
 
 permissions:
   contents: read
@@ -30,7 +39,8 @@ jobs:
       - run: uv sync --group dev
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run pytest -m "not integration" --tb=short --cov=qwen3_embed --cov-report=xml
+      - run: uv run pytest -m "not integration" --tb=short --cov=qwen3_embed 
+          --cov-report=xml
 
       - name: Upload coverage to Codecov
         if: github.event_name == 'push'
@@ -39,9 +49,11 @@ jobs:
           files: coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
 
+    if: github.event_name != 'issue_comment'
   dependency-review:
     name: Dependency Review
-    if: github.event_name == 'pull_request'
+    if: (github.event_name == 'pull_request') && github.event_name != 
+      'issue_comment'
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -55,3 +67,26 @@ jobs:
           fail-on-severity: moderate
           comment-summary-in-pr: always
           allow-ghsas: GHSA-w8v5-vhqr-4h9v # diskcache pickle - no patch, transitive dep of llama-cpp-python
+  ai_pr_review:
+    name: Qodo AI Code Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' || github.event_name == 
+      'pull_request'
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - name: PR Agent action step
+        uses: qodo-ai/pr-agent@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          config.model: gemini/gemini-3.0-flash
+          github_action_config.auto_review: 'true'
+          github_action_config.auto_describe: 'true'
+          github_action_config.auto_improve: 'true'
