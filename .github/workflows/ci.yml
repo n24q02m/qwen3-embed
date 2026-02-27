@@ -39,7 +39,7 @@ jobs:
       - run: uv sync --group dev
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run pytest -m "not integration" --tb=short --cov=qwen3_embed 
+      - run: uv run pytest -m "not integration" --tb=short --cov=qwen3_embed
           --cov-report=xml
 
       - name: Upload coverage to Codecov
@@ -93,8 +93,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PR_AGENT_CONFIG__MODEL: "gemini/gemini-3-flash"
-          PR_AGENT_CONFIG__FALLBACK_MODELS: '["gemini/gemini-1.5-flash"]'
           PR_REVIEWER__EXTRA_INSTRUCTIONS: ${{ env.CUSTOM_INSTRUCTIONS }}
           PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: ${{ env.CUSTOM_INSTRUCTIONS }}
           PR_DESCRIPTION__EXTRA_INSTRUCTIONS: ${{ env.CUSTOM_INSTRUCTIONS }}
