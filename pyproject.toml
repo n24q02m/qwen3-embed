@@ -36,6 +36,8 @@ Repository = "https://github.com/n24q02m/qwen3-embed"
 dev = [
     "pytest>=8.0",
     "pytest-cov>=7.0.0",
+    "pytest-xdist>=3.0",
+    "syrupy>=4.0",
     "ruff>=0.11",
     "ty>=0.0.17",
 ]
@@ -58,6 +60,20 @@ changelog_file = "CHANGELOG.md"
 
 [tool.semantic_release.remote]
 type = "github"
+
+[tool.ty]
+
+[tool.ty.rules]
+# llama_cpp is an optional dependency (not in default venv)
+unresolved-import = "warn"
+# onnxruntime has incomplete type stubs (SparseTensor union issues)
+possibly-missing-attribute = "warn"
+invalid-argument-type = "warn"
+unresolved-attribute = "warn"
+not-subscriptable = "warn"
+invalid-assignment = "warn"
+# multiprocessing context has dynamic Process attr
+call-non-callable = "warn"
 
 [tool.ruff]
 line-length = 99

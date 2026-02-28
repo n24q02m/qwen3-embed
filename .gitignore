@@ -34,3 +34,7 @@ Thumbs.db
 **/local_cache/
 
 temp/
+
+# Windows device names
+nul
+NUL
