@@ -100,7 +100,7 @@ class ModelManagement[T: BaseModelDescription]:
 
         if os.path.exists(output_path):
             return output_path
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=10)
 
         # Handle HTTP errors
         if response.status_code == 403:
@@ -310,6 +310,7 @@ class ModelManagement[T: BaseModelDescription]:
                 # Extract all files into the cache directory
                 tar.extractall(
                     path=cache_dir,
+                    filter="data",
                 )
         except tarfile.TarError as e:
             # If any error occurs while opening or extracting the tar.gz file,
