@@ -1,8 +1,9 @@
 """Unit tests for last_token_pool and other utility functions."""
 
 import numpy as np
+import pytest
 
-from qwen3_embed.common.utils import last_token_pool, mean_pooling, normalize
+from qwen3_embed.common.utils import iter_batch, last_token_pool, mean_pooling, normalize
 
 
 class TestLastTokenPool:
@@ -108,3 +109,55 @@ class TestMeanPooling:
 
         result = mean_pooling(model_output, mask)
         np.testing.assert_allclose(result[0], [3.0, 6.0])
+
+
+class TestIterBatch:
+    """Tests for iter_batch utility function."""
+
+    def test_exact_batching(self) -> None:
+        """Test when iterable length is exactly divisible by batch size."""
+        data = [1, 2, 3, 4, 5, 6]
+        result = list(iter_batch(data, 3))
+        assert result == [[1, 2, 3], [4, 5, 6]]
+
+    def test_remainder_batching(self) -> None:
+        """Test when iterable length is not divisible by batch size."""
+        data = [1, 2, 3, 4, 5]
+        result = list(iter_batch(data, 3))
+        assert result == [[1, 2, 3], [4, 5]]
+
+    def test_batch_larger_than_iterable(self) -> None:
+        """Test when batch size is larger than iterable length."""
+        data = [1, 2, 3]
+        result = list(iter_batch(data, 5))
+        assert result == [[1, 2, 3]]
+
+    def test_empty_iterable(self) -> None:
+        """Test with empty iterable."""
+        data = []
+        result = list(iter_batch(data, 3))
+        assert result == []
+
+    def test_batch_size_one(self) -> None:
+        """Test with batch size of 1."""
+        data = [1, 2, 3]
+        result = list(iter_batch(data, 1))
+        assert result == [[1], [2], [3]]
+
+    def test_generator_input(self) -> None:
+        """Test with a generator as input."""
+        data = (x for x in range(5))
+        result = list(iter_batch(data, 2))
+        assert result == [[0, 1], [2, 3], [4]]
+
+    def test_batch_size_zero(self) -> None:
+        """Test with batch size 0 (should return empty list)."""
+        data = [1, 2, 3]
+        result = list(iter_batch(data, 0))
+        assert result == []
+
+    def test_negative_batch_size(self) -> None:
+        """Test with negative batch size (should raise ValueError)."""
+        data = [1, 2, 3]
+        with pytest.raises(ValueError, match="Stop argument for islice"):
+            list(iter_batch(data, -1))
