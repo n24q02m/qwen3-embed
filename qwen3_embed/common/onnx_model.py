@@ -69,7 +69,7 @@ class OnnxModel[T]:
     ) -> None:
         model_path = model_dir / model_file
         # List of Execution Providers: https://onnxruntime.ai/docs/execution-providers
-        available_providers = ort.get_available_providers()
+        available_providers = ort.get_available_providers()  # type: ignore[possibly-missing-attribute]
         cuda_available = "CUDAExecutionProvider" in available_providers
         explicit_cuda = cuda is True or cuda == Device.CUDA
 
@@ -106,8 +106,8 @@ class OnnxModel[T]:
                     f"Provider {provider_name} is not available. Available providers: {available_providers}"
                 )
 
-        so = ort.SessionOptions()
-        so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        so = ort.SessionOptions()  # type: ignore[possibly-missing-attribute]
+        so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL  # type: ignore[possibly-missing-attribute]
 
         if threads is not None:
             so.intra_op_num_threads = threads
@@ -147,7 +147,7 @@ class OnnxModel[T]:
 
     @classmethod
     def add_extra_session_options(
-        cls, session_options: ort.SessionOptions, extra_options: dict[str, Any]
+        cls, session_options: "ort.SessionOptions", extra_options: dict[str, Any]  # type: ignore[possibly-missing-attribute]
     ) -> None:
         """Add extra session options to the existing options object in-place
 

@@ -126,7 +126,7 @@ class ParallelWorkerPool:
                 worker_kwargs["cuda"] = self.cuda
 
             assert hasattr(self.ctx, "Process")
-            process = self.ctx.Process(
+            process = self.ctx.Process(  # type: ignore[call-non-callable]
                 target=_worker,
                 args=(
                     self.worker_class,

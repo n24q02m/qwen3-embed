@@ -77,7 +77,7 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         onnx_input = self._preprocess_onnx_input(inputs, **kwargs)
         outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore
         relevant_output = outputs[0]
-        scores: NumpyArray = relevant_output[:, 0]
+        scores: NumpyArray = relevant_output[:, 0]  # type: ignore[invalid-argument-type,not-subscriptable]
         return OnnxOutputContext(model_output=scores)
 
     def _rerank_documents(
@@ -106,7 +106,7 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         is_small = False
 
         if isinstance(pairs, tuple):
-            pairs = [pairs]
+            pairs = [pairs]  # type: ignore[invalid-assignment]
             is_small = True
 
         if isinstance(pairs, list) and len(pairs) < batch_size:

@@ -206,14 +206,14 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
                 )
 
             onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
-            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore
+            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
             model_output = outputs[0]
-            if model_output.dtype == np.float16:
-                model_output = model_output.astype(np.float32)
-            scores = self._compute_yes_no_scores(model_output)
+            if getattr(model_output, "dtype", None) == np.float16:
+                model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
+            scores = self._compute_yes_no_scores(model_output)  # type: ignore[invalid-argument-type]
             all_scores.append(scores)
 
-        return OnnxOutputContext(model_output=np.concatenate(all_scores))
+        return OnnxOutputContext(model_output=np.concatenate(all_scores))  # type: ignore[invalid-argument-type]
 
     # ------------------------------------------------------------------
     # Worker

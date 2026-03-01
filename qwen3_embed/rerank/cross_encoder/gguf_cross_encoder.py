@@ -63,7 +63,7 @@ supported_qwen3_reranker_gguf_models: list[BaseModelDescription] = [
 def _check_llama_cpp() -> None:
     """Check that llama-cpp-python is installed."""
     try:
-        import llama_cpp  # noqa: F401
+        import llama_cpp  # type: ignore[unresolved-import] # noqa: F401
     except ImportError as e:
         msg = (
             "llama-cpp-python is required for GGUF models. "
@@ -123,7 +123,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
             msg = f"GGUF model file not found: {model_path}"
             raise FileNotFoundError(msg)
 
-        from llama_cpp import Llama
+        from llama_cpp import Llama  # type: ignore[unresolved-import]
 
         # AUTO/-1: offload all layers to GPU if available, fallback to CPU
         # CPU/False/0: force CPU only
