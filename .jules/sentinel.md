@@ -1,0 +1,4 @@
+## 2026-03-01 - [B615] Unsafe Hugging Face Hub download without revision pinning
+**Vulnerability:** Hugging Face model downloads via `snapshot_download` were lacking explicit revision pinning when downloading from the remote hub.
+**Learning:** By not pinning `revision`, `snapshot_download` is subject to pulling potentially unstable or tampered models from external hubs, exposing the system to supply chain attacks or unexpected functional failures.
+**Prevention:** Always pin the repository revision (e.g., using a commit SHA from `model_info().sha`) and pass it as the `revision` keyword argument to `snapshot_download()` or similar Hugging Face hub fetching utilities to ensure reproducibility and security. Suppress static analysis warnings (e.g. Bandit's `# nosec B615`) only for offline caching checks where no remote fetch actually occurs.
