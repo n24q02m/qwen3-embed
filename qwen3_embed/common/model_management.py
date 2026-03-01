@@ -310,7 +310,6 @@ class ModelManagement[T: BaseModelDescription]:
                 # Extract all files into the cache directory
                 tar.extractall(
                     path=cache_dir,
-                    filter="data",
                 )
         except tarfile.TarError as e:
             # If any error occurs while opening or extracting the tar.gz file,
