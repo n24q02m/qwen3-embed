@@ -4,7 +4,7 @@ version = "1.2.0"
 description = "Lightweight Qwen3 text embedding & reranking via ONNX Runtime (fork of fastembed)"
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.13"
+requires-python = ">=3.14.3"
 authors = [{ name = "n24q02m" }]
 keywords = ["vector", "embedding", "reranking", "qwen3", "onnx", "onnxruntime"]
 classifiers = [
@@ -16,17 +16,17 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy>=2.1.0",
+    "numpy>=2.4.2",
     "onnxruntime>1.20.0",
-    "tqdm>=4.66",
-    "requests>=2.31",
-    "tokenizers>=0.15,<1.0",
-    "huggingface-hub>=0.20,<2.0",
-    "loguru>=0.7.2",
+    "tqdm>=4.67.3",
+    "requests>=2.32.5",
+    "tokenizers>=0.22.2,<1.0",
+    "huggingface-hub>=0.36.2,<2.0",
+    "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
-gguf = ["llama-cpp-python>=0.3"]
+gguf = ["llama-cpp-python>=0.3.16"]
 
 [project.urls]
 Homepage = "https://github.com/n24q02m/qwen3-embed"
@@ -34,12 +34,12 @@ Repository = "https://github.com/n24q02m/qwen3-embed"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0",
+    "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
-    "pytest-xdist>=3.0",
-    "syrupy>=4.0",
-    "ruff>=0.11",
-    "ty>=0.0.17",
+    "pytest-xdist>=3.8.0",
+    "syrupy>=4.9.1",
+    "ruff>=0.15.4",
+    "ty>=0.0.19",
 ]
 
 [build-system]
