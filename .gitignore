@@ -38,3 +38,4 @@ temp/
 # Windows device names
 nul
 NUL
+*.tar.gz
