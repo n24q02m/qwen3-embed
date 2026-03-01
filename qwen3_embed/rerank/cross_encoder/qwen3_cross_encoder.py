@@ -49,6 +49,9 @@ RERANK_TEMPLATE = (
     "<|im_start|>assistant\n<think>\n\n</think>\n\n"
 )
 
+# Tokens that must be stripped from user input to prevent prompt injection
+FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
+
 # ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
@@ -109,12 +112,24 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     # Chat template formatting
     # ------------------------------------------------------------------
     @staticmethod
+    def _sanitize_input(text: str) -> str:
+        """Strip forbidden special tokens from user input."""
+        for token in FORBIDDEN_TOKENS:
+            text = text.replace(token, "")
+        return text
+
+    @staticmethod
     def _format_rerank_input(
         query: str,
         document: str,
         instruction: str = DEFAULT_INSTRUCTION,
     ) -> str:
         """Build the chat-template string for a single query-document pair."""
+        # Sanitize inputs to prevent injection
+        query = Qwen3CrossEncoder._sanitize_input(query)
+        document = Qwen3CrossEncoder._sanitize_input(document)
+        instruction = Qwen3CrossEncoder._sanitize_input(instruction)
+
         return RERANK_TEMPLATE.format(
             system=SYSTEM_PROMPT,
             instruction=instruction,
@@ -168,13 +183,16 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     def _onnx_embed_texts(self, texts: list[str], **kwargs: Any) -> OnnxOutputContext:
         """Tokenise and run model one text at a time (static batch=1 ONNX graph),
         then concatenate the yes/no scores."""
+        if self.model is None:
+            raise ValueError("Model not loaded. Please call load_onnx_model() first.")
         assert self.tokenizer is not None, "Tokenizer not loaded. Call load_onnx_model() first."
 
         all_scores: list[NumpyArray] = []
+        input_names = self.model_input_names or set()
+        assert input_names is not None
         for text in texts:
             tokenized = self.tokenizer.encode_batch([text])
 
-            input_names: set[str] = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
             onnx_input: dict[str, NumpyArray] = {
                 "input_ids": np.array([tokenized[0].ids], dtype=np.int64),
             }
@@ -188,7 +206,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
                 )
 
             onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
-            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore[union-attr]
+            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore
             model_output = outputs[0]
             if model_output.dtype == np.float16:
                 model_output = model_output.astype(np.float32)

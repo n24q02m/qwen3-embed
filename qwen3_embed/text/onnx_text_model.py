@@ -72,29 +72,31 @@ class OnnxTextModel(OnnxModel[T]):
         raise NotImplementedError("Subclasses must implement this method")
 
     def tokenize(self, documents: list[str], **kwargs: Any) -> list[Encoding]:
-        return self.tokenizer.encode_batch(documents)  # type: ignore[union-attr]
+        assert self.tokenizer is not None
+        return self.tokenizer.encode_batch(documents)
 
     def onnx_embed(
         self,
         documents: list[str],
         **kwargs: Any,
     ) -> OnnxOutputContext:
+        if self.model is None:
+            raise ValueError("Model not loaded. Please call load_onnx_model() first.")
         encoded = self.tokenize(documents, **kwargs)
         input_ids = np.array([e.ids for e in encoded])
         attention_mask = np.array([e.attention_mask for e in encoded])
-        input_names = {node.name for node in self.model.get_inputs()}  # type: ignore[union-attr]
+        input_names = self.model_input_names or set()
+        assert input_names is not None
         onnx_input: dict[str, NumpyArray] = {
             "input_ids": np.array(input_ids, dtype=np.int64),
         }
         if "attention_mask" in input_names:
             onnx_input["attention_mask"] = np.array(attention_mask, dtype=np.int64)
         if "token_type_ids" in input_names:
-            onnx_input["token_type_ids"] = np.array(
-                [np.zeros(len(e), dtype=np.int64) for e in input_ids], dtype=np.int64
-            )
+            onnx_input["token_type_ids"] = np.zeros(input_ids.shape, dtype=np.int64)
         onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
 
-        model_output = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore[union-attr]
+        model_output = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)  # type: ignore
         result = model_output[0]
         if result.dtype == np.float16:
             result = result.astype(np.float32)
@@ -160,7 +162,7 @@ class OnnxTextModel(OnnxModel[T]):
                 start_method=start_method,
             )
             for batch in pool.ordered_map(iter_batch(documents, batch_size), **params):
-                yield from self._post_process_onnx_output(batch, **kwargs)  # type: ignore
+                yield from self._post_process_onnx_output(batch, **kwargs)
 
     def _token_count(self, texts: str | Iterable[str], batch_size: int = 1024, **_: Any) -> int:
         if not hasattr(self, "model") or self.model is None:

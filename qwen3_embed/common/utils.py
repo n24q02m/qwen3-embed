@@ -1,7 +1,7 @@
+import contextlib
 import os
 import re
 import sys
-import tempfile
 import unicodedata
 from collections.abc import Iterable
 from itertools import islice
@@ -33,9 +33,12 @@ def last_token_pool(input_array: NumpyArray, attention_mask: NDArray[np.int64]) 
     if left_padding:
         return input_array[:, -1]
 
-    sequence_lengths = attention_mask.sum(axis=1).astype(np.int64) - 1
-    batch_size = input_array.shape[0]
-    return input_array[np.arange(batch_size), sequence_lengths]
+    batch_size, seq_len = attention_mask.shape
+    # Find the index of the last '1' in the attention mask for each row
+    # argmax returns the *first* occurrence of the max value.
+    # By reversing the mask, we find the first '1' from the end.
+    last_token_indices = seq_len - 1 - np.argmax(attention_mask[:, ::-1], axis=1)
+    return input_array[np.arange(batch_size), last_token_indices]
 
 
 def normalize(input_array: NumpyArray, p: int = 2, dim: int = 1, eps: float = 1e-12) -> NumpyArray:
@@ -47,8 +50,8 @@ def normalize(input_array: NumpyArray, p: int = 2, dim: int = 1, eps: float = 1e
 
 
 def mean_pooling(input_array: NumpyArray, attention_mask: NDArray[np.int64]) -> NumpyArray:
-    input_mask_expanded = np.expand_dims(attention_mask, axis=-1).astype(np.int64)
-    input_mask_expanded = np.tile(input_mask_expanded, (1, 1, input_array.shape[-1]))
+    # Use broadcasting instead of np.tile, and cast mask to input dtype to avoid type promotion overhead
+    input_mask_expanded = np.expand_dims(attention_mask, axis=-1).astype(input_array.dtype)
     sum_embeddings = np.sum(input_array * input_mask_expanded, axis=1)
     sum_mask = np.sum(input_mask_expanded, axis=1)
     pooled_embeddings = sum_embeddings / np.maximum(sum_mask, 1e-9)
@@ -73,11 +76,18 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
     Define the cache directory for qwen3_embed
     """
     if cache_dir is None:
-        default_cache_dir = os.path.join(tempfile.gettempdir(), "qwen3_embed_cache")
-        cache_path = Path(os.getenv("QWEN3_EMBED_CACHE_PATH", default_cache_dir))
+        if os.environ.get("QWEN3_EMBED_CACHE_PATH"):
+            cache_path = Path(os.environ["QWEN3_EMBED_CACHE_PATH"])
+        else:
+            xdg_cache_home = os.environ.get("XDG_CACHE_HOME")
+            base_path = Path(xdg_cache_home) if xdg_cache_home else Path.home() / ".cache"
+            cache_path = base_path / "qwen3_embed"
     else:
         cache_path = Path(cache_dir)
     cache_path.mkdir(parents=True, exist_ok=True)
+
+    with contextlib.suppress(OSError):
+        cache_path.chmod(0o700)
 
     return cache_path
 

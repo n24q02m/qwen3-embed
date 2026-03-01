@@ -357,7 +357,8 @@ class ModelManagement[T: BaseModelDescription]:
             )
 
             cls.decompress_to_cache(targz_path=str(model_tar_gz), cache_dir=str(cache_tmp_dir))
-            assert model_tmp_dir.exists(), f"Could not find {model_tmp_dir} in {cache_tmp_dir}"
+            if not model_tmp_dir.exists():
+                raise ValueError(f"Could not find {model_tmp_dir} in {cache_tmp_dir}")
 
             model_tar_gz.unlink()
             # Rename from tmp to final name is atomic

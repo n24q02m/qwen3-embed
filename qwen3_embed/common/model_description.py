@@ -37,7 +37,8 @@ class DenseModelDescription(BaseModelDescription):
     tasks: dict[str, Any] | None = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        assert self.dim is not None, "dim is required for dense model description"
+        if self.dim is None:
+            raise ValueError("dim is required for dense model description")
 
 
 @dataclass(frozen=True)
