@@ -65,6 +65,16 @@ class ModelManagement[T: BaseModelDescription]:
         raise NotImplementedError()
 
     @classmethod
+    def _check_model_already_exists(cls, model_name: str, component_name: str) -> None:
+        registered_models = cls._list_supported_models()
+        for registered_model in registered_models:
+            if model_name.lower() == registered_model.model.lower():
+                raise ValueError(
+                    f"Model {model_name} is already registered in {component_name}, if you still want to add this model, "
+                    f"please use another model name"
+                )
+
+    @classmethod
     def _get_model_description(cls, model_name: str) -> T:
         """
         Gets the model description from the model_name.
