@@ -93,7 +93,7 @@ class OnnxTextModel(OnnxModel[T]):
         if "attention_mask" in input_names:
             onnx_input["attention_mask"] = np.array(attention_mask, dtype=np.int64)
         if "token_type_ids" in input_names:
-            onnx_input["token_type_ids"] = np.zeros(input_ids.shape, dtype=np.int64)
+            onnx_input["token_type_ids"] = np.zeros_like(input_ids, dtype=np.int64)
         onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
 
         model_output = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
