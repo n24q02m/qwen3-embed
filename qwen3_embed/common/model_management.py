@@ -177,7 +177,10 @@ class ModelManagement[T: BaseModelDescription]:
                         if file_path.stat().st_size != meta["size"]:
                             return False
                 return True
-            except (OSError, KeyError) as e:
+            except KeyError as e:
+                logger.error(f"Malformed metadata structure, missing key: {str(e)}")
+                return False
+            except OSError as e:
                 logger.error(f"Error verifying files: {str(e)}")
                 return False
 
