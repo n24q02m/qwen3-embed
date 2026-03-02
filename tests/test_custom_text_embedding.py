@@ -310,6 +310,13 @@ class TestPostProcessOnnxOutput:
         result = np.asarray(emb._post_process_onnx_output(ctx))
         assert result.shape == (2, 8)
 
+    def test_last_token_pooling_no_mask_raises_in_post_process(self, tmp_path: Path) -> None:
+        emb = _build(tmp_path, pooling=PoolingType.LAST_TOKEN, normalization=False)
+        embeddings = np.ones((1, 4, 6), dtype=np.float32)
+        ctx = OnnxOutputContext(model_output=embeddings, attention_mask=None)
+        with pytest.raises(ValueError, match="attention_mask must be provided"):
+            emb._post_process_onnx_output(ctx)
+
     def test_last_token_pooling(self, tmp_path: Path) -> None:
         emb = _build(tmp_path, pooling=PoolingType.LAST_TOKEN, normalization=False)
         ctx = self._output(1, 4, 6)
