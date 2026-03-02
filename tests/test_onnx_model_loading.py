@@ -218,3 +218,32 @@ def test_load_cuda_warning(model: ConcreteOnnxModel, mock_ort):
 
     with pytest.warns(RuntimeWarning, match="Attempt to set CUDAExecutionProvider failed"):
         model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=True)
+
+
+def test_load_providers_validation_error_tuple(model: ConcreteOnnxModel, mock_ort):
+    """Test validation error for unavailable tuple providers."""
+    mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
+
+    with pytest.raises(ValueError, match="Provider CUDAExecutionProvider is not available"):
+        model._load_onnx_model(
+            Path("dummy"),
+            "model.onnx",
+            threads=None,
+            providers=[("CUDAExecutionProvider", {"device_id": 0})],
+        )
+
+
+def test_load_cuda_explicit_unavailable(model: ConcreteOnnxModel, mock_ort):
+    """Test validation error when CUDA is explicitly requested but unavailable."""
+    mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
+
+    with pytest.raises(ValueError, match="Provider CUDAExecutionProvider is not available"):
+        model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=True)
+
+
+def test_load_cuda_explicit_device_id_unavailable(model: ConcreteOnnxModel, mock_ort):
+    """Test validation error when CUDA with device_id is requested but unavailable."""
+    mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
+
+    with pytest.raises(ValueError, match="Provider CUDAExecutionProvider is not available"):
+        model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=True, device_id=0)
