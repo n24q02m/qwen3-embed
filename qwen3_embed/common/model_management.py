@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import json
 import os
 import shutil
@@ -118,6 +120,7 @@ class ModelManagement[T: BaseModelDescription]:
 
         show_progress = bool(total_size_in_bytes and show_progress)
 
+        file_hash = hashlib.md5()
         with (
             tqdm(
                 total=total_size_in_bytes,
@@ -131,6 +134,29 @@ class ModelManagement[T: BaseModelDescription]:
                 if chunk:  # Filter out keep-alive new chunks
                     progress_bar.update(len(chunk))
                     file.write(chunk)
+                    file_hash.update(chunk)
+
+        expected_md5 = None
+        x_goog_hash = response.headers.get("x-goog-hash")
+        if x_goog_hash and "md5=" in x_goog_hash:
+            for part in x_goog_hash.split(","):
+                part = part.strip()
+                if part.startswith("md5="):
+                    md5_b64 = part[4:]
+                    expected_md5 = base64.b64decode(md5_b64).hex()
+                    break
+        elif "etag" in response.headers:
+            etag = response.headers["etag"].strip('"')
+            if "-" not in etag and len(etag) == 32:
+                expected_md5 = etag.lower()
+
+        if expected_md5 and file_hash.hexdigest() != expected_md5:
+            os.remove(output_path)
+            raise ValueError(
+                f"Checksum mismatch for {url}. "
+                f"Expected MD5: {expected_md5}, got: {file_hash.hexdigest()}."
+            )
+
         return output_path
 
     @classmethod
