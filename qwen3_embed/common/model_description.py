@@ -7,6 +7,7 @@ from typing import Any
 class ModelSource:
     hf: str | None = None
     url: str | None = None
+    expected_md5: str | None = None
     _deprecated_tar_struct: bool = False
 
     @property

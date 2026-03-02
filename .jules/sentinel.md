@@ -1,0 +1,4 @@
+## 2024-06-25 - [Add MD5 Verification for GCS Downloads]
+**Vulnerability:** The `download_file_from_gcs` function in `ModelManagement` was downloading arbitrary model tarballs via HTTP/HTTPS without verifying the integrity of the downloaded file. This exposed users to Man-in-the-Middle (MITM) attacks or loading corrupted, tampered weights if the source was compromised.
+**Learning:** Even fallback or alternative download paths (like GCS) must have cryptographic integrity checks (MD5/SHA256) parity with primary paths (like HuggingFace Hub metadata checks) to prevent malicious injection during the download process.
+**Prevention:** For secure downloads using fallback mechanisms (e.g., GCS), `ModelManagement.download_file_from_gcs` accepts and validates an `expected_md5` parameter against the computed checksum of the downloaded file. The file is hashed in chunks during the streaming download, and deleted immediately if verification fails.
