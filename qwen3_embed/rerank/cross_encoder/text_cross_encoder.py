@@ -84,7 +84,7 @@ class TextCrossEncoder(TextCrossEncoderBase):
                 return
 
         raise ValueError(
-            f"Model {model_name} is not supported in TextCrossEncoder."
+            f"Model {model_name} is not supported in TextCrossEncoder. "
             "Please check the supported models using `TextCrossEncoder.list_supported_models()`"
         )
 
