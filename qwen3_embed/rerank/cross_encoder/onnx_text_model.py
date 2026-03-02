@@ -53,6 +53,12 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         return self.tokenizer.encode_batch(pairs)
 
     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
+        if getattr(self, "model_input_names", None) is None:
+            self.model_input_names = (
+                {node.name for node in self.model.get_inputs()}
+                if hasattr(self, "model") and self.model is not None
+                else set()
+            )
         input_names = self.model_input_names or set()
         inputs: dict[str, NumpyArray] = {
             "input_ids": np.array([enc.ids for enc in tokenized_input], dtype=np.int64),
