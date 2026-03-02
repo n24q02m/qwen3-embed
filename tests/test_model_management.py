@@ -148,8 +148,14 @@ class TestDownloadFileFromGcs:
         mock_get.return_value = response
 
         output = tmp_path / "new_model.onnx"
-        with pytest.raises(PermissionError, match="Authentication Error"):
+        expected_msg = (
+            r"^Authentication Error: You do not have permission to access this resource\. "
+            r"Please check your credentials\.$"
+        )
+        with pytest.raises(PermissionError, match=expected_msg):
             ModelManagement.download_file_from_gcs("http://example.com/x.onnx", str(output))
+
+        assert not output.exists()
 
     @patch("qwen3_embed.common.model_management.requests.get")
     def test_missing_content_length_prints_warning(self, mock_get, tmp_path, capsys):
