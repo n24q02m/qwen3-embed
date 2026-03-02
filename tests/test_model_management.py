@@ -632,10 +632,39 @@ class TestRetrieveModelGcs:
             )
         assert result.name == "fast-mymodel"
 
+    # ---------------------------------------------------------------------------
+    # TestDownloadModel
+    # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# TestDownloadModel
-# ---------------------------------------------------------------------------
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_hash_mismatch(self, mock_get, tmp_path):
+        """If md5 hash in header does not match downloaded content, raises ValueError."""
+        import base64
+        import hashlib
+
+        # Prepare content and wrong hash
+        content = b"fake model data"
+        wrong_hash = hashlib.md5(b"wrong data").digest()
+        wrong_hash_b64 = base64.b64encode(wrong_hash).decode("utf-8")
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {
+            "content-length": str(len(content)),
+            "x-goog-hash": f"crc32c=something, md5={wrong_hash_b64}",
+        }
+        mock_response.iter_content.return_value = [content]
+        mock_get.return_value = mock_response
+
+        output_path = tmp_path / "model.tar.gz"
+
+        with pytest.raises(ValueError, match="Checksum mismatch"):
+            ModelManagement.download_file_from_gcs(
+                "http://example.com/model.tar.gz",
+                output_path=str(output_path),
+            )
+
+        assert not output_path.exists()
 
 
 class TestDownloadModel:
