@@ -83,15 +83,23 @@ class OnnxTextModel(OnnxModel[T]):
         if self.model is None:
             raise ValueError("Model not loaded. Please call load_onnx_model() first.")
         encoded = self.tokenize(documents, **kwargs)
-        input_ids = np.array([e.ids for e in encoded])
-        attention_mask = np.array([e.attention_mask for e in encoded])
+
+        input_ids_list = []
+        attention_mask_list = []
+        for e in encoded:
+            input_ids_list.append(e.ids)
+            attention_mask_list.append(e.attention_mask)
+
+        input_ids = np.array(input_ids_list, dtype=np.int64)
+        attention_mask = np.array(attention_mask_list, dtype=np.int64)
+
         input_names = self.model_input_names or set()
         assert input_names is not None
         onnx_input: dict[str, NumpyArray] = {
-            "input_ids": np.array(input_ids, dtype=np.int64),
+            "input_ids": input_ids,
         }
         if "attention_mask" in input_names:
-            onnx_input["attention_mask"] = np.array(attention_mask, dtype=np.int64)
+            onnx_input["attention_mask"] = attention_mask
         if "token_type_ids" in input_names:
             onnx_input["token_type_ids"] = np.zeros(input_ids.shape, dtype=np.int64)
         onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
