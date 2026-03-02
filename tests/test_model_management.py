@@ -824,3 +824,27 @@ class TestDownloadModel:
         patterns = captured_patterns[0]
         assert "weights.onnx" in patterns
         assert "vocab.txt" in patterns
+
+
+def test_decompress_to_cache_security(tmp_path):
+    """Test that decompress_to_cache prevents directory traversal (tar slip)."""
+    # Create a malicious tarball
+    tar_path = tmp_path / "malicious.tar.gz"
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+
+    with tarfile.open(tar_path, "w:gz") as tar:
+        # Create a file that would normally write outside the target directory
+        tarinfo = tarfile.TarInfo(name="../malicious.txt")
+        tarinfo.size = 0
+        tar.addfile(tarinfo)
+
+    from qwen3_embed.common.model_management import ModelManagement
+
+    # In Python >= 3.12 with filter="data", TarFile.extractall raises a tarfile.FilterError
+    # when a path traversal is detected.
+    with pytest.raises((ValueError, tarfile.FilterError, tarfile.TarError)) as exc_info:
+        ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
+    # We catch ValueError because decompress_to_cache wraps tarfile.TarError in ValueError
+    assert str(tar_path) in str(exc_info.value)
