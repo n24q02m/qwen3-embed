@@ -1,0 +1,4 @@
+## 2024-05-15 - [B615] Unsafe Hugging Face Hub download
+**Vulnerability:** Hugging Face model downloads via `snapshot_download` were missing explicit revision pinning (`revision=...`). This allows a potential supply-chain attack where a downloaded model could be maliciously updated by an attacker who compromises the model repository.
+**Learning:** `snapshot_download` pulls the latest version of the target repo branch. Without pinning a specific commit hash (revision), malicious modifications to the model files or code could be unknowingly executed locally.
+**Prevention:** Always fetch the target repository's latest SHA using `model_info().sha` (or hardcode an approved commit hash) and pass it explicitly via the `revision` keyword argument to `snapshot_download`. When downloading strictly local files without remote fetches (`local_files_only=True`), suppress the rule with `# nosec B615`.
