@@ -222,8 +222,12 @@ class TestDecompressToCache:
     """Tests for decompress_to_cache method."""
 
     def test_decompress_nonexistent_file(self, tmp_path):
+        import re
+
         nonexistent_file = tmp_path / "nonexistent.tar.gz"
-        with pytest.raises(ValueError, match="does not exist or is not a file"):
+        with pytest.raises(
+            ValueError, match=re.escape(f"{nonexistent_file} does not exist or is not a file.")
+        ):
             ModelManagement.decompress_to_cache(str(nonexistent_file), str(tmp_path))
 
     def test_decompress_invalid_extension(self, tmp_path):
@@ -233,9 +237,13 @@ class TestDecompressToCache:
             ModelManagement.decompress_to_cache(str(invalid_file), str(tmp_path))
 
     def test_decompress_directory(self, tmp_path):
+        import re
+
         directory = tmp_path / "directory.tar.gz"
         directory.mkdir()
-        with pytest.raises(ValueError, match="does not exist or is not a file"):
+        with pytest.raises(
+            ValueError, match=re.escape(f"{directory} does not exist or is not a file.")
+        ):
             ModelManagement.decompress_to_cache(str(directory), str(tmp_path))
 
     def test_decompress_corrupted_tar_gz(self, tmp_path):
