@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 import shutil
@@ -344,6 +345,8 @@ class ModelManagement[T: BaseModelDescription]:
             shutil.rmtree(model_tmp_dir)
 
         cache_tmp_dir.mkdir(parents=True, exist_ok=True)
+        with contextlib.suppress(OSError):
+            os.chmod(cache_tmp_dir, 0o700)
 
         model_tar_gz = Path(cache_dir) / f"{fast_model_name}.tar.gz"
 
