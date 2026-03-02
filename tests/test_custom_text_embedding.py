@@ -233,7 +233,7 @@ class TestPool:
 
     def test_mean_pooling_no_mask_raises(self, tmp_path: Path) -> None:
         emb = self._make_instance(PoolingType.MEAN, tmp_path)
-        with pytest.raises(ValueError, match="attention_mask must be provided"):
+        with pytest.raises(ValueError, match="attention_mask must be provided for mean pooling"):
             emb._pool(np.ones((2, 4, 8), dtype=np.float32), attention_mask=None)
 
     def test_last_token_pooling_with_mask(self, tmp_path: Path) -> None:
@@ -247,7 +247,9 @@ class TestPool:
 
     def test_last_token_pooling_no_mask_raises(self, tmp_path: Path) -> None:
         emb = self._make_instance(PoolingType.LAST_TOKEN, tmp_path)
-        with pytest.raises(ValueError, match="attention_mask must be provided"):
+        with pytest.raises(
+            ValueError, match="attention_mask must be provided for last-token pooling"
+        ):
             emb._pool(np.ones((1, 4, 8), dtype=np.float32), attention_mask=None)
 
     def test_disabled_returns_unchanged(self, tmp_path: Path) -> None:
