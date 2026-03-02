@@ -40,3 +40,16 @@ class TestCustomCrossEncoderRegistration:
                 model="test/duplicate",
                 sources=ModelSource(hf="test/duplicate"),
             )
+
+    def test_duplicate_model_raises_exact_match(self):
+        """Test adding an exact duplicate model raises ValueError."""
+        TextCrossEncoder.add_custom_model(
+            model="test/duplicate_exact",
+            sources=ModelSource(hf="test/duplicate_exact"),
+        )
+
+        with pytest.raises(ValueError, match="already registered"):
+            TextCrossEncoder.add_custom_model(
+                model="test/duplicate_exact",
+                sources=ModelSource(hf="test/duplicate_exact"),
+            )
