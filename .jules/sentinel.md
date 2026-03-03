@@ -1,0 +1,4 @@
+## 2026-03-03 - [Supply Chain Defense: Pinning Hugging Face Models]
+**Vulnerability:** Hugging Face `snapshot_download` was called without a `revision` pin, allowing potential supply chain attacks if the remote repository is tampered with.
+**Learning:** `snapshot_download` must use explicit revision pinning (e.g., `revision=repo_revision`) when fetching remote files to prevent supply chain tampering. When `local_files_only=True` is used, it's safe to suppress the Bandit B615 warning (`# nosec B615`) because no remote fetching occurs, and dynamic revision lookup (`model_info`) would fail or require unnecessary network calls.
+**Prevention:** Always verify `snapshot_download` usage for the `revision` keyword argument. Suppress `# nosec B615` only when `local_files_only=True` is explicitly passed.

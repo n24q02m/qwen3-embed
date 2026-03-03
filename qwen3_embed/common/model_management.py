@@ -232,7 +232,7 @@ class ModelManagement[T: BaseModelDescription]:
                 cache_dir=cache_dir,
                 local_files_only=local_files_only,
                 **kwargs,
-            )
+            )  # nosec B615
             return result
 
         repo_revision = model_info(hf_source_repo).sha
@@ -260,6 +260,7 @@ class ModelManagement[T: BaseModelDescription]:
 
         result = snapshot_download(
             repo_id=hf_source_repo,
+            revision=repo_revision,
             allow_patterns=allow_patterns,
             cache_dir=cache_dir,
             local_files_only=local_files_only,
