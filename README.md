@@ -3,7 +3,7 @@
 **Lightweight Qwen3 text embedding and reranking via ONNX Runtime**
 
 [![CI](https://github.com/n24q02m/qwen3-embed/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/qwen3-embed/actions/workflows/ci.yml)
-[![Codecov](https://img.shields.io/codecov/c/github/n24q02m/qwen3-embed?logo=codecov&logoColor=white)](https://codecov.io/gh/n24q02m/qwen3-embed)
+[![codecov](https://codecov.io/gh/n24q02m/qwen3-embed/graph/badge.svg?token=M038M651L2)](https://codecov.io/gh/n24q02m/qwen3-embed)
 [![PyPI](https://img.shields.io/pypi/v/qwen3-embed?logo=pypi&logoColor=white)](https://pypi.org/project/qwen3-embed/)
 [![License: Apache-2.0](https://img.shields.io/github/license/n24q02m/qwen3-embed)](LICENSE)
 
