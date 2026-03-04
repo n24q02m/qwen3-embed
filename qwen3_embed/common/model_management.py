@@ -226,7 +226,7 @@ class ModelManagement[T: BaseModelDescription]:
                     logger.warning(
                         "Local file sizes do not match the metadata."
                     )  # do not raise, still make an attempt to load the model
-            result = snapshot_download(
+            result = snapshot_download(  # nosec B615
                 repo_id=hf_source_repo,
                 allow_patterns=allow_patterns,
                 cache_dir=cache_dir,
@@ -263,6 +263,7 @@ class ModelManagement[T: BaseModelDescription]:
             allow_patterns=allow_patterns,
             cache_dir=cache_dir,
             local_files_only=local_files_only,
+            revision=repo_revision,
             **kwargs,
         )
 
