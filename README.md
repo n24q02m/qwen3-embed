@@ -173,6 +173,12 @@ mise run test    # pytest
 mise run fix     # ruff auto-fix + format
 ```
 
+## Related Projects
+
+- **[modalcom-ai-workers](https://github.com/n24q02m/modalcom-ai-workers)** — GPU-accelerated AI workers on Modal.com using this embedding model
+- **[mnemo-mcp](https://github.com/n24q02m/mnemo-mcp)** — MCP memory server with semantic search powered by qwen3-embed
+- **[wet-mcp](https://github.com/n24q02m/wet-mcp)** — MCP web search server with vector-based docs search
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md)
