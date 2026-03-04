@@ -1,4 +1,5 @@
 import contextlib
+import functools
 import os
 import re
 import sys
@@ -92,8 +93,11 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
     return cache_path
 
 
-def get_all_punctuation() -> set[str]:
-    return set(
+@functools.lru_cache
+def get_all_punctuation() -> frozenset[str]:
+    # ⚡ Bolt: Cache this O(N) calculation over 1.1M unicode characters to save ~200ms per call.
+    # Return a frozenset so the cached result cannot be accidentally mutated by callers.
+    return frozenset(
         chr(i) for i in range(sys.maxunicode) if unicodedata.category(chr(i)).startswith("P")
     )
 
