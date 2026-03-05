@@ -53,13 +53,12 @@ class TextEmbedding(TextEmbeddingBase):
         size_in_gb: float = 0.0,
         additional_files: list[str] | None = None,
     ) -> None:
-        registered_models = cls._list_supported_models()
-        for registered_model in registered_models:
-            if model.lower() == registered_model.model.lower():
-                raise ValueError(
-                    f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
-                    f"please use another model name"
-                )
+        registered_models = {rm.model.lower() for rm in cls._list_supported_models()}
+        if model.lower() in registered_models:
+            raise ValueError(
+                f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
+                f"please use another model name"
+            )
 
         CustomTextEmbedding.add_model(
             DenseModelDescription(
