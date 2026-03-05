@@ -271,8 +271,35 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
+    # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
+    @patch("tarfile.TarFile.extractall")
+    def test_decompress_extraction_error_without_tmp_keeps_cache(self, mock_extractall, tmp_path):
+        """Extraction error raises ValueError and keeps cache_dir if 'tmp' is not in path."""
+        tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
+        mock_extractall.side_effect = tarfile.TarError("extraction failed")
+
+        with patch("qwen3_embed.common.model_management.shutil.rmtree") as mock_rmtree:
+            with pytest.raises(ValueError, match="An error occurred while decompressing"):
+                ModelManagement.decompress_to_cache(str(tar_path), "fake_dir_without_t_m_p")
+
+            mock_rmtree.assert_not_called()
+
+    @patch("tarfile.TarFile.extractall")
+    def test_decompress_extraction_error_with_tmp_removes_cache(self, mock_extractall, tmp_path):
+        """Extraction error raises ValueError and removes cache_dir if 'tmp' is in path."""
+        tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
+        mock_extractall.side_effect = tarfile.TarError("extraction failed")
+
+        cache_dir_with_tmp = "fake_dir_with_tmp"
+
+        with patch("qwen3_embed.common.model_management.shutil.rmtree") as mock_rmtree:
+            with pytest.raises(ValueError, match="An error occurred while decompressing"):
+                ModelManagement.decompress_to_cache(str(tar_path), cache_dir_with_tmp)
+
+            mock_rmtree.assert_called_once_with(cache_dir_with_tmp)
+
+
 # TestDownloadFilesFromHuggingFace
 # ---------------------------------------------------------------------------
 
