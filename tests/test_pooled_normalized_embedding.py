@@ -55,3 +55,38 @@ class TestPooledNormalizedEmbedding:
         np.testing.assert_allclose(result, expected_normalized, atol=1e-6)
         # Verify L2 norm is 1
         np.testing.assert_allclose(np.linalg.norm(result, axis=1), [1.0], atol=1e-6)
+
+    def test_get_worker_class(self):
+        """Should return PooledNormalizedEmbeddingWorker."""
+        from qwen3_embed.text.pooled_normalized_embedding import PooledNormalizedEmbeddingWorker
+
+        assert PooledNormalizedEmbedding._get_worker_class() == PooledNormalizedEmbeddingWorker
+
+    def test_list_supported_models(self):
+        """Should return supported_pooled_normalized_models."""
+        from qwen3_embed.text.pooled_normalized_embedding import supported_pooled_normalized_models
+
+        assert (
+            PooledNormalizedEmbedding._list_supported_models()
+            == supported_pooled_normalized_models
+        )
+
+    def test_worker_init_embedding(self):
+        """Should return PooledNormalizedEmbedding instance."""
+        from unittest.mock import patch
+
+        from qwen3_embed.text.pooled_normalized_embedding import PooledNormalizedEmbeddingWorker
+
+        with (
+            patch(
+                "qwen3_embed.text.pooled_normalized_embedding.PooledNormalizedEmbedding"
+            ) as mock_embedding,
+            patch.object(PooledNormalizedEmbeddingWorker, "__init__", return_value=None),
+        ):
+            worker = PooledNormalizedEmbeddingWorker()
+            worker.init_embedding(model_name="test_model", cache_dir="/tmp/test")
+            mock_embedding.assert_called_once_with(
+                model_name="test_model",
+                cache_dir="/tmp/test",
+                threads=1,
+            )
