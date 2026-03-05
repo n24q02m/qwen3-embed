@@ -1,0 +1,3 @@
+🎯 **What:** The `retrieve_model_gcs` function in `qwen3_embed/common/model_management.py` had untested logic for logging and raising a `ValueError` when `local_files_only` was true and the model tar.gz was missing.
+📊 **Coverage:** The existing test `test_local_files_only_raises_value_error` has been expanded. It now verifies that both the correct error message is raised in the `ValueError` and that `logger.error` is invoked with the exact missing file message.
+✨ **Result:** Enhanced test coverage and improved safety when checking correct logging and raising behaviors for missing offline file states.

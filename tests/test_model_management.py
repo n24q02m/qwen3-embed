@@ -526,15 +526,23 @@ class TestRetrieveModelGcs:
         mock_dl.assert_not_called()
         assert result == model_dir
 
-    def test_local_files_only_raises_value_error(self, tmp_path):
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_local_files_only_raises_value_error(self, mock_logger, tmp_path):
         """local_files_only=True when model dir is absent raises ValueError."""
-        with pytest.raises(ValueError, match="local_files_only=True"):
+        import re
+
+        model_dir = tmp_path / "model"
+        expected_msg = (
+            f"Could not find the model tar.gz file at {model_dir} and local_files_only=True."
+        )
+        with pytest.raises(ValueError, match=re.escape(expected_msg)):
             ModelManagement.retrieve_model_gcs(
                 model_name="test/model",
                 source_url="http://example.com/model.tar.gz",
                 cache_dir=str(tmp_path),
                 local_files_only=True,
             )
+        mock_logger.error.assert_called_once_with(expected_msg)
 
     def test_removes_stale_tmp_dir_before_download(self, tmp_path):
         """Pre-existing model_tmp_dir is removed before download attempt."""
