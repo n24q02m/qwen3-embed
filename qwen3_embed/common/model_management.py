@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import tarfile
+import tempfile
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -305,19 +306,30 @@ class ModelManagement[T: BaseModelDescription]:
             raise ValueError(f"{targz_path} is not a .tar.gz file.")
 
         try:
-            # Open the tar.gz file
-            with tarfile.open(targz_path, "r:gz") as tar:
-                # Extract all files into the cache directory
-                tar.extractall(
-                    path=cache_dir,
-                    filter="data",
-                )
+            # Create a temporary directory within the target cache_dir to avoid cross-device moves
+            with tempfile.TemporaryDirectory(dir=cache_dir) as tmpdir:
+                # Open the tar.gz file
+                with tarfile.open(targz_path, "r:gz") as tar:
+                    # Extract all files into the temporary directory
+                    tar.extractall(
+                        path=tmpdir,
+                        filter="data",
+                    )
+                # If extraction is successful, move the extracted contents to the final cache_dir
+                for item in os.listdir(tmpdir):
+                    source = os.path.join(tmpdir, item)
+                    destination = os.path.join(cache_dir, item)
+                    if os.path.exists(destination):
+                        if os.path.isdir(destination):
+                            shutil.rmtree(destination)
+                        else:
+                            os.remove(destination)
+                    shutil.move(source, destination)
         except tarfile.TarError as e:
             # If any error occurs while opening or extracting the tar.gz file,
-            # delete the cache directory (if it was created in this function)
-            # and raise the error again
-            if "tmp" in cache_dir:
-                shutil.rmtree(cache_dir)
+            # the TemporaryDirectory context manager will automatically clean up
+            # the partial extraction, leaving the cache_dir untouched.
+            # We raise the error again for the caller to handle.
             raise ValueError(f"An error occurred while decompressing {targz_path}: {e}") from e
 
         return cache_dir

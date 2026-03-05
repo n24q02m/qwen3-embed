@@ -258,10 +258,14 @@ class TestDecompressToCache:
         assert result == str(cache_dir)
         assert (cache_dir / "model.onnx").exists()
 
-    def test_decompress_error_with_tmp_in_path_removes_cache(self, tmp_path):
-        """Cache dir containing 'tmp' in its path is removed on TarError."""
+    def test_decompress_error_preserves_cache_dir(self, tmp_path):
+        """Cache dir is preserved on TarError, and no partial extraction is left."""
         cache_dir = tmp_path / "tmp_cache"
         cache_dir.mkdir()
+
+        # Place a dummy file to ensure it's not deleted
+        dummy_file = cache_dir / "dummy.txt"
+        dummy_file.touch()
 
         corrupted = tmp_path / "bad.tar.gz"
         corrupted.write_text("not valid")
@@ -269,7 +273,10 @@ class TestDecompressToCache:
         with pytest.raises(ValueError, match="An error occurred while decompressing"):
             ModelManagement.decompress_to_cache(str(corrupted), str(cache_dir))
 
-        assert not cache_dir.exists()
+        assert cache_dir.exists()
+        assert dummy_file.exists()
+        # Ensure no temporary directory leaked
+        assert len(list(cache_dir.iterdir())) == 1
 
 
 # ---------------------------------------------------------------------------
