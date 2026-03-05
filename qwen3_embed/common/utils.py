@@ -1,4 +1,5 @@
 import contextlib
+import functools
 import os
 import re
 import sys
@@ -92,8 +93,9 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
     return cache_path
 
 
-def get_all_punctuation() -> set[str]:
-    return set(
+@functools.lru_cache(maxsize=1)
+def get_all_punctuation() -> frozenset[str]:
+    return frozenset(
         chr(i) for i in range(sys.maxunicode) if unicodedata.category(chr(i)).startswith("P")
     )
 

@@ -132,12 +132,30 @@ class TestGetModelDescription:
 class TestDownloadFileFromGcs:
     """Tests for download_file_from_gcs."""
 
+    GCS_URL = "https://storage.googleapis.com"
+
+    def test_invalid_scheme_raises_value_error(self, tmp_path):
+        """Non-HTTP(S) schemes must be rejected."""
+        output = tmp_path / "model.onnx"
+        with pytest.raises(ValueError, match="Invalid URL scheme"):
+            ModelManagement.download_file_from_gcs("file:///etc/passwd", str(output))
+
+    def test_invalid_hostname_raises_value_error(self, tmp_path):
+        """Non-GCS hostnames must be rejected."""
+        output = tmp_path / "model.onnx"
+        with pytest.raises(ValueError, match="Invalid URL hostname"):
+            ModelManagement.download_file_from_gcs(
+                "http://169.254.169.254/latest/meta-data/", str(output)
+            )
+        with pytest.raises(ValueError, match="Invalid URL hostname"):
+            ModelManagement.download_file_from_gcs("https://example.com/x.onnx", str(output))
+
     def test_returns_existing_file(self, tmp_path):
         """If the file already exists, return immediately without HTTP request."""
         existing = tmp_path / "model.onnx"
         existing.write_bytes(b"data")
         result = ModelManagement.download_file_from_gcs(
-            "http://example.com/model.onnx", str(existing)
+            f"{self.GCS_URL}/model.onnx", str(existing)
         )
         assert result == str(existing)
 
@@ -149,10 +167,10 @@ class TestDownloadFileFromGcs:
 
         output = tmp_path / "new_model.onnx"
         with pytest.raises(PermissionError, match="Authentication Error"):
-            ModelManagement.download_file_from_gcs("http://example.com/x.onnx", str(output))
+            ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/x.onnx", str(output))
 
     @patch("qwen3_embed.common.model_management.requests.get")
-    def test_missing_content_length_prints_warning(self, mock_get, tmp_path, capsys):
+    def test_missing_content_length_logs_warning(self, mock_get, tmp_path):
         response = Mock()
         response.status_code = 200
         response.headers = {"content-length": "0"}
@@ -160,12 +178,13 @@ class TestDownloadFileFromGcs:
         mock_get.return_value = response
 
         output = tmp_path / "out.onnx"
-        result = ModelManagement.download_file_from_gcs(
-            "http://example.com/out.onnx", str(output), show_progress=False
-        )
-        assert result == str(output)
-        captured = capsys.readouterr()
-        assert "Warning" in captured.out
+        with patch("qwen3_embed.common.model_management.logger.warning") as mock_warning:
+            result = ModelManagement.download_file_from_gcs(
+                f"{self.GCS_URL}/out.onnx", str(output), show_progress=False
+            )
+            assert result == str(output)
+            mock_warning.assert_called_once()
+            assert "Content-length header is missing" in mock_warning.call_args[0][0]
 
     @patch("qwen3_embed.common.model_management.requests.get")
     def test_downloads_file_with_content_length(self, mock_get, tmp_path):
@@ -178,7 +197,7 @@ class TestDownloadFileFromGcs:
 
         output = tmp_path / "model.onnx"
         result = ModelManagement.download_file_from_gcs(
-            "http://example.com/model.onnx", str(output), show_progress=True
+            f"{self.GCS_URL}/model.onnx", str(output), show_progress=True
         )
         assert result == str(output)
         assert output.read_bytes() == chunk
@@ -193,7 +212,7 @@ class TestDownloadFileFromGcs:
         mock_get.return_value = response
 
         output = tmp_path / "out.onnx"
-        ModelManagement.download_file_from_gcs("http://example.com/out.onnx", str(output))
+        ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/out.onnx", str(output))
         assert output.read_bytes() == b"hello"
 
     @patch("qwen3_embed.common.model_management.requests.get")
@@ -208,7 +227,7 @@ class TestDownloadFileFromGcs:
         output = tmp_path / "out.onnx"
         # Should not raise even with show_progress=True but no content-length
         ModelManagement.download_file_from_gcs(
-            "http://example.com/out.onnx", str(output), show_progress=True
+            f"{self.GCS_URL}/out.onnx", str(output), show_progress=True
         )
         assert output.exists()
 

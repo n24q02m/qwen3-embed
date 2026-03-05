@@ -6,6 +6,7 @@ import time
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, TypeVar
+from urllib.parse import urlparse
 
 import requests
 from huggingface_hub import list_repo_tree, model_info, snapshot_download
@@ -98,6 +99,19 @@ class ModelManagement[T: BaseModelDescription]:
             str: The path to the downloaded file.
         """
 
+        parsed_url = urlparse(url)
+        if parsed_url.scheme not in ("http", "https"):
+            raise ValueError(
+                f"Invalid URL scheme: {parsed_url.scheme}. Only http and https are allowed."
+            )
+
+        allowed_domains = {"storage.googleapis.com"}
+        if parsed_url.hostname not in allowed_domains:
+            raise ValueError(
+                f"Invalid URL hostname: {parsed_url.hostname}. "
+                "Only URLs from Google Cloud Storage are allowed."
+            )
+
         if os.path.exists(output_path):
             return output_path
         response = requests.get(url, stream=True, timeout=10)
@@ -114,7 +128,7 @@ class ModelManagement[T: BaseModelDescription]:
 
         # Warn if the total size is zero
         if total_size_in_bytes == 0:
-            print(f"Warning: Content-length header is missing or zero in the response from {url}.")
+            logger.warning(f"Content-length header is missing or zero in the response from {url}.")
 
         show_progress = bool(total_size_in_bytes and show_progress)
 
@@ -263,6 +277,7 @@ class ModelManagement[T: BaseModelDescription]:
             allow_patterns=allow_patterns,
             cache_dir=cache_dir,
             local_files_only=local_files_only,
+            revision=repo_revision,
             **kwargs,
         )
 
