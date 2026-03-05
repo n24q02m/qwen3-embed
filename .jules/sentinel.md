@@ -1,0 +1,4 @@
+## 2026-07-05 - [False Positive B615 with HuggingFace `snapshot_download`]
+**Vulnerability:** Bandit correctly flagged a potential supply chain risk (B615) when using `snapshot_download` without revision pinning.
+**Learning:** In the specific case where `local_files_only=True` is provided to `snapshot_download` (like when loading from a local cache fallback), no remote fetching occurs, rendering the revision pinning warning a false positive.
+**Prevention:** Always use explicit revision pinning (e.g., `revision=repo_revision`) for `snapshot_download` when doing remote fetches, but it is safe and correct to suppress the Bandit warning (`# nosec B615`) for calls that are guaranteed to use `local_files_only=True`.
