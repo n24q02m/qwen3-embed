@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import shutil
@@ -85,7 +86,13 @@ class ModelManagement[T: BaseModelDescription]:
         raise ValueError(f"Model {model_name} is not supported in {cls.__name__}.")
 
     @classmethod
-    def download_file_from_gcs(cls, url: str, output_path: str, show_progress: bool = True) -> str:
+    def download_file_from_gcs(
+        cls,
+        url: str,
+        output_path: str,
+        show_progress: bool = True,
+        expected_md5: str | None = None,
+    ) -> str:
         """
         Downloads a file from Google Cloud Storage.
 
@@ -93,6 +100,8 @@ class ModelManagement[T: BaseModelDescription]:
             url (str): The URL to download the file from.
             output_path (str): The path to save the downloaded file to.
             show_progress (bool, optional): Whether to show a progress bar. Defaults to True.
+
+            expected_md5 (str | None, optional): The expected MD5 checksum to verify. Defaults to None.
 
         Returns:
             str: The path to the downloaded file.
@@ -118,6 +127,7 @@ class ModelManagement[T: BaseModelDescription]:
 
         show_progress = bool(total_size_in_bytes and show_progress)
 
+        md5_hash = hashlib.md5()
         with (
             tqdm(
                 total=total_size_in_bytes,
@@ -131,6 +141,18 @@ class ModelManagement[T: BaseModelDescription]:
                 if chunk:  # Filter out keep-alive new chunks
                     progress_bar.update(len(chunk))
                     file.write(chunk)
+                    if expected_md5 is not None:
+                        md5_hash.update(chunk)
+
+        if expected_md5 is not None:
+            calculated_md5 = md5_hash.hexdigest()
+            if calculated_md5 != expected_md5:
+                os.remove(output_path)
+                raise ValueError(
+                    f"Downloaded file {output_path} failed MD5 checksum verification. "
+                    f"Expected {expected_md5}, got {calculated_md5}."
+                )
+
         return output_path
 
     @classmethod
@@ -330,6 +352,7 @@ class ModelManagement[T: BaseModelDescription]:
         cache_dir: str,
         deprecated_tar_struct: bool = False,
         local_files_only: bool = False,
+        expected_md5: str | None = None,
     ) -> Path:
         fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{model_name.split('/')[-1]}"
         cache_tmp_dir = Path(cache_dir) / "tmp"
@@ -354,6 +377,7 @@ class ModelManagement[T: BaseModelDescription]:
             cls.download_file_from_gcs(
                 source_url,
                 output_path=str(model_tar_gz),
+                expected_md5=expected_md5,
             )
 
             cls.decompress_to_cache(targz_path=str(model_tar_gz), cache_dir=str(cache_tmp_dir))
@@ -458,6 +482,7 @@ class ModelManagement[T: BaseModelDescription]:
                         str(cache_dir),
                         deprecated_tar_struct=model.sources.deprecated_tar_struct,
                         local_files_only=local_files_only,
+                        expected_md5=model.sources.expected_md5,
                     )
                 except Exception:
                     if not local_files_only:
