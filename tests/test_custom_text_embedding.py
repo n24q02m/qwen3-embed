@@ -260,7 +260,15 @@ class TestPool:
         emb = self._make_instance(PoolingType.CLS, tmp_path)
         # Force an unsupported pooling type at runtime
         object.__setattr__(emb, "_pooling", "UNSUPPORTED")  # bypass normal attr setting
-        with pytest.raises(ValueError, match="Unsupported pooling type"):
+
+        import re
+
+        expected_msg = (
+            f"Unsupported pooling type UNSUPPORTED. "
+            f"Supported types are: {PoolingType.CLS}, {PoolingType.MEAN}, "
+            f"{PoolingType.LAST_TOKEN}, {PoolingType.DISABLED}."
+        )
+        with pytest.raises(ValueError, match=re.escape(expected_msg)):
             emb._pool(np.ones((1, 4, 8), dtype=np.float32), attention_mask=None)
 
 
