@@ -160,12 +160,15 @@ class TestDownloadFileFromGcs:
         mock_get.return_value = response
 
         output = tmp_path / "out.onnx"
-        result = ModelManagement.download_file_from_gcs(
-            "http://example.com/out.onnx", str(output), show_progress=False
-        )
-        assert result == str(output)
-        captured = capsys.readouterr()
-        assert "Warning" in captured.out
+
+        # loguru doesn't write to capsys by default. We need to patch loguru or mock logger.warning
+        with patch("qwen3_embed.common.model_management.logger.warning") as mock_warning:
+            result = ModelManagement.download_file_from_gcs(
+                "http://example.com/out.onnx", str(output), show_progress=False
+            )
+            assert result == str(output)
+            mock_warning.assert_called_once()
+            assert "Content-length header is missing" in mock_warning.call_args[0][0]
 
     @patch("qwen3_embed.common.model_management.requests.get")
     def test_downloads_file_with_content_length(self, mock_get, tmp_path):
