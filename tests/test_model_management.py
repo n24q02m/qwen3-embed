@@ -227,10 +227,12 @@ class TestDecompressToCache:
             ModelManagement.decompress_to_cache(str(nonexistent_file), str(tmp_path))
 
     def test_decompress_invalid_extension(self, tmp_path):
-        invalid_file = tmp_path / "invalid.txt"
-        invalid_file.touch()
-        with pytest.raises(ValueError, match="is not a .tar.gz file"):
-            ModelManagement.decompress_to_cache(str(invalid_file), str(tmp_path))
+        invalid_extensions = ["invalid.txt", "model.tar", "model.zip", "model", "model.tar.bz2"]
+        for ext in invalid_extensions:
+            invalid_file = tmp_path / ext
+            invalid_file.touch()
+            with pytest.raises(ValueError, match="is not a .tar.gz file"):
+                ModelManagement.decompress_to_cache(str(invalid_file), str(tmp_path))
 
     def test_decompress_directory(self, tmp_path):
         directory = tmp_path / "directory.tar.gz"
