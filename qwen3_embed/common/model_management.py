@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import json
 import os
 import shutil
@@ -118,6 +120,17 @@ class ModelManagement[T: BaseModelDescription]:
 
         show_progress = bool(total_size_in_bytes and show_progress)
 
+        expected_md5 = None
+        x_goog_hash = response.headers.get("x-goog-hash")
+        if x_goog_hash:
+            for hash_part in x_goog_hash.split(","):
+                hash_part = hash_part.strip()
+                if hash_part.startswith("md5="):
+                    expected_md5 = hash_part[4:]
+                    break
+
+        md5_hash = hashlib.md5()
+
         with (
             tqdm(
                 total=total_size_in_bytes,
@@ -131,6 +144,18 @@ class ModelManagement[T: BaseModelDescription]:
                 if chunk:  # Filter out keep-alive new chunks
                     progress_bar.update(len(chunk))
                     file.write(chunk)
+                    md5_hash.update(chunk)
+
+        if expected_md5:
+            actual_md5 = base64.b64encode(md5_hash.digest()).decode("utf-8")
+            if actual_md5 != expected_md5:
+                if os.path.exists(output_path):
+                    os.remove(output_path)
+                raise ValueError(
+                    f"Downloaded file {output_path} is corrupted. "
+                    f"MD5 hash mismatch: expected {expected_md5}, got {actual_md5}."
+                )
+
         return output_path
 
     @classmethod
