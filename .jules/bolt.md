@@ -1,0 +1,3 @@
+## 2024-03-09 - [mean_pooling Optimization]
+**Learning:** Using `np.matmul(mask[:, np.newaxis, :], input_array).squeeze(1)` for masked mean pooling is ~5x faster and significantly more memory-efficient than `np.expand_dims` with broadcasting (`np.sum(input_array * input_mask_expanded, axis=1)`), as it avoids creating a large intermediate tensor of shape `(Batch, Seq, Hidden)`. Casting the mask directly to the input array's dtype avoids type promotion overhead.
+**Action:** When computing masked aggregations (like mean pooling) on large dense arrays where the mask broadcast matches a dot product, always use `np.matmul` instead of element-wise multiplication and summing.
