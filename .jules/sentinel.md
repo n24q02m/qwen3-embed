@@ -1,0 +1,4 @@
+## 2026-03-08 - Safe HuggingFace Hub Local Download Suppression
+**Vulnerability:** B615:huggingface_unsafe_download was triggered on a `snapshot_download()` call without revision pinning.
+**Learning:** When `local_files_only=True` is used for `snapshot_download()`, no remote fetching occurs, meaning the operation is isolated from network/tampering risks. Suppressing the Bandit warning with `# nosec B615` is safe under these exact conditions, provided we do not refactor or hardcode any dynamic variables (e.g. changing `local_files_only=local_files_only` to `True` could introduce functional regressions).
+**Prevention:** Only use `# nosec B615` on `snapshot_download()` calls if they are strictly guaranteed to operate offline (e.g., inside an `if local_files_only:` block with `local_files_only` explicitly passed). When fetching remotely, always use explicit revision pinning (e.g., `revision=repo_revision`) to prevent supply chain attacks.
