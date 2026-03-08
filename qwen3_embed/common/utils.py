@@ -51,7 +51,8 @@ def normalize(input_array: NumpyArray, p: int = 2, dim: int = 1, eps: float = 1e
 
 
 def mean_pooling(input_array: NumpyArray, attention_mask: NDArray[np.int64]) -> NumpyArray:
-    # Use broadcasting instead of np.tile, and cast mask to input dtype to avoid type promotion overhead
+    # Use batched matmul instead of broadcasting to avoid allocating a large (Batch, Seq, Hidden) tensor
+    # Cast mask to input dtype to avoid type promotion overhead
     mask = attention_mask.astype(input_array.dtype)
     sum_embeddings = np.matmul(mask[:, np.newaxis, :], input_array).squeeze(1)
     sum_mask = np.sum(mask, axis=1, keepdims=True)
