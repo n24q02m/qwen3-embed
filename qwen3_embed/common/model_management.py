@@ -79,8 +79,9 @@ class ModelManagement[T: BaseModelDescription]:
         Returns:
             T: The model description.
         """
+        model_name_lower = model_name.lower()
         for model in cls._list_supported_models():
-            if model_name.lower() == model.model.lower():
+            if model_name_lower == model.model.lower():
                 return model
 
         raise ValueError(f"Model {model_name} is not supported in {cls.__name__}.")
