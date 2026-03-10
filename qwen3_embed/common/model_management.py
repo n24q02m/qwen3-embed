@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import json
 import os
 import shutil
@@ -132,6 +134,7 @@ class ModelManagement[T: BaseModelDescription]:
 
         show_progress = bool(total_size_in_bytes and show_progress)
 
+        md5_hash = hashlib.md5()  # nosec B303
         with (
             tqdm(
                 total=total_size_in_bytes,
@@ -145,6 +148,19 @@ class ModelManagement[T: BaseModelDescription]:
                 if chunk:  # Filter out keep-alive new chunks
                     progress_bar.update(len(chunk))
                     file.write(chunk)
+                    md5_hash.update(chunk)
+
+        expected_md5 = None
+        if "x-goog-hash" in response.headers:
+            for hash_str in response.headers["x-goog-hash"].split(","):
+                if hash_str.strip().startswith("md5="):
+                    expected_md5 = base64.b64decode(hash_str.strip()[4:]).hex()
+                    break
+
+        if expected_md5 and md5_hash.hexdigest() != expected_md5:
+            os.remove(output_path)
+            raise ValueError(f"MD5 checksum mismatch for downloaded file: {output_path}")
+
         return output_path
 
     @classmethod
