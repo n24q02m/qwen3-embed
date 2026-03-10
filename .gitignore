@@ -39,3 +39,7 @@ temp/
 nul
 NUL
 *.tar.gz
+
+# AI Agent
+.jules/
+JULES.md
