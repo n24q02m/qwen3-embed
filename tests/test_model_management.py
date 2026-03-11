@@ -527,6 +527,64 @@ class TestDownloadFilesFromHuggingFace:
 # ---------------------------------------------------------------------------
 
 
+
+    @patch("qwen3_embed.common.model_management.list_repo_tree")
+    @patch("qwen3_embed.common.model_management.model_info")
+    @patch("qwen3_embed.common.model_management.snapshot_download")
+    def test_collect_file_metadata_logic(self, mock_snap, mock_info, mock_tree, tmp_path):
+        """Tests the internal _collect_file_metadata logic by verifying the saved metadata.json."""
+        snapshot_dir = tmp_path / "models--org--repo"
+        snapshot_dir.mkdir(parents=True)
+
+        # Create some files:
+        # 1. A normal file in the root
+        (snapshot_dir / "model.onnx").write_bytes(b"x" * 500)
+
+        # 2. A file in a subdirectory
+        sub_dir = snapshot_dir / "sub"
+        sub_dir.mkdir()
+        (sub_dir / "config.json").write_bytes(b"x" * 100)
+
+        # 3. A file that is not in repo_files
+        (snapshot_dir / "extra.txt").write_bytes(b"x" * 50)
+
+        # 4. The metadata file itself (should be ignored)
+        # removed to force re-collection
+
+        repo_files = [
+            make_repo_file("model.onnx", size=500, oid="aaa"),
+            make_repo_file("config.json", size=100, oid="bbb"),
+        ]
+
+        mock_info.return_value = Mock(sha="rev123")
+        mock_tree.return_value = repo_files
+        mock_snap.return_value = str(snapshot_dir)
+
+        ModelManagement.download_files_from_huggingface(
+            hf_source_repo="org/repo",
+            cache_dir=str(tmp_path),
+            extra_patterns=["model.onnx"],
+        )
+
+        meta_file = snapshot_dir / ModelManagement.METADATA_FILE
+        assert meta_file.exists()
+
+        metadata = json.loads(meta_file.read_text())
+
+        # Verify metadata dictionary contents
+        assert "model.onnx" in metadata
+        assert metadata["model.onnx"] == {"size": 500, "blob_id": "aaa"}
+
+        assert "sub/config.json" in metadata
+        assert metadata["sub/config.json"] == {"size": 100, "blob_id": "bbb"}
+
+        assert "extra.txt" not in metadata
+        assert ModelManagement.METADATA_FILE not in metadata
+
+
+# # ---------------------------------------------------------------------------
+
+
 class TestRetrieveModelGcs:
     """Tests for retrieve_model_gcs."""
 
