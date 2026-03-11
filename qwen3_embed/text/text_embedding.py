@@ -54,8 +54,10 @@ class TextEmbedding(TextEmbeddingBase):
         additional_files: list[str] | None = None,
     ) -> None:
         registered_models = cls._list_supported_models()
+        # ⚡ Bolt: Cache lowercase model name outside loop
+        model_lower = model.lower()
         for registered_model in registered_models:
-            if model.lower() == registered_model.model.lower():
+            if model_lower == registered_model.model.lower():
                 raise ValueError(
                     f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
                     f"please use another model name"
@@ -88,9 +90,11 @@ class TextEmbedding(TextEmbeddingBase):
         **kwargs: Any,
     ):
         super().__init__(model_name, cache_dir, threads, **kwargs)
+        # ⚡ Bolt: Cache lowercase model name outside loop
+        model_name_lower = model_name.lower()
         for EMBEDDING_MODEL_TYPE in self.EMBEDDINGS_REGISTRY:
             supported_models = EMBEDDING_MODEL_TYPE._list_supported_models()
-            if any(model_name.lower() == model.model.lower() for model in supported_models):
+            if any(model_name_lower == model.model.lower() for model in supported_models):
                 self.model = EMBEDDING_MODEL_TYPE(
                     model_name=model_name,
                     cache_dir=cache_dir,
@@ -130,8 +134,10 @@ class TextEmbedding(TextEmbeddingBase):
         """
         descriptions = cls._list_supported_models()
         embedding_size: int | None = None
+        # ⚡ Bolt: Cache lowercase model name outside loop
+        model_name_lower = model_name.lower()
         for description in descriptions:
-            if description.model.lower() == model_name.lower():
+            if description.model.lower() == model_name_lower:
                 embedding_size = description.dim
                 break
         if embedding_size is None:
