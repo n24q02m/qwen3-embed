@@ -282,9 +282,7 @@ class TestDownloadFileFromGcs:
         mock_get.return_value = response
 
         output = tmp_path / "model.onnx"
-        result = ModelManagement.download_file_from_gcs(
-            f"{self.GCS_URL}/model.onnx", str(output)
-        )
+        result = ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/model.onnx", str(output))
         assert result == str(output)
         assert output.read_bytes() == chunk
 
