@@ -17,7 +17,6 @@ from qwen3_embed.parallel_processor import Worker
 T = TypeVar("T")
 
 
-
 @dataclass
 class OnnxModelConfig:
     model_dir: Path
