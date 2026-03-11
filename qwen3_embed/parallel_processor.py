@@ -2,6 +2,7 @@ import logging
 import os
 from collections.abc import Iterable
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import StrEnum
 from multiprocessing import Queue, get_context
 from multiprocessing.context import BaseContext
@@ -16,6 +17,16 @@ from qwen3_embed.common.types import Device
 processing_timeout = 10 * 60  # seconds
 
 max_internal_batch_size = 200
+
+
+@dataclass
+class WorkerContext:
+    worker_class: type["Worker"]
+    input_queue: Queue
+    output_queue: Queue
+    num_active_workers: BaseValue
+    worker_id: int
+    kwargs: dict[str, Any] | None = None
 
 
 class QueueSignals(StrEnum):
@@ -33,42 +44,35 @@ class Worker:
         raise NotImplementedError()
 
 
-def _worker(
-    worker_class: type[Worker],
-    input_queue: Queue,
-    output_queue: Queue,
-    num_active_workers: BaseValue,
-    worker_id: int,
-    kwargs: dict[str, Any] | None = None,
-) -> None:
+def _worker(context: WorkerContext) -> None:
     """
     A worker that pulls data pints off the input queue, and places the execution result on the output queue.
     When there are no data pints left on the input queue, it decrements
     num_active_workers to signal completion.
     """
 
-    if kwargs is None:
-        kwargs = {}
+    if context.kwargs is None:
+        context.kwargs = {}
 
     logging.info(
-        f"Reader worker: {worker_id} PID: {os.getpid()} Device: {kwargs.get('device_id', 'CPU')}"
+        f"Reader worker: {context.worker_id} PID: {os.getpid()} Device: {context.kwargs.get('device_id', 'CPU')}"
     )
     try:
-        worker = worker_class.start(**kwargs)
+        worker = context.worker_class.start(**context.kwargs)
 
         # Keep going until you get an item that's None.
         def input_queue_iterable() -> Iterable[Any]:
             while True:
-                item = input_queue.get()
+                item = context.input_queue.get()
                 if item == QueueSignals.stop:
                     break
                 yield item
 
         for processed_item in worker.process(input_queue_iterable()):
-            output_queue.put(processed_item)
+            context.output_queue.put(processed_item)
     except Exception as e:  # pylint: disable=broad-except
         logging.exception(e)
-        output_queue.put(QueueSignals.error)
+        context.output_queue.put(QueueSignals.error)
     finally:
         # It's important that we close and join the queue here before
         # decrementing num_active_workers. Otherwise our parent may join us
@@ -78,15 +82,15 @@ def _worker(
         # See:
         # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#pipes-and-queues
         # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#programming-guidelines
-        input_queue.close()
-        output_queue.close()
-        input_queue.join_thread()
-        output_queue.join_thread()
+        context.input_queue.close()
+        context.output_queue.close()
+        context.input_queue.join_thread()
+        context.output_queue.join_thread()
 
-        with num_active_workers.get_lock():
-            num_active_workers.value -= 1
+        with context.num_active_workers.get_lock():
+            context.num_active_workers.value -= 1
 
-        logging.info(f"Reader worker {worker_id} finished")
+        logging.info(f"Reader worker {context.worker_id} finished")
 
 
 class ParallelWorkerPool:
@@ -126,16 +130,17 @@ class ParallelWorkerPool:
                 worker_kwargs["cuda"] = self.cuda
 
             assert hasattr(self.ctx, "Process")
+            context = WorkerContext(
+                worker_class=self.worker_class,
+                input_queue=self.input_queue,
+                output_queue=self.output_queue,
+                num_active_workers=self.num_active_workers,
+                worker_id=worker_id,
+                kwargs=worker_kwargs,
+            )
             process = self.ctx.Process(  # type: ignore[call-non-callable]
                 target=_worker,
-                args=(
-                    self.worker_class,
-                    self.input_queue,
-                    self.output_queue,
-                    self.num_active_workers,
-                    worker_id,
-                    worker_kwargs,
-                ),
+                args=(context,),
             )
             process.start()
             self.processes.append(process)
