@@ -25,7 +25,6 @@ class OnnxOutputContext:
     metadata: dict[str, Any] | None = None
 
 
-
 @dataclass
 class OnnxEmbeddingParameters:
     model_name: str
