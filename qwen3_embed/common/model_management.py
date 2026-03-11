@@ -6,7 +6,6 @@ import time
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, TypeVar
-from urllib.parse import urlparse
 
 import requests
 from huggingface_hub import list_repo_tree, model_info, snapshot_download
@@ -99,16 +98,9 @@ class ModelManagement[T: BaseModelDescription]:
             str: The path to the downloaded file.
         """
 
-        parsed_url = urlparse(url)
-        if parsed_url.scheme not in ("http", "https"):
+        if not url.startswith(("http://storage.googleapis.com/", "https://storage.googleapis.com/")):
             raise ValueError(
-                f"Invalid URL scheme: {parsed_url.scheme}. Only http and https are allowed."
-            )
-
-        allowed_domains = {"storage.googleapis.com"}
-        if parsed_url.hostname not in allowed_domains:
-            raise ValueError(
-                f"Invalid URL hostname: {parsed_url.hostname}. "
+                f"Invalid URL: {url}. "
                 "Only URLs from Google Cloud Storage are allowed."
             )
 

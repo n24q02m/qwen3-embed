@@ -137,17 +137,30 @@ class TestDownloadFileFromGcs:
     def test_invalid_scheme_raises_value_error(self, tmp_path):
         """Non-HTTP(S) schemes must be rejected."""
         output = tmp_path / "model.onnx"
-        with pytest.raises(ValueError, match="Invalid URL scheme"):
+        with pytest.raises(ValueError, match="Invalid URL"):
             ModelManagement.download_file_from_gcs("file:///etc/passwd", str(output))
+
+    def test_ssrf_payloads_rejected(self, tmp_path):
+        """SSRF payloads attempting to bypass host checks must be rejected."""
+        output = tmp_path / "model.onnx"
+        payloads = [
+            "https://storage.googleapis.com@127.0.0.1/",
+            "https://127.0.0.1#@storage.googleapis.com/",
+            "https://storage.googleapis.com.evil.com/",
+            "http://127.0.0.1:80@storage.googleapis.com/",
+        ]
+        for payload in payloads:
+            with pytest.raises(ValueError, match="Invalid URL"):
+                ModelManagement.download_file_from_gcs(payload, str(output))
 
     def test_invalid_hostname_raises_value_error(self, tmp_path):
         """Non-GCS hostnames must be rejected."""
         output = tmp_path / "model.onnx"
-        with pytest.raises(ValueError, match="Invalid URL hostname"):
+        with pytest.raises(ValueError, match="Invalid URL"):
             ModelManagement.download_file_from_gcs(
                 "http://169.254.169.254/latest/meta-data/", str(output)
             )
-        with pytest.raises(ValueError, match="Invalid URL hostname"):
+        with pytest.raises(ValueError, match="Invalid URL"):
             ModelManagement.download_file_from_gcs("https://example.com/x.onnx", str(output))
 
     def test_returns_existing_file(self, tmp_path):
