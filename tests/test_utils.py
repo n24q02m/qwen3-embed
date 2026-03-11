@@ -162,29 +162,49 @@ class TestIterBatch:
         with pytest.raises(ValueError, match="Stop argument for islice"):
             list(iter_batch(data, -1))
 
+
 class TestGetAllPunctuation:
     """Tests for get_all_punctuation utility function."""
 
     def test_returns_frozenset(self) -> None:
         """Should return a frozenset."""
         from qwen3_embed.common.utils import get_all_punctuation
+
         result = get_all_punctuation()
         assert isinstance(result, frozenset)
 
     def test_contains_common_punctuation(self) -> None:
         """Should contain common ASCII punctuation marks."""
         from qwen3_embed.common.utils import get_all_punctuation
+
         punctuation = get_all_punctuation()
 
         # Not all of these might be categorized as "P" (Punctuation) in Unicode (e.g., $ is "Sc" Currency Symbol)
         # So let's test a subset that are definitively punctuation
-        definite_punctuation = [".", ",", "!", "?", "-", ";", ":", "'", '"', "(", ")", "[", "]", "{", "}"]
+        definite_punctuation = [
+            ".",
+            ",",
+            "!",
+            "?",
+            "-",
+            ";",
+            ":",
+            "'",
+            '"',
+            "(",
+            ")",
+            "[",
+            "]",
+            "{",
+            "}",
+        ]
         for mark in definite_punctuation:
             assert mark in punctuation, f"Expected {mark} to be in punctuation set"
 
     def test_does_not_contain_alphanumeric(self) -> None:
         """Should not contain alphanumeric characters."""
         from qwen3_embed.common.utils import get_all_punctuation
+
         punctuation = get_all_punctuation()
         alphanumeric = ["a", "Z", "0", "9", " ", "\n", "\t"]
         for char in alphanumeric:
@@ -193,6 +213,7 @@ class TestGetAllPunctuation:
     def test_caching(self) -> None:
         """Multiple calls should return the exact same object due to lru_cache."""
         from qwen3_embed.common.utils import get_all_punctuation
+
         result1 = get_all_punctuation()
         result2 = get_all_punctuation()
         assert result1 is result2
