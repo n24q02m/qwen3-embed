@@ -319,7 +319,7 @@ class TestDecompressToCache:
         cache_dir = tmp_path / "cache_tmp"
         cache_dir.mkdir()
 
-        with pytest.raises(ValueError, match="An error occurred while decompressing"):
+        with pytest.raises(tarfile.TarError, match="not a gzip file"):
             ModelManagement.decompress_to_cache(str(corrupted_file), str(cache_dir))
 
     def test_decompress_success(self, tmp_path):
@@ -332,17 +332,24 @@ class TestDecompressToCache:
         assert result == str(cache_dir)
         assert (cache_dir / "model.onnx").exists()
 
-    def test_decompress_error_with_tmp_in_path_removes_cache(self, tmp_path):
-        """Cache dir containing 'tmp' in its path is removed on TarError."""
-        cache_dir = tmp_path / "tmp_cache"
+    def test_decompress_extraction_failure_removes_cache_dir(self, tmp_path):
+        """If tarfile extraction fails mid-way, the cache directory is completely removed."""
+        cache_dir = tmp_path / "cache_dir"
         cache_dir.mkdir()
 
-        corrupted = tmp_path / "bad.tar.gz"
-        corrupted.write_text("not valid")
+        # Create a valid tar structure but mock extractall to fail
+        tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
 
-        with pytest.raises(ValueError, match="An error occurred while decompressing"):
-            ModelManagement.decompress_to_cache(str(corrupted), str(cache_dir))
+        def mock_extractall(*args, **kwargs):
+            raise tarfile.TarError("Simulated extraction failure")
 
+        with (
+            patch("tarfile.TarFile.extractall", side_effect=mock_extractall),
+            pytest.raises(tarfile.TarError, match="Simulated extraction failure"),
+        ):
+            ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
+        # Ensure the cache dir was removed due to the error
         assert not cache_dir.exists()
 
     def test_decompress_tar_slip_prevention(self, tmp_path):
