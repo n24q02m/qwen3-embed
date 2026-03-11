@@ -130,6 +130,7 @@ class ModelManagement[T: BaseModelDescription]:
                 part = part.strip()
                 if part.startswith("md5="):
                     import base64
+
                     expected_md5 = base64.b64decode(part[4:]).hex()
 
         # Get the total size of the file
@@ -152,6 +153,7 @@ class ModelManagement[T: BaseModelDescription]:
             open(output_path, "wb") as file,
         ):
             import hashlib
+
             md5_hash = hashlib.md5()
             for chunk in response.iter_content(chunk_size=1024):
                 if chunk:  # Filter out keep-alive new chunks

@@ -845,7 +845,6 @@ class TestDownloadModel:
         assert "vocab.txt" in patterns
 
 
-
 class TestDownloadFileFromGCS:
     @patch("qwen3_embed.common.model_management.requests.get")
     def test_download_file_from_gcs_hash_mismatch(self, mock_get, tmp_path):
