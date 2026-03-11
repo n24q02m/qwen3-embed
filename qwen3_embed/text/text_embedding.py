@@ -1,5 +1,5 @@
 from collections.abc import Iterable, Sequence
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, replace
 from typing import Any
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource, PoolingType
@@ -12,6 +12,13 @@ from qwen3_embed.text.pooled_normalized_embedding import PooledNormalizedEmbeddi
 from qwen3_embed.text.qwen3_embedding import Qwen3TextEmbedding
 from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
+
+@dataclass
+class InitOptions:
+    providers: Sequence[OnnxProvider] | None = None
+    cuda: bool | Device = Device.AUTO
+    device_ids: list[int] | None = None
+    lazy_load: bool = False
 
 class TextEmbedding(TextEmbeddingBase):
     EMBEDDINGS_REGISTRY: list[type[TextEmbeddingBase]] = [
@@ -81,13 +88,22 @@ class TextEmbedding(TextEmbeddingBase):
         model_name: str = "n24q02m/Qwen3-Embedding-0.6B-ONNX",
         cache_dir: str | None = None,
         threads: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        lazy_load: bool = False,
+        init_options: InitOptions | None = None,
         **kwargs: Any,
     ):
+        # Extract legacy init options from kwargs to maintain backward compatibility
+        legacy_options = {}
+        for param in ["providers", "cuda", "device_ids", "lazy_load"]:
+            if param in kwargs:
+                legacy_options[param] = kwargs.pop(param)
+
         super().__init__(model_name, cache_dir, threads, **kwargs)
+
+        if init_options is None:
+            init_options = InitOptions(**legacy_options)
+        elif legacy_options:
+            # Create a new InitOptions to avoid mutating the provided one
+            init_options = replace(init_options, **legacy_options)
         for EMBEDDING_MODEL_TYPE in self.EMBEDDINGS_REGISTRY:
             supported_models = EMBEDDING_MODEL_TYPE._list_supported_models()
             if any(model_name.lower() == model.model.lower() for model in supported_models):
@@ -95,10 +111,10 @@ class TextEmbedding(TextEmbeddingBase):
                     model_name=model_name,
                     cache_dir=cache_dir,
                     threads=threads,
-                    providers=providers,
-                    cuda=cuda,
-                    device_ids=device_ids,
-                    lazy_load=lazy_load,
+                    providers=init_options.providers,
+                    cuda=init_options.cuda,
+                    device_ids=init_options.device_ids,
+                    lazy_load=init_options.lazy_load,
                     **kwargs,
                 )
                 return
