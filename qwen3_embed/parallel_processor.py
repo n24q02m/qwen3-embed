@@ -33,6 +33,36 @@ class Worker:
         raise NotImplementedError()
 
 
+def _get_items_from_queue(input_queue: Queue) -> Iterable[Any]:
+    while True:
+        item = input_queue.get()
+        if item == QueueSignals.stop:
+            break
+        yield item
+
+
+def _cleanup_worker(
+    input_queue: Queue, output_queue: Queue, num_active_workers: BaseValue, worker_id: int
+) -> None:
+    # It's important that we close and join the queue here before
+    # decrementing num_active_workers. Otherwise our parent may join us
+    # before the queue's feeder thread has passed all buffered items to
+    # the underlying pipe resulting in a deadlock.
+    #
+    # See:
+    # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#pipes-and-queues
+    # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#programming-guidelines
+    input_queue.close()
+    output_queue.close()
+    input_queue.join_thread()
+    output_queue.join_thread()
+
+    with num_active_workers.get_lock():
+        num_active_workers.value -= 1
+
+    logging.info(f"Reader worker {worker_id} finished")
+
+
 def _worker(
     worker_class: type[Worker],
     input_queue: Queue,
@@ -55,38 +85,13 @@ def _worker(
     )
     try:
         worker = worker_class.start(**kwargs)
-
-        # Keep going until you get an item that's None.
-        def input_queue_iterable() -> Iterable[Any]:
-            while True:
-                item = input_queue.get()
-                if item == QueueSignals.stop:
-                    break
-                yield item
-
-        for processed_item in worker.process(input_queue_iterable()):
+        for processed_item in worker.process(_get_items_from_queue(input_queue)):
             output_queue.put(processed_item)
     except Exception as e:  # pylint: disable=broad-except
         logging.exception(e)
         output_queue.put(QueueSignals.error)
     finally:
-        # It's important that we close and join the queue here before
-        # decrementing num_active_workers. Otherwise our parent may join us
-        # before the queue's feeder thread has passed all buffered items to
-        # the underlying pipe resulting in a deadlock.
-        #
-        # See:
-        # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#pipes-and-queues
-        # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#programming-guidelines
-        input_queue.close()
-        output_queue.close()
-        input_queue.join_thread()
-        output_queue.join_thread()
-
-        with num_active_workers.get_lock():
-            num_active_workers.value -= 1
-
-        logging.info(f"Reader worker {worker_id} finished")
+        _cleanup_worker(input_queue, output_queue, num_active_workers, worker_id)
 
 
 class ParallelWorkerPool:
