@@ -338,9 +338,7 @@ class TestRerankPairsIsSmallBranch:
         m.tokenizer = _make_mock_tokenizer(n_pairs=1)
         scores = list(
             m._rerank_pairs(
-                pairs=[("query", "doc")],
-                batch_size=64,
-                worker_params=WorkerParams("m", "/tmp")
+                pairs=[("query", "doc")], batch_size=64, worker_params=WorkerParams("m", "/tmp")
             )
         )
         assert len(scores) == 1
@@ -353,7 +351,7 @@ class TestRerankPairsIsSmallBranch:
             loaded_model._rerank_pairs(
                 pairs=pairs,
                 batch_size=64,  # larger than len(pairs)=2 => is_small
-                worker_params=WorkerParams("m", "/tmp")
+                worker_params=WorkerParams("m", "/tmp"),
             )
         )
         assert len(scores) == 2
@@ -364,10 +362,7 @@ class TestRerankPairsIsSmallBranch:
         loaded_model.model = _make_mock_session(n_pairs=5)
         scores = list(
             loaded_model._rerank_pairs(
-                pairs=pairs,
-                batch_size=10,
-                parallel=None,
-                worker_params=WorkerParams("m", "/tmp")
+                pairs=pairs, batch_size=10, parallel=None, worker_params=WorkerParams("m", "/tmp")
             )
         )
         assert len(scores) == 5
@@ -386,9 +381,7 @@ class TestRerankPairsIsSmallBranch:
         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
         list(
             m._rerank_pairs(
-                pairs=[("q", "d")],
-                batch_size=64,
-                worker_params=WorkerParams("m", "/tmp")
+                pairs=[("q", "d")], batch_size=64, worker_params=WorkerParams("m", "/tmp")
             )
         )
         assert loaded
@@ -411,7 +404,7 @@ class TestRerankPairsParallelBranch:
                     pairs=self._large_pairs(),
                     batch_size=2,
                     parallel=0,
-                    worker_params=WorkerParams("m", "/tmp")
+                    worker_params=WorkerParams("m", "/tmp"),
                 )
             )
         cls.assert_called_once()
@@ -429,7 +422,7 @@ class TestRerankPairsParallelBranch:
                     pairs=self._large_pairs(),
                     batch_size=2,
                     parallel=3,
-                    worker_params=WorkerParams("m", "/tmp")
+                    worker_params=WorkerParams("m", "/tmp"),
                 )
             )
         call_kw = cls.call_args[1]
@@ -448,7 +441,7 @@ class TestRerankPairsParallelBranch:
                     pairs=self._large_pairs(),
                     batch_size=2,
                     parallel=2,
-                    worker_params=WorkerParams("m", "/tmp")
+                    worker_params=WorkerParams("m", "/tmp"),
                 )
             )
         call_kw = cls.call_args[1]
@@ -467,7 +460,9 @@ class TestRerankPairsParallelBranch:
                     pairs=self._large_pairs(),
                     batch_size=2,
                     parallel=2,
-                    worker_params=WorkerParams("m", "/tmp", extra_session_options={"enable_cpu_mem_arena": False})
+                    worker_params=WorkerParams(
+                        "m", "/tmp", extra_session_options={"enable_cpu_mem_arena": False}
+                    ),
                 )
             )
         cls.assert_called_once()
