@@ -218,3 +218,22 @@ def test_load_cuda_warning(model: ConcreteOnnxModel, mock_ort):
 
     with pytest.warns(RuntimeWarning, match="Attempt to set CUDAExecutionProvider failed"):
         model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=True)
+
+
+def test_add_extra_session_options():
+    session_options = MagicMock()
+
+    # Test valid options
+    ConcreteOnnxModel.add_extra_session_options(session_options, {"enable_cpu_mem_arena": False})
+    assert session_options.enable_cpu_mem_arena is False
+
+    # Test valid options (True)
+    ConcreteOnnxModel.add_extra_session_options(session_options, {"enable_cpu_mem_arena": True})
+    assert session_options.enable_cpu_mem_arena is True
+
+    # Test invalid option
+    with pytest.raises(
+        ValueError,
+        match="invalid_option is unknown or not exposed \\(exposed options: \\('enable_cpu_mem_arena',\\)\\)",
+    ):
+        ConcreteOnnxModel.add_extra_session_options(session_options, {"invalid_option": True})
