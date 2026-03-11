@@ -16,7 +16,7 @@ from qwen3_embed.common.onnx_model import (
 from qwen3_embed.common.preprocessor_utils import load_tokenizer
 from qwen3_embed.common.types import Device, NumpyArray
 from qwen3_embed.common.utils import iter_batch
-from qwen3_embed.parallel_processor import ParallelWorkerPool
+from qwen3_embed.parallel_processor import ParallelWorkerPool, WorkerPoolConfig
 
 
 class OnnxCrossEncoderModel(OnnxModel[float]):
@@ -135,11 +135,13 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
                 params.update(extra_session_options)
 
             pool = ParallelWorkerPool(
-                num_workers=parallel or 1,
                 worker=self._get_worker_class(),
-                cuda=cuda,
-                device_ids=device_ids,
-                start_method=start_method,
+                config=WorkerPoolConfig(
+                    num_workers=parallel or 1,
+                    cuda=cuda,
+                    device_ids=device_ids,
+                    start_method=start_method,
+                ),
             )
             for batch in pool.ordered_map(iter_batch(pairs, batch_size), **params):
                 yield from self._post_process_onnx_output(batch)

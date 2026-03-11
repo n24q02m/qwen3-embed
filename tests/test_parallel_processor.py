@@ -10,6 +10,7 @@ from qwen3_embed.parallel_processor import (
     ParallelWorkerPool,
     QueueSignals,
     Worker,
+    WorkerPoolConfig,
     _worker,
 )
 
@@ -72,7 +73,7 @@ def test_ordered_map_basic():
     """
     Test basic ordered map functionality with multiple workers.
     """
-    pool = ParallelWorkerPool(num_workers=2, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=2))
     input_data = list(range(10))
     # Expected output: squares of input
     expected = [x * x for x in input_data]
@@ -85,7 +86,7 @@ def test_ordered_map_empty():
     """
     Test ordered map with empty input.
     """
-    pool = ParallelWorkerPool(num_workers=2, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=2))
     results = list(pool.ordered_map([]))
     assert results == []
 
@@ -94,7 +95,7 @@ def test_ordered_map_generator():
     """
     Test ordered map with a generator input.
     """
-    pool = ParallelWorkerPool(num_workers=2, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=2))
     input_gen = (x for x in range(10))
     expected = [x * x for x in range(10)]
 
@@ -107,7 +108,7 @@ def test_worker_exception():
     Test that an exception in a worker propagates correctly.
     """
     # Fail on input value 5
-    pool = ParallelWorkerPool(num_workers=2, worker=FailingWorker)
+    pool = ParallelWorkerPool(worker=FailingWorker, config=WorkerPoolConfig(num_workers=2))
     input_data = range(10)
 
     # We expect a RuntimeError because ParallelWorkerPool catches the worker exception
@@ -135,7 +136,7 @@ def test_many_items():
     num_workers = 4
     # 4 * 200 = 800 items buffer. Let's process 2000 items.
 
-    pool = ParallelWorkerPool(num_workers=num_workers, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=num_workers))
     n_items = 2000
     input_data = range(n_items)
     expected = [x * x for x in input_data]
@@ -150,7 +151,7 @@ def test_worker_initialization():
     """
     # We reuse FailingWorker but set failure_val to something not in input
     # to test that kwargs are passed correctly.
-    pool = ParallelWorkerPool(num_workers=1, worker=FailingWorker)
+    pool = ParallelWorkerPool(worker=FailingWorker, config=WorkerPoolConfig(num_workers=1))
     input_data = [1, 2, 3]
     # If failure_val is 2, it should fail.
 
@@ -284,9 +285,11 @@ def test_worker_function_multiple_items():
 def test_start_with_device_ids():
     """Test ParallelWorkerPool.start() with device_ids assigns device_id to kwargs."""
     pool = ParallelWorkerPool(
-        num_workers=2,
         worker=SquareWorker,
-        device_ids=[0, 1],
+        config=WorkerPoolConfig(
+            num_workers=2,
+            device_ids=[0, 1],
+        )
     )
     results = list(pool.ordered_map(list(range(4))))
     assert results == [0, 1, 4, 9]
@@ -295,9 +298,11 @@ def test_start_with_device_ids():
 def test_start_with_single_device_id_cycles():
     """Test that device_ids cycles correctly when fewer ids than workers."""
     pool = ParallelWorkerPool(
-        num_workers=3,
         worker=SquareWorker,
-        device_ids=[0],
+        config=WorkerPoolConfig(
+            num_workers=3,
+            device_ids=[0],
+        )
     )
     results = list(pool.ordered_map(list(range(3))))
     assert results == [0, 1, 4]
@@ -315,7 +320,7 @@ def test_semi_ordered_map_queue_full_else_branch():
     forces the else branch (blocking output_queue.get).
     """
     with patch.object(pp_module, "max_internal_batch_size", 1):
-        pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+        pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=1))
         # Use enough items to force the else branch (pushed-read >= queue_size=1)
         # After first push: pushed=1, read=0 -> 1 >= 1 -> else branch on second iteration
         results = list(pool.ordered_map(list(range(5))))
@@ -332,7 +337,7 @@ def test_semi_ordered_map_error_in_else_branch():
     - raises RuntimeError
     """
     with patch.object(pp_module, "max_internal_batch_size", 1):
-        pool = ParallelWorkerPool(num_workers=1, worker=FailingWorker)
+        pool = ParallelWorkerPool(worker=FailingWorker, config=WorkerPoolConfig(num_workers=1))
         with pytest.raises(RuntimeError, match="Thread unexpectedly terminated"):
             list(pool.ordered_map(list(range(5)), failure_val=0))
 
@@ -345,7 +350,7 @@ def test_emergency_shutdown_calls_cancel_join_thread():
     Test that cancel_join_thread is called when emergency_shutdown=True.
     We directly set emergency_shutdown=True on the pool and trigger the finally block.
     """
-    pool2 = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+    pool2 = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=1))
     pool2.emergency_shutdown = True
     pool2.input_queue = MagicMock()
     pool2.output_queue = MagicMock()
@@ -368,7 +373,7 @@ def test_emergency_shutdown_calls_cancel_join_thread():
 
 def test_check_worker_health_healthy_processes():
     """Test check_worker_health does nothing when all processes are alive."""
-    pool = ParallelWorkerPool(num_workers=2, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=2))
 
     mock_process = MagicMock()
     mock_process.is_alive.return_value = True
@@ -382,7 +387,7 @@ def test_check_worker_health_healthy_processes():
 
 def test_check_worker_health_exited_zero():
     """Test check_worker_health ignores process that exited with code 0."""
-    pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=1))
 
     mock_process = MagicMock()
     mock_process.is_alive.return_value = False
@@ -396,7 +401,7 @@ def test_check_worker_health_exited_zero():
 
 def test_check_worker_health_dead_process_triggers_emergency():
     """Test check_worker_health raises RuntimeError when process exits with non-zero code."""
-    pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=1))
 
     mock_process = MagicMock()
     mock_process.is_alive.return_value = False
@@ -415,7 +420,7 @@ def test_check_worker_health_dead_process_triggers_emergency():
 
 def test_join_or_terminate_alive_process_gets_terminated():
     """Test that join_or_terminate terminates a process that is still alive after join."""
-    pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=1))
 
     mock_process = MagicMock()
     mock_process.is_alive.return_value = True  # Still alive after join timeout
@@ -430,7 +435,7 @@ def test_join_or_terminate_alive_process_gets_terminated():
 
 def test_join_or_terminate_dead_process_not_terminated():
     """Test that join_or_terminate does not terminate a process that finishes in time."""
-    pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=1))
 
     mock_process = MagicMock()
     mock_process.is_alive.return_value = False  # Finished during join
@@ -448,7 +453,7 @@ def test_join_or_terminate_dead_process_not_terminated():
 
 def test_del_terminates_alive_processes():
     """Test that __del__ terminates any still-alive processes."""
-    pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=1))
 
     alive_process = MagicMock()
     alive_process.is_alive.return_value = True
@@ -465,6 +470,6 @@ def test_del_terminates_alive_processes():
 
 def test_del_no_processes():
     """Test that __del__ with no processes does not raise."""
-    pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=1))
     pool.processes = []
     pool.__del__()  # Should not raise
