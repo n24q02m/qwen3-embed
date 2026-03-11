@@ -290,6 +290,45 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
+    def test_decompress_tar_slip_prevention(self, tmp_path):
+        """Tar slip via malicious path raises ValueError and cache dir is removed."""
+        cache_dir = tmp_path / "tmp_cache_dir"
+        cache_dir.mkdir()
+
+        malicious_tar = tmp_path / "malicious.tar.gz"
+        with tarfile.open(malicious_tar, "w:gz") as tar:
+            with open("test.txt", "w") as f:
+                f.write("test")
+            info = tarfile.TarInfo(name="../evil.txt")
+            info.size = 4
+            with open("test.txt", "rb") as fileobj:
+                tar.addfile(info, fileobj=fileobj)
+            import os
+
+            os.remove("test.txt")
+
+        with pytest.raises(ValueError, match="An error occurred while decompressing"):
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
+
+        assert not cache_dir.exists()
+
+    def test_decompress_mid_extraction_failure(self, tmp_path):
+        """Mid-extraction TarError is re-raised and cache dir is removed."""
+        tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
+        cache_dir = tmp_path / "tmp_out"
+        cache_dir.mkdir()
+
+        def fake_extractall(*args, **kwargs):
+            raise tarfile.TarError("Mid-extraction error")
+
+        with (
+            patch("tarfile.TarFile.extractall", side_effect=fake_extractall),
+            pytest.raises(ValueError, match="An error occurred while decompressing"),
+        ):
+            ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
+        assert not cache_dir.exists()
+
 
 # ---------------------------------------------------------------------------
 # TestDownloadFilesFromHuggingFace
