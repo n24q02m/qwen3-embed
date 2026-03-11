@@ -523,6 +523,48 @@ class TestDownloadFilesFromHuggingFace:
 
 
 # ---------------------------------------------------------------------------
+
+    @patch("qwen3_embed.common.model_management.list_repo_tree")
+    @patch("qwen3_embed.common.model_management.model_info")
+    @patch("qwen3_embed.common.model_management.snapshot_download")
+    def test_metadata_save_valueerror_is_swallowed(self, mock_snap, mock_info, mock_tree, tmp_path):
+        """ValueError while saving metadata logs an exception and warning but does not raise."""
+        snapshot_dir = tmp_path / "models--org--repo"
+        snapshot_dir.mkdir(parents=True)
+        inner_file = snapshot_dir / "model.onnx"
+        inner_file.write_bytes(b"x" * 500)
+
+        repo_files = [make_repo_file("model.onnx", size=500, oid="aaa")]
+        mock_info.return_value = Mock(sha="rev123")
+        mock_tree.return_value = repo_files
+        mock_snap.return_value = str(snapshot_dir)
+
+        # Patch json.dumps to raise ValueError on metadata write
+        def patched_dumps(data, *args, **kwargs):
+            raise ValueError("metadata serialization error")
+
+        with (
+            patch("qwen3_embed.common.model_management.json.dumps", patched_dumps),
+            patch("qwen3_embed.common.model_management.logger.exception") as mock_exception,
+            patch("qwen3_embed.common.model_management.logger.warning") as mock_warning,
+        ):
+            # Should not raise
+            result = ModelManagement.download_files_from_huggingface(
+                hf_source_repo="org/repo",
+                cache_dir=str(tmp_path),
+                extra_patterns=["model.onnx"],
+            )
+        assert result == str(snapshot_dir)
+        mock_exception.assert_called_once()
+        # Verify ValueError is passed to exception
+        args, _ = mock_exception.call_args
+        assert isinstance(args[0], ValueError)
+        assert str(args[0]) == "metadata serialization error"
+
+        mock_warning.assert_called_once_with("Failed to save metadata file. Next load may take longer to verify.")
+
+
+# ---------------------------------------------------------------------------
 # TestRetrieveModelGcs
 # ---------------------------------------------------------------------------
 
