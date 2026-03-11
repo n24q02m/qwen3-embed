@@ -1,6 +1,6 @@
 # Qwen3 Embed
 
-**Lightweight Qwen3 text embedding and reranking via ONNX Runtime**
+**Lightweight Qwen3 text embedding and reranking via ONNX Runtime and GGUF**
 
 [![CI](https://github.com/n24q02m/qwen3-embed/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/qwen3-embed/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/n24q02m/qwen3-embed/graph/badge.svg?token=M038M651L2)](https://codecov.io/gh/n24q02m/qwen3-embed)
@@ -148,7 +148,8 @@ model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX", cuda=Devic
 
 ### GGUF
 
-GPU is handled by `llama-cpp-python`. Install with CUDA support:
+GPU is handled by `llama-cpp-python`. The default `pip install qwen3-embed[gguf]` is CPU-only.
+For CUDA GPU support, build with:
 
 ```bash
 CMAKE_ARGS="-DGGML_CUDA=on" pip install qwen3-embed[gguf]
@@ -175,7 +176,6 @@ mise run fix     # ruff auto-fix + format
 
 ## Related Projects
 
-- **[modalcom-ai-workers](https://github.com/n24q02m/modalcom-ai-workers)** — GPU-accelerated AI workers on Modal.com using this embedding model
 - **[mnemo-mcp](https://github.com/n24q02m/mnemo-mcp)** — MCP memory server with semantic search powered by qwen3-embed
 - **[wet-mcp](https://github.com/n24q02m/wet-mcp)** — MCP web search server with vector-based docs search
 

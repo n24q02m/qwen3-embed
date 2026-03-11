@@ -1,16 +1,17 @@
 [project]
 name = "qwen3-embed"
 version = "1.2.0"
-description = "Lightweight Qwen3 text embedding & reranking via ONNX Runtime (fork of fastembed)"
+description = "Lightweight Qwen3 text embedding & reranking via ONNX Runtime and GGUF (fork of fastembed)"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.13"
 authors = [{ name = "n24q02m" }]
 keywords = ["vector", "embedding", "reranking", "qwen3", "onnx", "onnxruntime"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]

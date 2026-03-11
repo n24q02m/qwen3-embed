@@ -33,7 +33,8 @@ mise run fix       # ruff check --fix + ruff format
 ### Pytest Configuration
 
 - `testpaths = ["tests"]`, `pythonpath = ["."]`
-- Integration marker: `@pytest.mark.integration` (requires ~1.2 GB model download)
+- Integration marker: `@pytest.mark.integration` (requires model downloads: ONNX ~1.2 GB, Q4F16 ~1 GB, GGUF ~756 MB)
+- Integration test files: `test_integration.py` (ONNX), `test_integration_q4f16.py`, `test_integration_gguf.py`
 - CI runs: `uv run pytest -m "not integration" --tb=short`
 
 ## Code Style
@@ -53,7 +54,10 @@ mise run fix       # ruff check --fix + ruff format
 
 ### Type Checker (ty)
 
-Uses defaults (no custom config in pyproject.toml).
+Custom rules in `[tool.ty.rules]` (pyproject.toml):
+- `unresolved-import = "warn"` (llama_cpp is optional)
+- `possibly-missing-attribute = "warn"` (onnxruntime incomplete stubs)
+- `invalid-argument-type = "warn"`, `unresolved-attribute = "warn"`, `not-subscriptable = "warn"`, `invalid-assignment = "warn"`, `call-non-callable = "warn"`
 
 ### Import Ordering (isort via Ruff)
 
