@@ -169,7 +169,6 @@ class ParallelWorkerPool:
                 self.input_queue.join_thread()
                 self.output_queue.join_thread()
 
-
     def _process_stream(self, stream: Iterable[Any]) -> Iterable[tuple[int, Any]]:
         assert self.input_queue is not None, "Input queue was not initialized"
         assert self.output_queue is not None, "Output queue was not initialized"
