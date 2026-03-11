@@ -39,7 +39,7 @@ def test_dense_model_description_valid_dim():
         description="Test description",
         license="MIT",
         size_in_GB=1.0,
-        dim=768
+        dim=768,
     )
     assert desc.dim == 768
 
@@ -54,5 +54,5 @@ def test_dense_model_description_invalid_dim():
             description="Test description",
             license="MIT",
             size_in_GB=1.0,
-            dim=None
+            dim=None,
         )
