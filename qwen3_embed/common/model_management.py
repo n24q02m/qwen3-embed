@@ -217,7 +217,9 @@ class ModelManagement[T: BaseModelDescription]:
                 (model_dir / cls.METADATA_FILE).write_text(json.dumps(meta))
             except (OSError, ValueError) as e:
                 logger.exception(e)
-                logger.warning("Failed to save metadata file. Next load may take longer to verify.")
+                logger.warning(
+                    "Failed to save metadata file. Next load may take longer to verify."
+                )
 
         allow_patterns = [
             "config.json",

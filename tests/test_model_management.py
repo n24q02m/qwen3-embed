@@ -521,13 +521,14 @@ class TestDownloadFilesFromHuggingFace:
         )
         assert result == str(snapshot_dir)
 
-
-# ---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
 
     @patch("qwen3_embed.common.model_management.list_repo_tree")
     @patch("qwen3_embed.common.model_management.model_info")
     @patch("qwen3_embed.common.model_management.snapshot_download")
-    def test_metadata_save_valueerror_is_swallowed(self, mock_snap, mock_info, mock_tree, tmp_path):
+    def test_metadata_save_valueerror_is_swallowed(
+        self, mock_snap, mock_info, mock_tree, tmp_path
+    ):
         """ValueError while saving metadata logs an exception and warning but does not raise."""
         snapshot_dir = tmp_path / "models--org--repo"
         snapshot_dir.mkdir(parents=True)
@@ -561,7 +562,9 @@ class TestDownloadFilesFromHuggingFace:
         assert isinstance(args[0], ValueError)
         assert str(args[0]) == "metadata serialization error"
 
-        mock_warning.assert_called_once_with("Failed to save metadata file. Next load may take longer to verify.")
+        mock_warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
 
 
 # ---------------------------------------------------------------------------
