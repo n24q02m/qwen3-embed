@@ -153,7 +153,7 @@ class TestEmbeddingSemanticQuality:
     def test_multilingual_similarity(self, embedding_model):
         """Cross-language texts with same meaning should be similar."""
         en = "Artificial intelligence is transforming the world."
-        zh = "AI dang thay doi the gioi."  # Vietnamese
+        zh = "Trí tuệ nhân tạo đang biến đổi thế giới."  # Vietnamese
         unrelated = "The price of gold increased by 2% yesterday."
 
         embs = list(embedding_model.embed([en, zh, unrelated]))
