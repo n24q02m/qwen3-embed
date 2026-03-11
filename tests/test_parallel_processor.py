@@ -136,7 +136,9 @@ def test_many_items():
     num_workers = 4
     # 4 * 200 = 800 items buffer. Let's process 2000 items.
 
-    pool = ParallelWorkerPool(worker=SquareWorker, config=WorkerPoolConfig(num_workers=num_workers))
+    pool = ParallelWorkerPool(
+        worker=SquareWorker, config=WorkerPoolConfig(num_workers=num_workers)
+    )
     n_items = 2000
     input_data = range(n_items)
     expected = [x * x for x in input_data]
@@ -289,7 +291,7 @@ def test_start_with_device_ids():
         config=WorkerPoolConfig(
             num_workers=2,
             device_ids=[0, 1],
-        )
+        ),
     )
     results = list(pool.ordered_map(list(range(4))))
     assert results == [0, 1, 4, 9]
@@ -302,7 +304,7 @@ def test_start_with_single_device_id_cycles():
         config=WorkerPoolConfig(
             num_workers=3,
             device_ids=[0],
-        )
+        ),
     )
     results = list(pool.ordered_map(list(range(3))))
     assert results == [0, 1, 4]

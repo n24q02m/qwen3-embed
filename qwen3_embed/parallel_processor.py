@@ -90,13 +90,13 @@ def _worker(
         logging.info(f"Reader worker {worker_id} finished")
 
 
-
 @dataclass
 class WorkerPoolConfig:
     num_workers: int
     start_method: str | None = None
     device_ids: list[int] | None = None
     cuda: bool | Device = Device.AUTO
+
 
 class ParallelWorkerPool:
     def __init__(
