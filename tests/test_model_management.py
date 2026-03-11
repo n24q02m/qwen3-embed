@@ -521,12 +521,9 @@ class TestDownloadFilesFromHuggingFace:
         )
         assert result == str(snapshot_dir)
 
-
-# ---------------------------------------------------------------------------
-# TestRetrieveModelGcs
-# ---------------------------------------------------------------------------
-
-
+    # ---------------------------------------------------------------------------
+    # TestRetrieveModelGcs
+    # ---------------------------------------------------------------------------
 
     @patch("qwen3_embed.common.model_management.list_repo_tree")
     @patch("qwen3_embed.common.model_management.model_info")
