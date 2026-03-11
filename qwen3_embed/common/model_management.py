@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import json
 import os
 import shutil
@@ -114,6 +116,56 @@ class ModelManagement[T: BaseModelDescription]:
 
         if os.path.exists(output_path):
             return output_path
+        response = requests.get(url, stream=True, timeout=10)
+
+        # Handle HTTP errors
+        if response.status_code == 403:
+            raise PermissionError(
+                "Authentication Error: You do not have permission to access this resource. "
+                "Please check your credentials."
+            )
+
+        # Get the total size of the file
+        total_size_in_bytes = int(response.headers.get("content-length", 0))
+
+        # Warn if the total size is zero
+        if total_size_in_bytes == 0:
+            logger.warning(f"Content-length header is missing or zero in the response from {url}.")
+
+        show_progress = bool(total_size_in_bytes and show_progress)
+
+        expected_md5 = None
+        x_goog_hash = response.headers.get("x-goog-hash")
+        if x_goog_hash:
+            for h in x_goog_hash.split(","):
+                h = h.strip()
+                if h.startswith("md5="):
+                    expected_md5 = base64.b64decode(h[4:]).hex()
+
+        md5_hash = hashlib.md5()
+
+        with (
+            tqdm(
+                total=total_size_in_bytes,
+                unit="iB",
+                unit_scale=True,
+                disable=not show_progress,
+            ) as progress_bar,
+            open(output_path, "wb") as file,
+        ):
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:  # Filter out keep-alive new chunks
+                    progress_bar.update(len(chunk))
+                    file.write(chunk)
+                    md5_hash.update(chunk)
+
+        if expected_md5 and md5_hash.hexdigest() != expected_md5:
+            os.remove(output_path)
+            raise ValueError(
+                f"MD5 checksum mismatch for downloaded file. Expected {expected_md5}, got {md5_hash.hexdigest()}"
+            )
+
+        return output_path
         response = requests.get(url, stream=True, timeout=10)
 
         # Handle HTTP errors

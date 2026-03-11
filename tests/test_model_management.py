@@ -1,5 +1,7 @@
 """Tests for model management utility functions."""
 
+import base64
+import hashlib
 import io
 import json
 import tarfile
@@ -231,6 +233,65 @@ class TestDownloadFileFromGcs:
         )
         assert output.exists()
 
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_downloads_file_with_valid_md5_hash(self, mock_get, tmp_path):
+        chunk = b"A" * 1024
+        valid_md5 = base64.b64encode(hashlib.md5(chunk).digest()).decode('utf-8')
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": str(len(chunk)),
+            "x-goog-hash": f"crc32c=something, md5={valid_md5}"
+        }
+        response.iter_content.return_value = [chunk]
+        mock_get.return_value = response
+
+        output = tmp_path / "model.onnx"
+        result = ModelManagement.download_file_from_gcs(
+            f"{self.GCS_URL}/model.onnx", str(output), show_progress=True
+        )
+        assert result == str(output)
+        assert output.read_bytes() == chunk
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_downloads_file_with_invalid_md5_hash(self, mock_get, tmp_path):
+        chunk = b"A" * 1024
+        invalid_md5 = base64.b64encode(b"invalid_hash_value").decode('utf-8')
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": str(len(chunk)),
+            "x-goog-hash": f"crc32c=something, md5={invalid_md5}"
+        }
+        response.iter_content.return_value = [chunk]
+        mock_get.return_value = response
+
+        output = tmp_path / "model.onnx"
+        with pytest.raises(ValueError, match="MD5 checksum mismatch for downloaded file"):
+            ModelManagement.download_file_from_gcs(
+                f"{self.GCS_URL}/model.onnx", str(output), show_progress=True
+            )
+        assert not output.exists()
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_downloads_file_without_md5_hash(self, mock_get, tmp_path):
+        chunk = b"A" * 1024
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": str(len(chunk)),
+            # No x-goog-hash header
+        }
+        response.iter_content.return_value = [chunk]
+        mock_get.return_value = response
+
+        output = tmp_path / "model.onnx"
+        result = ModelManagement.download_file_from_gcs(
+            f"{self.GCS_URL}/model.onnx", str(output), show_progress=True
+        )
+        assert result == str(output)
+        assert output.read_bytes() == chunk
 
 # ---------------------------------------------------------------------------
 # TestDecompressToCache
