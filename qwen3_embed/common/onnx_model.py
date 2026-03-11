@@ -25,6 +25,18 @@ class OnnxOutputContext:
     metadata: dict[str, Any] | None = None
 
 
+
+@dataclass
+class OnnxLoadConfig:
+    model_dir: Path
+    model_file: str
+    threads: int | None = None
+    providers: Sequence[OnnxProvider] | None = None
+    cuda: bool | Device = Device.AUTO
+    device_id: int | None = None
+    extra_session_options: dict[str, Any] | None = None
+
+
 class OnnxModel[T]:
     EXPOSED_SESSION_OPTIONS = ("enable_cpu_mem_arena",)
 
@@ -57,26 +69,17 @@ class OnnxModel[T]:
         """
         return onnx_input
 
-    def _load_onnx_model(
-        self,
-        model_dir: Path,
-        model_file: str,
-        threads: int | None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_id: int | None = None,
-        extra_session_options: dict[str, Any] | None = None,
-    ) -> None:
-        model_path = model_dir / model_file
+    def _load_onnx_model(self, config: OnnxLoadConfig) -> None:
+        model_path = config.model_dir / config.model_file
         # List of Execution Providers: https://onnxruntime.ai/docs/execution-providers
         available_providers = ort.get_available_providers()  # type: ignore[possibly-missing-attribute]
         cuda_available = "CUDAExecutionProvider" in available_providers
-        explicit_cuda = cuda is True or cuda == Device.CUDA
+        explicit_cuda = config.cuda is True or config.cuda == Device.CUDA
 
-        if explicit_cuda and providers is not None:
+        if explicit_cuda and config.providers is not None:
             warnings.warn(
                 f"`cuda` and `providers` are mutually exclusive parameters, "
-                f"cuda: {cuda}, providers: {providers}. If you'd like to use providers, cuda should be one of "
+                f"cuda: {config.cuda}, providers: {config.providers}. If you'd like to use providers, cuda should be one of "
                 f"[False, Device.CPU, Device.AUTO].",
                 category=UserWarning,
                 stacklevel=6,
@@ -84,14 +87,14 @@ class OnnxModel[T]:
 
         dml_available = "DmlExecutionProvider" in available_providers
 
-        if providers is not None:
-            onnx_providers = list(providers)
-        elif explicit_cuda or (cuda == Device.AUTO and cuda_available):
-            if device_id is None:
+        if config.providers is not None:
+            onnx_providers = list(config.providers)
+        elif explicit_cuda or (config.cuda == Device.AUTO and cuda_available):
+            if config.device_id is None:
                 onnx_providers = ["CUDAExecutionProvider"]
             else:
-                onnx_providers = [("CUDAExecutionProvider", {"device_id": device_id})]
-        elif cuda == Device.AUTO and dml_available:
+                onnx_providers = [("CUDAExecutionProvider", {"device_id": config.device_id})]
+        elif config.cuda == Device.AUTO and dml_available:
             onnx_providers = ["DmlExecutionProvider"]
         else:
             onnx_providers = ["CPUExecutionProvider"]
@@ -109,12 +112,12 @@ class OnnxModel[T]:
         so = ort.SessionOptions()  # type: ignore[possibly-missing-attribute]
         so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL  # type: ignore[possibly-missing-attribute]
 
-        if threads is not None:
-            so.intra_op_num_threads = threads
-            so.inter_op_num_threads = threads
+        if config.threads is not None:
+            so.intra_op_num_threads = config.threads
+            so.inter_op_num_threads = config.threads
 
-        if extra_session_options is not None:
-            self.add_extra_session_options(so, extra_session_options)
+        if config.extra_session_options is not None:
+            self.add_extra_session_options(so, config.extra_session_options)
 
         self.model = ort.InferenceSession(
             str(model_path), providers=onnx_providers, sess_options=so
