@@ -384,7 +384,7 @@ class ModelManagement[T: BaseModelDescription]:
         if model_tmp_dir.exists():
             shutil.rmtree(model_tmp_dir)
 
-        cache_tmp_dir.mkdir(parents=True, exist_ok=True)
+        cache_tmp_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         with contextlib.suppress(OSError):
             os.chmod(cache_tmp_dir, 0o700)
 

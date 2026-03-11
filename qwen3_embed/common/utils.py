@@ -85,7 +85,7 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
             cache_path = base_path / "qwen3_embed"
     else:
         cache_path = Path(cache_dir)
-    cache_path.mkdir(parents=True, exist_ok=True)
+    cache_path.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     with contextlib.suppress(OSError):
         cache_path.chmod(0o700)
