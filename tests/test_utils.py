@@ -3,7 +3,13 @@
 import numpy as np
 import pytest
 
-from qwen3_embed.common.utils import iter_batch, last_token_pool, mean_pooling, normalize
+from qwen3_embed.common.utils import (
+    iter_batch,
+    last_token_pool,
+    mean_pooling,
+    normalize,
+    remove_non_alphanumeric,
+)
 
 
 class TestLastTokenPool:
@@ -217,3 +223,31 @@ class TestGetAllPunctuation:
         result1 = get_all_punctuation()
         result2 = get_all_punctuation()
         assert result1 is result2
+
+
+class TestRemoveNonAlphanumeric:
+    """Tests for remove_non_alphanumeric utility."""
+
+    def test_basic_punctuation(self) -> None:
+        """Punctuation should be replaced by spaces."""
+        assert remove_non_alphanumeric("hello, world!") == "hello  world "
+
+    def test_underscore_is_kept(self) -> None:
+        """Underscores are alphanumeric in regex terms (\\w)."""
+        assert remove_non_alphanumeric("hello_world") == "hello_world"
+
+    def test_unicode_characters(self) -> None:
+        """Accents should be kept, emojis should be removed."""
+        assert remove_non_alphanumeric("café au lait! 😊") == "café au lait   "
+
+    def test_empty_string(self) -> None:
+        """Empty string remains empty."""
+        assert remove_non_alphanumeric("") == ""
+
+    def test_numbers_are_kept(self) -> None:
+        """Digits should remain untouched."""
+        assert remove_non_alphanumeric("year 2024 is here.") == "year 2024 is here "
+
+    def test_multiple_consecutive_punctuation(self) -> None:
+        """Multiple punctuations each get replaced with a space."""
+        assert remove_non_alphanumeric("hello... world!!!") == "hello    world   "
