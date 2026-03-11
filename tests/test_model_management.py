@@ -90,7 +90,7 @@ class TestAbstractMethods:
 
     def test_add_custom_model_raises(self):
         with pytest.raises(NotImplementedError):
-            ModelManagement.add_custom_model()
+            ModelManagement.add_custom_model(model_description=BaseModelDescription(model="test", sources=ModelSource(hf="test"), model_file="model.onnx", description="desc", license="mit", size_in_GB=0.1))
 
     def test_list_supported_models_private_raises(self):
         with pytest.raises(NotImplementedError):
