@@ -843,3 +843,58 @@ class TestDownloadModel:
         patterns = captured_patterns[0]
         assert "weights.onnx" in patterns
         assert "vocab.txt" in patterns
+
+
+
+class TestDownloadFileFromGCS:
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_hash_mismatch(self, mock_get, tmp_path):
+        import base64
+        import hashlib
+        import os
+
+        import pytest
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
+        mock_get.return_value = mock_response
+
+        output_path = str(tmp_path / "test.txt")
+
+        from qwen3_embed.common.model_management import ModelManagement
+
+        b64_hash = base64.b64encode(hashlib.md5(b"wrong").digest()).decode()
+        mock_response.headers = {"x-goog-hash": f"md5={b64_hash}"}
+
+        with pytest.raises(ValueError, match="File integrity check failed: expected MD5"):
+            ModelManagement.download_file_from_gcs(
+                "https://storage.googleapis.com/test", output_path
+            )
+
+        assert not os.path.exists(output_path)
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_hash_match(self, mock_get, tmp_path):
+        import base64
+        import hashlib
+        import os
+
+        data = b"chunk1chunk2"
+        b64_hash = base64.b64encode(hashlib.md5(data).digest()).decode()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"x-goog-hash": f"md5={b64_hash}"}
+        mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
+        mock_get.return_value = mock_response
+
+        output_path = str(tmp_path / "test.txt")
+        from qwen3_embed.common.model_management import ModelManagement
+
+        result = ModelManagement.download_file_from_gcs(
+            "https://storage.googleapis.com/test", output_path
+        )
+
+        assert result == output_path
+        assert os.path.exists(output_path)

@@ -1,0 +1,4 @@
+## 2026-03-11 - [File Integrity Verification for GCS Downloads]
+**Vulnerability:** Missing File Integrity Verification. Files downloaded via Google Cloud Storage fallback could be tampered with or corrupted without detection, and they would still be kept and used.
+**Learning:** When implementing file cleanup on validation failure (e.g., removing a downloaded file after a hash mismatch), always place `os.remove(output_path)` outside the `with open(..., 'wb') as file:` context manager to prevent `PermissionError`s on Windows, which does not allow unlinking an open file.
+**Prevention:** Ensure MD5 checks extract the appropriate hash from metadata (like `x-goog-hash` which has `md5=BASE64`), compute the hash iteratively while downloading chunks, and reliably verify and cleanly delete the file *after* the file handle is fully closed if the hash mismatch occurs.

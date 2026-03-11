@@ -123,7 +123,17 @@ class ModelManagement[T: BaseModelDescription]:
                 "Please check your credentials."
             )
 
+        expected_md5 = None
+        if "x-goog-hash" in response.headers:
+            x_goog_hash = response.headers["x-goog-hash"]
+            for part in x_goog_hash.split(","):
+                part = part.strip()
+                if part.startswith("md5="):
+                    import base64
+                    expected_md5 = base64.b64decode(part[4:]).hex()
+
         # Get the total size of the file
+
         total_size_in_bytes = int(response.headers.get("content-length", 0))
 
         # Warn if the total size is zero
@@ -141,10 +151,21 @@ class ModelManagement[T: BaseModelDescription]:
             ) as progress_bar,
             open(output_path, "wb") as file,
         ):
+            import hashlib
+            md5_hash = hashlib.md5()
             for chunk in response.iter_content(chunk_size=1024):
                 if chunk:  # Filter out keep-alive new chunks
                     progress_bar.update(len(chunk))
                     file.write(chunk)
+                    md5_hash.update(chunk)
+
+        if expected_md5 and expected_md5 != md5_hash.hexdigest():
+            os.remove(output_path)
+            raise ValueError(
+                f"File integrity check failed: expected MD5 {expected_md5}, "
+                f"got {md5_hash.hexdigest()}"
+            )
+
         return output_path
 
     @classmethod
