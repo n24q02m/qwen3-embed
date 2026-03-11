@@ -100,5 +100,9 @@ def get_all_punctuation() -> frozenset[str]:
     )
 
 
+# ⚡ Bolt: Compile regex once at the module level to avoid recompilation overhead in hot loops
+_NON_ALPHANUMERIC_RE = re.compile(r"[^\w\s]", flags=re.UNICODE)
+
+
 def remove_non_alphanumeric(text: str) -> str:
-    return re.sub(r"[^\w\s]", " ", text, flags=re.UNICODE)
+    return _NON_ALPHANUMERIC_RE.sub(" ", text)
