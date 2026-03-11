@@ -328,12 +328,10 @@ class ModelManagement[T: BaseModelDescription]:
                     filter="data",
                 )
         except tarfile.TarError as e:
-            # If any error occurs while opening or extracting the tar.gz file,
-            # delete the cache directory (if it was created in this function)
-            # and raise the error again
-            if "tmp" in cache_dir:
-                shutil.rmtree(cache_dir)
-            raise ValueError(f"An error occurred while decompressing {targz_path}: {e}") from e
+            # If decompression fails, remove the partially extracted directory
+            shutil.rmtree(cache_dir, ignore_errors=True)
+            logger.error(f"Failed to decompress {targz_path}: {e}")
+            raise e
 
         return cache_dir
 
