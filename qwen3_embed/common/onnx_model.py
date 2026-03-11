@@ -25,7 +25,6 @@ class OnnxOutputContext:
     metadata: dict[str, Any] | None = None
 
 
-
 @dataclass
 class OnnxLoadConfig:
     model_dir: Path
