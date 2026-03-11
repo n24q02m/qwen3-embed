@@ -873,16 +873,19 @@ class TestDownloadModel:
     def test_hf_source_cache_hit_returns_path(self, mock_enable, tmp_path):
         """HF local cache hit returns immediately without retry loop."""
         model = make_model_description(hf="org/repo")
+        cached_dir = tmp_path / "cached"
+        cached_dir.mkdir()
+        (cached_dir / "model.onnx").touch()
 
         with patch.object(
             ModelManagement,
             "download_files_from_huggingface",
-            return_value=str(tmp_path / "cached"),
+            return_value=str(cached_dir),
         ) as mock_hf:
             result = ModelManagement.download_model(model, cache_dir=str(tmp_path))
 
         mock_hf.assert_called_once()
-        assert result == Path(tmp_path / "cached")
+        assert result == Path(cached_dir)
         mock_enable.assert_called()
 
     @patch("qwen3_embed.common.model_management.enable_progress_bars")

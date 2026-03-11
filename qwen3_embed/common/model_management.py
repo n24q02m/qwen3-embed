@@ -457,7 +457,7 @@ class ModelManagement[T: BaseModelDescription]:
             try:
                 cache_kwargs = deepcopy(kwargs)
                 cache_kwargs["local_files_only"] = True
-                return Path(
+                cached_path = Path(
                     cls.download_files_from_huggingface(
                         hf_source,
                         cache_dir=cache_dir,
@@ -465,6 +465,9 @@ class ModelManagement[T: BaseModelDescription]:
                         **cache_kwargs,
                     )
                 )
+                # Verify the required model file actually exists in the cached snapshot
+                if (cached_path / model.model_file).exists():
+                    return cached_path
             except Exception:
                 pass
             finally:
