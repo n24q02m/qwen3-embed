@@ -43,9 +43,14 @@ class TextEmbedding(TextEmbeddingBase):
     def add_custom_model(
         cls,
         model_description: DenseModelDescription,
-        pooling: PoolingType,
-        normalization: bool,
+        **kwargs: Any,
     ) -> None:
+        pooling = kwargs.get("pooling")
+        if not isinstance(pooling, PoolingType):
+            raise TypeError("pooling argument of type PoolingType is required")
+        normalization = kwargs.get("normalization")
+        if not isinstance(normalization, bool):
+            raise TypeError("normalization argument of type bool is required")
         registered_models = cls._list_supported_models()
         for registered_model in registered_models:
             if model_description.model.lower() == registered_model.model.lower():

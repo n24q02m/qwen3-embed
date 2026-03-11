@@ -139,6 +139,7 @@ class TextCrossEncoder(TextCrossEncoderBase):
     def add_custom_model(
         cls,
         model_description: BaseModelDescription,
+        **kwargs: Any,
     ) -> None:
         registered_models = cls._list_supported_models()
         for registered_model in registered_models:

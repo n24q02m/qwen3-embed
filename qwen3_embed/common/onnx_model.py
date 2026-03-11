@@ -149,7 +149,7 @@ class OnnxModel[T]:
     def add_extra_session_options(
         cls,
         session_options: "ort.SessionOptions",
-        extra_options: dict[str, Any],  # type: ignore[possibly-missing-attribute]
+        extra_options: dict[str, Any],
     ) -> None:
         """Add extra session options to the existing options object in-place
 
