@@ -1,6 +1,6 @@
 [project]
 name = "qwen3-embed"
-version = "1.2.0"
+version = "1.3.0"
 description = "Lightweight Qwen3 text embedding & reranking via ONNX Runtime and GGUF (fork of fastembed)"
 readme = "README.md"
 license = "Apache-2.0"
