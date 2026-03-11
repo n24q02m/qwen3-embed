@@ -315,10 +315,19 @@ class ModelManagement[T: BaseModelDescription]:
         try:
             # Open the tar.gz file
             with tarfile.open(targz_path, "r:gz") as tar:
-                # Extract all files into the cache directory
+                # Extract all files into the cache directory securely
+                target_dir = os.path.abspath(cache_dir)
+                for member in tar.getmembers():
+                    member_path = os.path.abspath(os.path.join(target_dir, member.name))
+                    if (
+                        not member_path.startswith(target_dir + os.sep)
+                        and member_path != target_dir
+                    ):
+                        raise tarfile.TarError(
+                            f"Attempted path traversal in tar file: {member.name}"
+                        )
                 tar.extractall(
                     path=cache_dir,
-                    filter="data",
                 )
         except tarfile.TarError as e:
             # If any error occurs while opening or extracting the tar.gz file,
