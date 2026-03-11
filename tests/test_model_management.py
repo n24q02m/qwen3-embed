@@ -285,13 +285,16 @@ class TestDecompressToCache:
         tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
 
         with (
-            patch.object(tarfile.TarFile, "extractall", side_effect=tarfile.TarError("Mid-extraction failure")),
-            pytest.raises(ValueError, match="An error occurred while decompressing")
+            patch.object(
+                tarfile.TarFile,
+                "extractall",
+                side_effect=tarfile.TarError("Mid-extraction failure"),
+            ),
+            pytest.raises(ValueError, match="An error occurred while decompressing"),
         ):
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
         assert not cache_dir.exists()
-
 
 
 # ---------------------------------------------------------------------------
