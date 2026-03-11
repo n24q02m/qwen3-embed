@@ -340,12 +340,17 @@ class ModelManagement[T: BaseModelDescription]:
     @classmethod
     def retrieve_model_gcs(
         cls,
-        model_name: str,
-        source_url: str,
+        model: T,
         cache_dir: str,
-        deprecated_tar_struct: bool = False,
         local_files_only: bool = False,
     ) -> Path:
+        model_name = model.model
+        source_url = model.sources.url
+        deprecated_tar_struct = model.sources.deprecated_tar_struct
+
+        if not source_url:
+            raise ValueError(f"Source URL is not defined for model {model_name}")
+
         fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{model_name.split('/')[-1]}"
         cache_tmp_dir = Path(cache_dir) / "tmp"
         model_tmp_dir = cache_tmp_dir / fast_model_name
@@ -468,10 +473,8 @@ class ModelManagement[T: BaseModelDescription]:
             if url_source or local_files_only:
                 try:
                     return cls.retrieve_model_gcs(
-                        model.model,
-                        str(url_source),
+                        model,
                         str(cache_dir),
-                        deprecated_tar_struct=model.sources.deprecated_tar_struct,
                         local_files_only=local_files_only,
                     )
                 except Exception:
