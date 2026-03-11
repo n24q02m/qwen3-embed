@@ -1,5 +1,7 @@
 """Tests for model management utility functions."""
 
+import base64
+import hashlib
 import io
 import json
 import tarfile
@@ -243,6 +245,48 @@ class TestDownloadFileFromGcs:
             f"{self.GCS_URL}/out.onnx", str(output), show_progress=True
         )
         assert output.exists()
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_hash_mismatch_raises_value_error(self, mock_get, tmp_path):
+        """MD5 mismatch between header and downloaded content raises ValueError."""
+        chunk = b"actual content"
+        wrong_md5 = base64.b64encode(hashlib.md5(b"different content").digest()).decode()
+
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": str(len(chunk)),
+            "x-goog-hash": f"md5={wrong_md5}",
+        }
+        response.iter_content.return_value = [chunk]
+        mock_get.return_value = response
+
+        output = tmp_path / "model.onnx"
+        with pytest.raises(ValueError, match="File integrity check failed"):
+            ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/model.onnx", str(output))
+        assert not output.exists()
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_hash_match_succeeds(self, mock_get, tmp_path):
+        """Matching MD5 in x-goog-hash header allows download to complete."""
+        chunk = b"verified content"
+        correct_md5 = base64.b64encode(hashlib.md5(chunk).digest()).decode()
+
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": str(len(chunk)),
+            "x-goog-hash": f"crc32c=abc123, md5={correct_md5}",
+        }
+        response.iter_content.return_value = [chunk]
+        mock_get.return_value = response
+
+        output = tmp_path / "model.onnx"
+        result = ModelManagement.download_file_from_gcs(
+            f"{self.GCS_URL}/model.onnx", str(output)
+        )
+        assert result == str(output)
+        assert output.read_bytes() == chunk
 
 
 # ---------------------------------------------------------------------------
