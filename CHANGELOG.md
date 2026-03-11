@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.3.0](https://github.com/n24q02m/qwen3-embed/compare/v1.2.0...v1.3.0) (2026-03-11)
+
+### Features
+
+* add unit tests for remove_non_alphanumeric utility ([#223](https://github.com/n24q02m/qwen3-embed/issues/223)) ([c991044](https://github.com/n24q02m/qwen3-embed/commit/c991044))
+* add tests for DenseModelDescription dimension limits ([#188](https://github.com/n24q02m/qwen3-embed/issues/188)) ([b204339](https://github.com/n24q02m/qwen3-embed/commit/b204339))
+* add coverage for add_extra_session_options ([#187](https://github.com/n24q02m/qwen3-embed/issues/187)) ([d3e998c](https://github.com/n24q02m/qwen3-embed/commit/d3e998c))
+* add test for _collect_file_metadata function ([#186](https://github.com/n24q02m/qwen3-embed/issues/186)) ([3731db9](https://github.com/n24q02m/qwen3-embed/commit/3731db9))
+* add tests for get_all_punctuation utility ([#185](https://github.com/n24q02m/qwen3-embed/issues/185)) ([d8422d1](https://github.com/n24q02m/qwen3-embed/commit/d8422d1))
+
+### Bug Fixes
+
+* revert Python to 3.13, fix Renovate config, add Q4F16/GGUF integration tests, fix model cache validation ([3770fe8](https://github.com/n24q02m/qwen3-embed/commit/3770fe8))
+* improve metadata save error logging and add test ([#224](https://github.com/n24q02m/qwen3-embed/issues/224)) ([d84cd31](https://github.com/n24q02m/qwen3-embed/commit/d84cd31))
+* improve decompress_to_cache TarError handling test ([#193](https://github.com/n24q02m/qwen3-embed/issues/193)) ([00a48ba](https://github.com/n24q02m/qwen3-embed/commit/00a48ba))
+* suppress Bandit B615 on offline snapshot_download ([#222](https://github.com/n24q02m/qwen3-embed/issues/222)) ([306f3b8](https://github.com/n24q02m/qwen3-embed/commit/306f3b8))
+* add MD5 hash verification for GCS file downloads ([#221](https://github.com/n24q02m/qwen3-embed/issues/221)) ([3582fbc](https://github.com/n24q02m/qwen3-embed/commit/3582fbc))
+* fix insecure temporary directory creation ([#212](https://github.com/n24q02m/qwen3-embed/issues/212)) ([a2ec057](https://github.com/n24q02m/qwen3-embed/commit/a2ec057))
+* fix arbitrary file write via archive extraction (Tar Slip) ([#218](https://github.com/n24q02m/qwen3-embed/issues/218)) ([ce7a251](https://github.com/n24q02m/qwen3-embed/commit/ce7a251))
+* fix unsafe file download via unvalidated URL (SSRF) ([#203](https://github.com/n24q02m/qwen3-embed/issues/203)) ([35df610](https://github.com/n24q02m/qwen3-embed/commit/35df610))
+* standardize CI with PR title check, email notify, and templates ([a4582b5](https://github.com/n24q02m/qwen3-embed/commit/a4582b5))
+
+### Security
+
+* fix path traversal via archive extraction (Tar Slip) ([#218](https://github.com/n24q02m/qwen3-embed/issues/218))
+* fix SSRF via unvalidated URL in file downloads ([#203](https://github.com/n24q02m/qwen3-embed/issues/203))
+* fix insecure temporary directory creation ([#212](https://github.com/n24q02m/qwen3-embed/issues/212))
+* add MD5 hash verification for GCS file downloads ([#221](https://github.com/n24q02m/qwen3-embed/issues/221))
+* fix model cache validation (false cache hit with Q4F16 variant) ([3770fe8](https://github.com/n24q02m/qwen3-embed/commit/3770fe8))
+
+### Documentation
+
+* update docs for stable release - Production/Stable status, complete CHANGELOG, accurate README and AGENTS.md ([dae3f2f](https://github.com/n24q02m/qwen3-embed/commit/dae3f2f))
+
 ## [1.2.0](https://github.com/n24q02m/qwen3-embed/compare/v1.1.3...v1.2.0) (2026-03-04)
 
 ### Features
