@@ -2,7 +2,7 @@
 
 import pytest
 
-from qwen3_embed.common.model_description import ModelSource, PoolingType
+from qwen3_embed.common.model_description import DenseModelDescription, ModelSource, PoolingType
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.text_embedding import TextEmbedding
 
@@ -17,50 +17,85 @@ class TestCustomModelRegistration:
 
     def test_register_cls_pooling_model(self):
         TextEmbedding.add_custom_model(
-            model="test/cls-model",
+            model_description=DenseModelDescription(
+                model="test/cls-model",
+                sources=ModelSource(hf="test/cls-model"),
+                dim=768,
+                model_file="onnx/model.onnx",
+                description="",
+                license="",
+                size_in_GB=0.0,
+                additional_files=[],
+            ),
             pooling=PoolingType.CLS,
             normalization=True,
-            sources=ModelSource(hf="test/cls-model"),
-            dim=768,
         )
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/cls-model" for m in models)
 
     def test_register_mean_pooling_model(self):
         TextEmbedding.add_custom_model(
-            model="test/mean-model",
+            model_description=DenseModelDescription(
+                model="test/mean-model",
+                sources=ModelSource(hf="test/mean-model"),
+                dim=512,
+                model_file="onnx/model.onnx",
+                description="",
+                license="",
+                size_in_GB=0.0,
+                additional_files=[],
+            ),
             pooling=PoolingType.MEAN,
             normalization=True,
-            sources=ModelSource(hf="test/mean-model"),
-            dim=512,
         )
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/mean-model" for m in models)
 
     def test_register_last_token_pooling_model(self):
         TextEmbedding.add_custom_model(
-            model="test/last-token-model",
+            model_description=DenseModelDescription(
+                model="test/last-token-model",
+                sources=ModelSource(hf="test/last-token-model"),
+                dim=1024,
+                model_file="onnx/model.onnx",
+                description="",
+                license="",
+                size_in_GB=0.0,
+                additional_files=[],
+            ),
             pooling=PoolingType.LAST_TOKEN,
             normalization=True,
-            sources=ModelSource(hf="test/last-token-model"),
-            dim=1024,
         )
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/last-token-model" for m in models)
 
     def test_duplicate_model_raises(self):
         TextEmbedding.add_custom_model(
-            model="test/duplicate",
+            model_description=DenseModelDescription(
+                model="test/duplicate",
+                sources=ModelSource(hf="test/duplicate"),
+                dim=256,
+                model_file="onnx/model.onnx",
+                description="",
+                license="",
+                size_in_GB=0.0,
+                additional_files=[],
+            ),
             pooling=PoolingType.CLS,
             normalization=True,
-            sources=ModelSource(hf="test/duplicate"),
-            dim=256,
         )
         with pytest.raises(ValueError, match="already registered"):
             TextEmbedding.add_custom_model(
-                model="test/duplicate",
+                model_description=DenseModelDescription(
+                    model="test/duplicate",
+                    sources=ModelSource(hf="test/duplicate"),
+                    dim=256,
+                    model_file="onnx/model.onnx",
+                    description="",
+                    license="",
+                    size_in_GB=0.0,
+                    additional_files=[],
+                ),
                 pooling=PoolingType.CLS,
                 normalization=True,
-                sources=ModelSource(hf="test/duplicate"),
-                dim=256,
             )
