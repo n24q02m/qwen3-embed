@@ -20,6 +20,7 @@ class InitOptions:
     device_ids: list[int] | None = None
     lazy_load: bool = False
 
+
 class TextEmbedding(TextEmbeddingBase):
     EMBEDDINGS_REGISTRY: list[type[TextEmbeddingBase]] = [
         Qwen3TextEmbedding,
