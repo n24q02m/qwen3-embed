@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from qwen3_embed.common.onnx_model import OnnxModel, OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxLoadConfig, OnnxModel, OnnxOutputContext
 from qwen3_embed.common.types import Device
 
 
@@ -48,7 +48,7 @@ def test_load_defaults(model: ConcreteOnnxModel, mock_ort):
     """Test default behavior (CPU fallback)."""
     mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
 
-    model._load_onnx_model(Path("dummy"), "model.onnx", threads=None)
+    model._load_onnx_model(OnnxLoadConfig(model_dir=Path("dummy"), model_file="model.onnx", threads=None))
 
     # Should use CPUExecutionProvider
     mock_ort.InferenceSession.assert_called_with(
@@ -68,7 +68,7 @@ def test_load_cuda_explicit(model: ConcreteOnnxModel, mock_ort):
     # Mock session to report CUDA provider present
     mock_ort.InferenceSession.return_value.get_providers.return_value = ["CUDAExecutionProvider"]
 
-    model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=True)
+    model._load_onnx_model(OnnxLoadConfig(model_dir=Path("dummy"), model_file="model.onnx", threads=None, cuda=True))
 
     mock_ort.InferenceSession.assert_called_with(
         "dummy/model.onnx",
@@ -87,7 +87,7 @@ def test_load_cuda_auto_available(model: ConcreteOnnxModel, mock_ort):
     # Mock session to report CUDA provider present
     mock_ort.InferenceSession.return_value.get_providers.return_value = ["CUDAExecutionProvider"]
 
-    model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=Device.AUTO)
+    model._load_onnx_model(OnnxLoadConfig(model_dir=Path("dummy"), model_file="model.onnx", threads=None, cuda=Device.AUTO))
 
     mock_ort.InferenceSession.assert_called_with(
         "dummy/model.onnx",
@@ -100,7 +100,7 @@ def test_load_cuda_auto_unavailable(model: ConcreteOnnxModel, mock_ort):
     """Test AUTO CUDA when CUDA is NOT available (fallback to CPU)."""
     mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
 
-    model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=Device.AUTO)
+    model._load_onnx_model(OnnxLoadConfig(model_dir=Path("dummy"), model_file="model.onnx", threads=None, cuda=Device.AUTO))
 
     # Should fallback to CPU
     mock_ort.InferenceSession.assert_called_with(
@@ -121,7 +121,7 @@ def test_load_explicit_providers(model: ConcreteOnnxModel, mock_ort):
     mock_ort.InferenceSession.return_value.get_providers.return_value = ["CUDAExecutionProvider"]
 
     model._load_onnx_model(
-        Path("dummy"), "model.onnx", threads=None, providers=["CUDAExecutionProvider"]
+        OnnxLoadConfig(model_dir=Path("dummy"), model_file="model.onnx", threads=None, providers=["CUDAExecutionProvider"])
     )
 
     mock_ort.InferenceSession.assert_called_with(
@@ -137,7 +137,7 @@ def test_load_providers_validation_error(model: ConcreteOnnxModel, mock_ort):
 
     with pytest.raises(ValueError, match="Provider CUDAExecutionProvider is not available"):
         model._load_onnx_model(
-            Path("dummy"), "model.onnx", threads=None, providers=["CUDAExecutionProvider"]
+            OnnxLoadConfig(model_dir=Path("dummy"), model_file="model.onnx", threads=None, providers=["CUDAExecutionProvider"])
         )
 
 
@@ -153,11 +153,13 @@ def test_load_cuda_and_providers_warning(model: ConcreteOnnxModel, mock_ort):
 
     with pytest.warns(UserWarning, match="`cuda` and `providers` are mutually exclusive"):
         model._load_onnx_model(
-            Path("dummy"),
-            "model.onnx",
-            threads=None,
-            cuda=True,
-            providers=["CUDAExecutionProvider"],
+            OnnxLoadConfig(
+                model_dir=Path("dummy"),
+                model_file="model.onnx",
+                threads=None,
+                cuda=True,
+                providers=["CUDAExecutionProvider"],
+            )
         )
 
 
@@ -168,7 +170,7 @@ def test_load_dml_auto(model: ConcreteOnnxModel, mock_ort):
         "CPUExecutionProvider",
     ]
 
-    model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=Device.AUTO)
+    model._load_onnx_model(OnnxLoadConfig(model_dir=Path("dummy"), model_file="model.onnx", threads=None, cuda=Device.AUTO))
 
     mock_ort.InferenceSession.assert_called_with(
         "dummy/model.onnx",
@@ -181,7 +183,7 @@ def test_load_threads(model: ConcreteOnnxModel, mock_ort):
     """Test thread configuration."""
     mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
 
-    model._load_onnx_model(Path("dummy"), "model.onnx", threads=4)
+    model._load_onnx_model(OnnxLoadConfig(model_dir=Path("dummy"), model_file="model.onnx", threads=4))
 
     so = mock_ort.SessionOptions.return_value
     assert so.intra_op_num_threads == 4
@@ -193,10 +195,12 @@ def test_load_extra_session_options(model: ConcreteOnnxModel, mock_ort):
     mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
 
     model._load_onnx_model(
-        Path("dummy"),
-        "model.onnx",
-        threads=None,
-        extra_session_options={"enable_cpu_mem_arena": False},
+        OnnxLoadConfig(
+            model_dir=Path("dummy"),
+            model_file="model.onnx",
+            threads=None,
+            extra_session_options={"enable_cpu_mem_arena": False},
+        )
     )
 
     so = mock_ort.SessionOptions.return_value
@@ -217,4 +221,4 @@ def test_load_cuda_warning(model: ConcreteOnnxModel, mock_ort):
     mock_ort.InferenceSession.return_value = session_mock
 
     with pytest.warns(RuntimeWarning, match="Attempt to set CUDAExecutionProvider failed"):
-        model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=True)
+        model._load_onnx_model(OnnxLoadConfig(model_dir=Path("dummy"), model_file="model.onnx", threads=None, cuda=True))
