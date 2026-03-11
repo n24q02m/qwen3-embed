@@ -2,7 +2,7 @@ from collections.abc import Iterable, Sequence
 from typing import Any
 
 from qwen3_embed.common.model_description import DenseModelDescription
-from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxEmbeddingParameters, OnnxOutputContext
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
 from qwen3_embed.common.utils import define_cache_dir, normalize
 from qwen3_embed.text.onnx_text_model import OnnxTextModel, TextEmbeddingWorker
@@ -112,10 +112,9 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
         Returns:
             List of embeddings, one per document
         """
-        yield from self._embed_documents(
+        parameters = OnnxEmbeddingParameters(
             model_name=self.model_name,
             cache_dir=str(self.cache_dir),
-            documents=documents,
             batch_size=batch_size,
             parallel=parallel,
             providers=self.providers,
@@ -124,6 +123,10 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
             local_files_only=self._local_files_only,
             specific_model_path=self._specific_model_path,
             extra_session_options=self._extra_session_options,
+        )
+        yield from self._embed_documents(
+            documents=documents,
+            parameters=parameters,
             **kwargs,
         )
 

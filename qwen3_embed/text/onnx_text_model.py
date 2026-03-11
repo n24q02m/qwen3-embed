@@ -8,7 +8,13 @@ import numpy as np
 from numpy.typing import NDArray
 from tokenizers import Encoding, Tokenizer
 
-from qwen3_embed.common.onnx_model import EmbeddingWorker, OnnxModel, OnnxOutputContext, T
+from qwen3_embed.common.onnx_model import (
+    EmbeddingWorker,
+    OnnxEmbeddingParameters,
+    OnnxModel,
+    OnnxOutputContext,
+    T,
+)
 from qwen3_embed.common.preprocessor_utils import load_tokenizer
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
 from qwen3_embed.common.utils import iter_batch
@@ -108,17 +114,8 @@ class OnnxTextModel(OnnxModel[T]):
 
     def _embed_documents(
         self,
-        model_name: str,
-        cache_dir: str,
         documents: str | Iterable[str],
-        batch_size: int = 256,
-        parallel: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        local_files_only: bool = False,
-        specific_model_path: str | None = None,
-        extra_session_options: dict[str, Any] | None = None,
+        parameters: OnnxEmbeddingParameters,
         **kwargs: Any,
     ) -> Iterable[T]:
         is_small = False
@@ -127,41 +124,41 @@ class OnnxTextModel(OnnxModel[T]):
             documents = [documents]
             is_small = True
 
-        if isinstance(documents, list) and len(documents) < batch_size:
+        if isinstance(documents, list) and len(documents) < parameters.batch_size:
             is_small = True
 
-        if parallel is None or is_small:
+        if parameters.parallel is None or is_small:
             if not hasattr(self, "model") or self.model is None:
                 self.load_onnx_model()
-            for batch in iter_batch(documents, batch_size):
+            for batch in iter_batch(documents, parameters.batch_size):
                 yield from self._post_process_onnx_output(
                     self.onnx_embed(batch, **kwargs), **kwargs
                 )
         else:
-            if parallel == 0:
-                parallel = os.cpu_count()
+            if parameters.parallel == 0:
+                parameters.parallel = os.cpu_count()
 
             start_method = "forkserver" if "forkserver" in get_all_start_methods() else "spawn"
             params = {
-                "model_name": model_name,
-                "cache_dir": cache_dir,
-                "providers": providers,
-                "local_files_only": local_files_only,
-                "specific_model_path": specific_model_path,
+                "model_name": parameters.model_name,
+                "cache_dir": parameters.cache_dir,
+                "providers": parameters.providers,
+                "local_files_only": parameters.local_files_only,
+                "specific_model_path": parameters.specific_model_path,
                 **kwargs,
             }
 
-            if extra_session_options is not None:
-                params.update(extra_session_options)
+            if parameters.extra_session_options is not None:
+                params.update(parameters.extra_session_options)
 
             pool = ParallelWorkerPool(
-                num_workers=parallel or 1,
+                num_workers=parameters.parallel or 1,
                 worker=self._get_worker_class(),
-                cuda=cuda,
-                device_ids=device_ids,
+                cuda=parameters.cuda,
+                device_ids=parameters.device_ids,
                 start_method=start_method,
             )
-            for batch in pool.ordered_map(iter_batch(documents, batch_size), **params):
+            for batch in pool.ordered_map(iter_batch(documents, parameters.batch_size), **params):
                 yield from self._post_process_onnx_output(batch, **kwargs)
 
     def _token_count(self, texts: str | Iterable[str], batch_size: int = 1024, **_: Any) -> int:
