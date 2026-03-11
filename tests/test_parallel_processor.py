@@ -238,7 +238,11 @@ def test_worker_function_exception_handling():
     # failure_val=5 means item 5 raises an exception
     input_queue.get.side_effect = [(0, 5), QueueSignals.stop]
 
-    _worker(WorkerContext(FailingWorker, input_queue, output_queue, num_active_workers, 0, {"failure_val": 5}))
+    _worker(
+        WorkerContext(
+            FailingWorker, input_queue, output_queue, num_active_workers, 0, {"failure_val": 5}
+        )
+    )
 
     # Should put the error signal
     output_queue.put.assert_called_once_with(QueueSignals.error)
