@@ -280,7 +280,9 @@ class TestOnnxTextModelLoadOnnxModel:
             session_mock.get_inputs.return_value = []
             mock_ort.InferenceSession.return_value = session_mock
 
-            m._load_onnx_model(OnnxLoadConfig(model_dir=tmp_path, model_file="model.onnx", threads=None))
+            m._load_onnx_model(
+                OnnxLoadConfig(model_dir=tmp_path, model_file="model.onnx", threads=None)
+            )
 
         assert m.tokenizer is mock_tokenizer
         assert m.special_token_to_id is mock_special
