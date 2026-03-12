@@ -4,7 +4,7 @@ version = "1.3.0"
 description = "Lightweight Qwen3 text embedding & reranking via ONNX Runtime and GGUF (fork of fastembed)"
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 authors = [{ name = "n24q02m" }]
 keywords = ["vector", "embedding", "reranking", "qwen3", "onnx", "onnxruntime"]
 classifiers = [
@@ -12,18 +12,22 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
 dependencies = [
-    "numpy>=2.4.3",
+    "numpy>=2.0",
     "onnxruntime>1.20.0",
-    "tqdm>=4.67.3",
-    "requests>=2.32.5",
-    "tokenizers>=0.22.2,<1.0",
-    "huggingface-hub>=0.36.2,<2.0",
-    "loguru>=0.7.3",
+    "tqdm>=4.67",
+    "requests>=2.32",
+    "tokenizers>=0.21,<1.0",
+    "huggingface-hub>=0.27,<2.0",
+    "loguru>=0.7",
 ]
 
 [project.optional-dependencies]

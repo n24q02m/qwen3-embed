@@ -2,7 +2,7 @@ import warnings
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 import numpy as np
 import onnxruntime as ort
@@ -25,7 +25,7 @@ class OnnxOutputContext:
     metadata: dict[str, Any] | None = None
 
 
-class OnnxModel[T]:
+class OnnxModel(Generic[T]):
     EXPOSED_SESSION_OPTIONS = ("enable_cpu_mem_arena",)
 
     @classmethod
@@ -175,7 +175,7 @@ class OnnxModel[T]:
         raise NotImplementedError("Subclasses must implement this method")
 
 
-class EmbeddingWorker[T](Worker):
+class EmbeddingWorker(Worker, Generic[T]):
     def init_embedding(
         self,
         model_name: str,

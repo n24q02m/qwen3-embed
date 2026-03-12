@@ -56,9 +56,13 @@ jobs:
           gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --title "$new_title"
           echo "Auto-fixed: $title -> $new_title"
   lint-and-test:
-    name: Lint & Test
+    name: Lint & Test (Python ${{ matrix.python-version }})
     if: github.event_name != 'issues'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2
@@ -73,21 +77,24 @@ jobs:
         with:
           version: "latest"
 
-      - name: Setup Python 3.13
+      - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
-          python-version: "3.13"
+          python-version: "${{ matrix.python-version }}"
 
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --python ${{ matrix.python-version }} --group dev
 
       - name: Run Ruff linter
+        if: matrix.python-version == '3.13'
         run: uv run ruff check .
 
       - name: Run Ruff formatter
+        if: matrix.python-version == '3.13'
         run: uv run ruff format --check .
 
       - name: Run type check
+        if: matrix.python-version == '3.13'
         run: uv run ty check
 
       - name: Run tests with coverage
@@ -95,7 +102,7 @@ jobs:
           --cov-report=xml
 
       - name: Upload coverage to Codecov
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && matrix.python-version == '3.13'
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
         with:
           files: coverage.xml

@@ -8,7 +8,7 @@ import tarfile
 import time
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 import requests
 from huggingface_hub import list_repo_tree, model_info, snapshot_download
@@ -26,7 +26,7 @@ from qwen3_embed.common.model_description import BaseModelDescription
 T = TypeVar("T", bound=BaseModelDescription)
 
 
-class ModelManagement[T: BaseModelDescription]:
+class ModelManagement(Generic[T]):
     METADATA_FILE = "files_metadata.json"
 
     @classmethod

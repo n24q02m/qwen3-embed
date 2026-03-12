@@ -71,11 +71,11 @@
       "allowedVersions": ">=10.0.0"
     },
     {
-      "description": "Pin Python runtime to 3.13.x",
+      "description": "Disable Python runtime updates (library supports 3.10-3.14)",
       "matchPackageNames": [
         "python"
       ],
-      "allowedVersions": ">=3.13.0 <3.14.0"
+      "enabled": false
     },
     {
       "description": "Pin Node.js runtime to 24.x",
