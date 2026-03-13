@@ -31,7 +31,7 @@ from qwen3_embed.rerank.cross_encoder.onnx_text_model import TextRerankerWorker
 # ---------------------------------------------------------------------------
 # Token IDs in the Qwen3 tokenizer vocabulary
 TOKEN_YES_ID = 9693
-TOKEN_NO_ID = 2132
+TOKEN_NO_ID = 2152
 
 SYSTEM_PROMPT = (
     "Judge whether the Document meets the requirements based on the Query "
@@ -79,6 +79,18 @@ supported_qwen3_reranker_models: list[BaseModelDescription] = [
         size_in_GB=0.57,
         sources=ModelSource(hf="n24q02m/Qwen3-Reranker-0.6B-ONNX"),
         model_file="onnx/model_q4f16.onnx",
+    ),
+    BaseModelDescription(
+        model="n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo",
+        description=(
+            "Qwen3 reranker (0.6B) with optimized 2-dim yes/no output. "
+            "INT8 dynamic quantized. ~10x less RAM than full-vocab version. "
+            "Multilingual, 40960 input tokens, instruction-aware, 2025 year."
+        ),
+        license="apache-2.0",
+        size_in_GB=0.57,
+        sources=ModelSource(hf="n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo"),
+        model_file="onnx/model_quantized.onnx",
     ),
 ]
 
@@ -144,19 +156,25 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     def _compute_yes_no_scores(model_output: NumpyArray) -> NumpyArray:
         """Extract yes/no logits from causal LM output and compute scores.
 
+        Supports two output shapes:
+        - Optimized: ``(batch, 2)`` — direct [no, yes] logits.
+        - Legacy: ``(batch, seq_len, vocab_size)`` — full causal LM output.
+
         Args:
-            model_output: Raw model output, shape ``(batch, seq_len, vocab_size)``.
+            model_output: Raw model output.
 
         Returns:
             Relevance scores (P(yes)), shape ``(batch,)``.
         """
-        # Last token logits for each sample
-        last_logits: NumpyArray = model_output[:, -1, :]  # (batch, vocab_size)
-
-        # Stack [no, yes] logits
-        yes_no_logits = np.stack(
-            [last_logits[:, TOKEN_NO_ID], last_logits[:, TOKEN_YES_ID]], axis=1
-        )  # (batch, 2)
+        if model_output.ndim == 2:
+            # Optimized model: output is already (batch, 2) with [no, yes]
+            yes_no_logits = model_output
+        else:
+            # Legacy full-vocab model: (batch, seq_len, vocab_size)
+            last_logits: NumpyArray = model_output[:, -1, :]  # (batch, vocab_size)
+            yes_no_logits = np.stack(
+                [last_logits[:, TOKEN_NO_ID], last_logits[:, TOKEN_YES_ID]], axis=1
+            )  # (batch, 2)
 
         # Numerically stable softmax
         max_logits = np.max(yes_no_logits, axis=1, keepdims=True)

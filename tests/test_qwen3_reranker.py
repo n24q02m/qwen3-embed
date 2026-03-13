@@ -24,7 +24,14 @@ class TestQwen3CrossEncoderRegistry:
         """Qwen3 reranker models should appear in list_supported_models."""
         models = TextCrossEncoder.list_supported_models()
         qwen3_models = [m for m in models if "Qwen3" in m["model"]]
-        assert len(qwen3_models) >= 1
+        assert len(qwen3_models) >= 3
+
+    def test_qwen3_yesno_model_in_registry(self):
+        """Optimized YesNo model should be in the registry."""
+        models = TextCrossEncoder.list_supported_models()
+        yesno_models = [m for m in models if "YesNo" in m["model"]]
+        assert len(yesno_models) == 1
+        assert yesno_models[0]["model"] == "n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo"
 
     def test_qwen3_reranker_description(self):
         """Verify Qwen3-Reranker-0.6B model description fields."""
@@ -130,6 +137,57 @@ class TestYesNoScoring:
         assert not np.isnan(scores[0])
         assert not np.isinf(scores[0])
         assert 0.5 < scores[0] < 1.0
+
+
+class TestOptimizedYesNoScoring:
+    """Test scoring with optimized (batch, 2) output shape."""
+
+    def test_optimized_strong_yes(self):
+        """Optimized model output (batch, 2) with [no, yes] logits."""
+        output = np.array([[-10.0, 10.0]], dtype=np.float32)  # (1, 2)
+        scores = Qwen3CrossEncoder._compute_yes_no_scores(output)
+        assert scores.shape == (1,)
+        assert scores[0] > 0.99
+
+    def test_optimized_strong_no(self):
+        output = np.array([[10.0, -10.0]], dtype=np.float32)  # (1, 2)
+        scores = Qwen3CrossEncoder._compute_yes_no_scores(output)
+        assert scores[0] < 0.01
+
+    def test_optimized_equal(self):
+        output = np.array([[5.0, 5.0]], dtype=np.float32)  # (1, 2)
+        scores = Qwen3CrossEncoder._compute_yes_no_scores(output)
+        np.testing.assert_allclose(scores[0], 0.5, atol=1e-6)
+
+    def test_optimized_batch(self):
+        output = np.array(
+            [[-10.0, 10.0], [10.0, -10.0], [0.0, 0.0]], dtype=np.float32
+        )  # (3, 2)
+        scores = Qwen3CrossEncoder._compute_yes_no_scores(output)
+        assert scores.shape == (3,)
+        assert scores[0] > 0.99
+        assert scores[1] < 0.01
+        np.testing.assert_allclose(scores[2], 0.5, atol=1e-6)
+
+    def test_optimized_numerical_stability(self):
+        output = np.array([[999.0, 1000.0]], dtype=np.float32)  # (1, 2)
+        scores = Qwen3CrossEncoder._compute_yes_no_scores(output)
+        assert not np.isnan(scores[0])
+        assert not np.isinf(scores[0])
+        assert 0.5 < scores[0] < 1.0
+
+    def test_optimized_matches_legacy(self):
+        """Optimized and legacy outputs should produce identical scores."""
+        vocab_size = 20000
+        legacy_output = np.zeros((1, 3, vocab_size), dtype=np.float32)
+        legacy_output[0, -1, TOKEN_YES_ID] = 3.5
+        legacy_output[0, -1, TOKEN_NO_ID] = 1.2
+
+        optimized_output = np.array([[1.2, 3.5]], dtype=np.float32)  # [no, yes]
+
+        legacy_scores = Qwen3CrossEncoder._compute_yes_no_scores(legacy_output)
+        optimized_scores = Qwen3CrossEncoder._compute_yes_no_scores(optimized_output)
+        np.testing.assert_allclose(legacy_scores, optimized_scores, atol=1e-6)
 
 
 class TestTokenConstants:
