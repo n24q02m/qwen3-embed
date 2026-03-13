@@ -108,6 +108,9 @@ class OnnxModel(Generic[T]):
 
         so = ort.SessionOptions()  # type: ignore[possibly-missing-attribute]
         so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL  # type: ignore[possibly-missing-attribute]
+        # Disable memory pattern optimization to prevent ORT from retaining
+        # peak-sized buffers across inferences with varying sequence lengths.
+        so.enable_mem_pattern = False
 
         if threads is not None:
             so.intra_op_num_threads = threads
