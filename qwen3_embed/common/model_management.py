@@ -343,6 +343,7 @@ class ModelManagement(Generic[T]):
             with tarfile.open(targz_path, "r:gz") as tar:
                 # Extract all files into the cache directory securely
                 target_dir = os.path.abspath(cache_dir)
+                safe_members = []
                 for member in tar.getmembers():
                     member_path = os.path.abspath(os.path.join(target_dir, member.name))
                     if (
@@ -352,9 +353,12 @@ class ModelManagement(Generic[T]):
                         raise tarfile.TarError(
                             f"Attempted path traversal in tar file: {member.name}"
                         )
-                tar.extractall(
-                    path=cache_dir,
-                )
+                    safe_members.append(member)
+
+                if hasattr(tarfile, "data_filter"):
+                    tar.extractall(path=cache_dir, members=safe_members, filter="data")
+                else:
+                    tar.extractall(path=cache_dir, members=safe_members)
         except tarfile.TarError as e:
             # If decompression fails, remove the partially extracted directory
             shutil.rmtree(cache_dir, ignore_errors=True)
