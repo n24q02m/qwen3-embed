@@ -89,8 +89,8 @@ supported_qwen3_reranker_models: list[BaseModelDescription] = [
         ),
         license="apache-2.0",
         size_in_GB=0.57,
-        sources=ModelSource(hf="n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo"),
-        model_file="onnx/model_quantized.onnx",
+        sources=ModelSource(hf="n24q02m/Qwen3-Reranker-0.6B-ONNX"),
+        model_file="onnx/model_yesno_quantized.onnx",
     ),
 ]
 
