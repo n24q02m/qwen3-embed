@@ -25,6 +25,7 @@ Trimmed fork of [fastembed](https://github.com/qdrant/fastembed), keeping only Q
 | `n24q02m/Qwen3-Embedding-0.6B-ONNX-Q4F16` | Embedding | 32-1024 (MRL) | 32768 | 517 MB |
 | `n24q02m/Qwen3-Reranker-0.6B-ONNX` | Reranker | - | 40960 | 573 MB |
 | `n24q02m/Qwen3-Reranker-0.6B-ONNX-Q4F16` | Reranker | - | 40960 | 518 MB |
+| `n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo` | Reranker | - | 40960 | 598 MB |
 
 ### GGUF (optional, requires `llama-cpp-python`)
 
@@ -90,6 +91,9 @@ queries = list(model.query_embed(
 from qwen3_embed import TextCrossEncoder
 
 reranker = TextCrossEncoder(model_name="n24q02m/Qwen3-Reranker-0.6B-ONNX")
+
+# YesNo variant: ~10x less RAM (~598MB vs ~12GB at inference)
+# reranker = TextCrossEncoder(model_name="n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo")
 
 query = "What is Qwen3?"
 documents = [
