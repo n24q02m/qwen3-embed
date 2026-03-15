@@ -237,3 +237,13 @@ def test_add_extra_session_options():
         match="invalid_option is unknown or not exposed \\(exposed options: \\('enable_cpu_mem_arena',\\)\\)",
     ):
         ConcreteOnnxModel.add_extra_session_options(session_options, {"invalid_option": True})
+
+def test_select_exposed_session_options():
+    """Test filtering of exposed session options."""
+    model_kwargs = {
+        "enable_cpu_mem_arena": False,
+        "invalid_option": True,
+        "another_invalid_option": 123
+    }
+    filtered_options = ConcreteOnnxModel._select_exposed_session_options(model_kwargs)
+    assert filtered_options == {"enable_cpu_mem_arena": False}
