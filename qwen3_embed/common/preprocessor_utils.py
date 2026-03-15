@@ -16,37 +16,28 @@ def load_special_tokens(model_dir: Path) -> dict[str, Any]:
     return tokens_map
 
 
-def load_tokenizer(model_dir: Path) -> tuple[Tokenizer, dict[str, int]]:
-    config_path = model_dir / "config.json"
-    if not config_path.exists():
-        raise ValueError(f"Could not find config.json in {model_dir}")
+def _read_json_config(model_dir: Path, filename: str) -> dict[str, Any]:
+    file_path = model_dir / filename
+    if not file_path.exists():
+        raise ValueError(f"Could not find {filename} in {model_dir}")
+    with open(str(file_path)) as f:
+        return json.load(f)
 
-    tokenizer_path = model_dir / "tokenizer.json"
-    if not tokenizer_path.exists():
-        raise ValueError(f"Could not find tokenizer.json in {model_dir}")
 
-    tokenizer_config_path = model_dir / "tokenizer_config.json"
-    if not tokenizer_config_path.exists():
-        raise ValueError(f"Could not find tokenizer_config.json in {model_dir}")
+def _get_max_context(tokenizer_config: dict[str, Any]) -> int:
+    if "model_max_length" not in tokenizer_config and "max_length" not in tokenizer_config:
+        raise ValueError("Models without model_max_length or max_length are not supported.")
+    if "model_max_length" not in tokenizer_config:
+        return tokenizer_config["max_length"]
+    elif "max_length" not in tokenizer_config:
+        return tokenizer_config["model_max_length"]
+    else:
+        return min(tokenizer_config["model_max_length"], tokenizer_config["max_length"])
 
-    with open(str(config_path)) as config_file:
-        config = json.load(config_file)
 
-    with open(str(tokenizer_config_path)) as tokenizer_config_file:
-        tokenizer_config = json.load(tokenizer_config_file)
-        if "model_max_length" not in tokenizer_config and "max_length" not in tokenizer_config:
-            raise ValueError("Models without model_max_length or max_length are not supported.")
-        if "model_max_length" not in tokenizer_config:
-            max_context = tokenizer_config["max_length"]
-        elif "max_length" not in tokenizer_config:
-            max_context = tokenizer_config["model_max_length"]
-        else:
-            max_context = min(tokenizer_config["model_max_length"], tokenizer_config["max_length"])
-
-    tokens_map = load_special_tokens(model_dir)
-
-    tokenizer = Tokenizer.from_file(str(tokenizer_path))
-    tokenizer.enable_truncation(max_length=max_context)
+def _configure_tokenizer_padding(
+    tokenizer: Tokenizer, config: dict[str, Any], tokenizer_config: dict[str, Any]
+) -> None:
     if not tokenizer.padding:
         pad_token_id = config.get("pad_token_id")
         if pad_token_id is None:
@@ -56,6 +47,8 @@ def load_tokenizer(model_dir: Path) -> tuple[Tokenizer, dict[str, int]]:
             pad_token = pad_token.get("content", "")
         tokenizer.enable_padding(pad_id=pad_token_id, pad_token=pad_token)
 
+
+def _add_special_tokens(tokenizer: Tokenizer, tokens_map: dict[str, Any]) -> dict[str, int]:
     for token in tokens_map.values():
         if isinstance(token, str):
             tokenizer.add_special_tokens([token])
@@ -70,5 +63,25 @@ def load_tokenizer(model_dir: Path) -> tuple[Tokenizer, dict[str, int]]:
         elif isinstance(token, dict):
             token_str = token.get("content", "")
             special_token_to_id[token_str] = tokenizer.token_to_id(token_str)
+
+    return special_token_to_id
+
+
+def load_tokenizer(model_dir: Path) -> tuple[Tokenizer, dict[str, int]]:
+    config = _read_json_config(model_dir, "config.json")
+    tokenizer_config = _read_json_config(model_dir, "tokenizer_config.json")
+
+    tokenizer_path = model_dir / "tokenizer.json"
+    if not tokenizer_path.exists():
+        raise ValueError(f"Could not find tokenizer.json in {model_dir}")
+
+    max_context = _get_max_context(tokenizer_config)
+    tokens_map = load_special_tokens(model_dir)
+
+    tokenizer = Tokenizer.from_file(str(tokenizer_path))
+    tokenizer.enable_truncation(max_length=max_context)
+
+    _configure_tokenizer_padding(tokenizer, config, tokenizer_config)
+    special_token_to_id = _add_special_tokens(tokenizer, tokens_map)
 
     return tokenizer, special_token_to_id
