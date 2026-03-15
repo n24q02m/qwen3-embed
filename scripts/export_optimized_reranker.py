@@ -35,9 +35,7 @@ class Qwen3RerankerYesNo(nn.Module):
 
         # Extract only the 2 relevant rows from lm_head
         lm_head_weight = base_model.lm_head.weight.data  # (vocab_size, hidden_size)
-        self.yes_no_head = nn.Linear(
-            lm_head_weight.shape[1], 2, bias=False
-        )
+        self.yes_no_head = nn.Linear(lm_head_weight.shape[1], 2, bias=False)
         # Row order: [no, yes] to match _compute_yes_no_scores stack order
         self.yes_no_head.weight.data = lm_head_weight[[TOKEN_NO_ID, TOKEN_YES_ID], :]
 
@@ -77,7 +75,9 @@ def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
     yes_token = tokenizer.encode("yes", add_special_tokens=False)
     no_token = tokenizer.encode("no", add_special_tokens=False)
     print(f"Tokenizer 'yes' -> {yes_token}, 'no' -> {no_token}")
-    assert TOKEN_YES_ID in yes_token, f"TOKEN_YES_ID mismatch: expected {TOKEN_YES_ID} in {yes_token}"
+    assert TOKEN_YES_ID in yes_token, (
+        f"TOKEN_YES_ID mismatch: expected {TOKEN_YES_ID} in {yes_token}"
+    )
     assert TOKEN_NO_ID in no_token, f"TOKEN_NO_ID mismatch: expected {TOKEN_NO_ID} in {no_token}"
 
     print("Creating optimized yes/no model...")

@@ -35,7 +35,6 @@ def test_check_llama_cpp_missing():
         _check_llama_cpp()
 
 
-
 def test_check_llama_cpp_import_error_with_mock():
     """Test that _check_llama_cpp raises ImportError from builtins.__import__."""
     original_import = __import__
