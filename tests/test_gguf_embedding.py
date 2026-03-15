@@ -272,6 +272,43 @@ class TestGGUFEmbeddingEmbed:
         list(model.embed("specific text"))
         model._llm.create_embedding.assert_called_once_with("specific text")
 
+    def test_embed_large_batch(self):
+        """Test embed with a large number of generated strings to ensure batching logic is correct."""
+        model = _make_model(embedding_dim=4)
+
+        # Override create_embedding to return a constant vector
+        model._llm.create_embedding.return_value = {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]}]}
+
+        num_docs = 1000
+        docs = [f"document {i}" for i in range(num_docs)]
+
+        results = list(model.embed(docs, batch_size=32, parallel=4))
+
+        assert len(results) == num_docs
+        assert model._llm.create_embedding.call_count == num_docs
+
+        # Verify calls were made with correct documents
+        calls = [c[0][0] for c in model._llm.create_embedding.call_args_list]
+        assert calls == docs
+
+    def test_embed_generator_input(self):
+        """Test embed handles generator iterables correctly."""
+        model = _make_model(embedding_dim=4)
+        model._llm.create_embedding.return_value = {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]}]}
+
+        def doc_generator():
+            for i in range(5):
+                yield f"gen doc {i}"
+
+        results = list(model.embed(doc_generator()))
+
+        assert len(results) == 5
+        assert model._llm.create_embedding.call_count == 5
+
+        calls = [c[0][0] for c in model._llm.create_embedding.call_args_list]
+        expected = [f"gen doc {i}" for i in range(5)]
+        assert calls == expected
+
 
 # ---------------------------------------------------------------------------
 # Tests for query_embed
