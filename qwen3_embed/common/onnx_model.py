@@ -78,6 +78,7 @@ class OnnxModel(Generic[T]):
 
         dml_available = "DmlExecutionProvider" in available_providers
 
+        onnx_providers: list[OnnxProvider]
         if providers is not None:
             onnx_providers = list(providers)
         elif explicit_cuda or (cuda == Device.AUTO and cuda_available):
@@ -174,7 +175,7 @@ class OnnxModel(Generic[T]):
     def add_extra_session_options(
         cls,
         session_options: "ort.SessionOptions",
-        extra_options: dict[str, Any],  # type: ignore[possibly-missing-attribute]
+        extra_options: dict[str, Any],
     ) -> None:
         """Add extra session options to the existing options object in-place
 
