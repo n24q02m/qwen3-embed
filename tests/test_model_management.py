@@ -369,7 +369,7 @@ class TestDecompressToCache:
 
             os.remove("test.txt")
 
-        with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
+        with pytest.raises(tarfile.TarError):
             ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
 
         assert not cache_dir.exists()
