@@ -91,7 +91,7 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
         providers: Sequence[OnnxProvider] | None = None,
         cuda: bool | Device = Device.AUTO,
         device_ids: list[int] | None = None,
-        lazy_load: bool = False,
+        lazy_load: bool = False,  # noqa: ARG002
         **kwargs: Any,
     ) -> None:
         _check_llama_cpp()
