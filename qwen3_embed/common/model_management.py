@@ -468,8 +468,8 @@ class ModelManagement(Generic[T]):
                 # Verify the required model file actually exists in the cached snapshot
                 if (cached_path / model.model_file).exists():
                     return cached_path
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Cache miss or failed to load from cache for {hf_source}: {e}")
             finally:
                 enable_progress_bars()
 
