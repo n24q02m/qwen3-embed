@@ -417,6 +417,70 @@ class ModelManagement(Generic[T]):
         return model_dir
 
     @classmethod
+    def _check_hf_cache(
+        cls,
+        hf_source: str,
+        cache_dir: str,
+        extra_patterns: list[str],
+        model_file: str,
+        kwargs: dict[str, Any],
+    ) -> Path | None:
+        try:
+            cache_kwargs = deepcopy(kwargs)
+            cache_kwargs["local_files_only"] = True
+            cached_path = Path(
+                cls.download_files_from_huggingface(
+                    hf_source,
+                    cache_dir=cache_dir,
+                    extra_patterns=extra_patterns,
+                    **cache_kwargs,
+                )
+            )
+            if (cached_path / model_file).exists():
+                return cached_path
+        except Exception:
+            pass
+        finally:
+            enable_progress_bars()
+        return None
+
+    @classmethod
+    def _try_download_hf(
+        cls, hf_source: str, cache_dir: str, extra_patterns: list[str], kwargs: dict[str, Any]
+    ) -> Path | None:
+        try:
+            return Path(
+                cls.download_files_from_huggingface(
+                    hf_source,
+                    cache_dir=cache_dir,
+                    extra_patterns=extra_patterns,
+                    **kwargs,
+                )
+            )
+        except (OSError, RepositoryNotFoundError, ValueError) as e:
+            logger.error(
+                f"Could not download model from HuggingFace: {e} Falling back to other sources."
+            )
+            return None
+        finally:
+            enable_progress_bars()
+
+    @classmethod
+    def _try_download_gcs(cls, model: Any, cache_dir: str, local_files_only: bool) -> Path | None:
+        try:
+            return cls.retrieve_model_gcs(
+                model.model,
+                str(model.sources.url),
+                str(cache_dir),
+                deprecated_tar_struct=model.sources.deprecated_tar_struct,
+                local_files_only=local_files_only,
+            )
+        except Exception:
+            if not local_files_only:
+                logger.error(f"Could not download model from url: {model.sources.url}")
+            return None
+
+    @classmethod
     def download_model(cls, model: T, cache_dir: str, retries: int = 3, **kwargs: Any) -> Path:
         """
         Downloads a model from HuggingFace Hub or Google Cloud Storage.
@@ -454,60 +518,25 @@ class ModelManagement(Generic[T]):
         extra_patterns.extend(model.additional_files)
 
         if hf_source:
-            try:
-                cache_kwargs = deepcopy(kwargs)
-                cache_kwargs["local_files_only"] = True
-                cached_path = Path(
-                    cls.download_files_from_huggingface(
-                        hf_source,
-                        cache_dir=cache_dir,
-                        extra_patterns=extra_patterns,
-                        **cache_kwargs,
-                    )
-                )
-                # Verify the required model file actually exists in the cached snapshot
-                if (cached_path / model.model_file).exists():
-                    return cached_path
-            except Exception:
-                pass
-            finally:
-                enable_progress_bars()
+            cached_path = cls._check_hf_cache(
+                hf_source, cache_dir, extra_patterns, model.model_file, kwargs
+            )
+            if cached_path:
+                return cached_path
 
         sleep = 3.0
         while retries > 0:
             retries -= 1
 
             if hf_source and not local_files_only:
-                # we have already tried loading with `local_files_only=True` via hf and we failed
-                try:
-                    return Path(
-                        cls.download_files_from_huggingface(
-                            hf_source,
-                            cache_dir=cache_dir,
-                            extra_patterns=extra_patterns,
-                            **kwargs,
-                        )
-                    )
-                except (OSError, RepositoryNotFoundError, ValueError) as e:
-                    if not local_files_only:
-                        logger.error(
-                            f"Could not download model from HuggingFace: {e} "
-                            "Falling back to other sources."
-                        )
-                finally:
-                    enable_progress_bars()
+                path = cls._try_download_hf(hf_source, cache_dir, extra_patterns, kwargs)
+                if path:
+                    return path
+
             if url_source or local_files_only:
-                try:
-                    return cls.retrieve_model_gcs(
-                        model.model,
-                        str(url_source),
-                        str(cache_dir),
-                        deprecated_tar_struct=model.sources.deprecated_tar_struct,
-                        local_files_only=local_files_only,
-                    )
-                except Exception:
-                    if not local_files_only:
-                        logger.error(f"Could not download model from url: {url_source}")
+                path = cls._try_download_gcs(model, cache_dir, local_files_only)
+                if path:
+                    return path
 
             if local_files_only:
                 logger.error("Could not find model in cache_dir")
