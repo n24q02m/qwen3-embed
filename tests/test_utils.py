@@ -116,6 +116,48 @@ class TestMeanPooling:
         result = mean_pooling(model_output, mask)
         np.testing.assert_allclose(result[0], [3.0, 6.0])
 
+    def test_empty_mask(self) -> None:
+        """Empty mask should return zero vectors (avoid division by zero)."""
+        model_output = np.array([[[1.0, 2.0], [3.0, 4.0]]])
+        mask = np.array([[0, 0]], dtype=np.int64)
+
+        result = mean_pooling(model_output, mask)
+        np.testing.assert_allclose(result[0], [0.0, 0.0])
+
+    def test_single_token(self) -> None:
+        """Single token sequences should work seamlessly."""
+        model_output = np.array([[[5.0, 10.0]]])
+        mask = np.array([[1]], dtype=np.int64)
+
+        result = mean_pooling(model_output, mask)
+        np.testing.assert_allclose(result[0], [5.0, 10.0])
+
+    def test_multi_batch(self) -> None:
+        """Multiple batches with varied masking should be handled correctly."""
+        model_output = np.array(
+            [
+                [[1.0, 2.0], [3.0, 4.0], [0.0, 0.0]],
+                [[2.0, 4.0], [4.0, 8.0], [1.0, 1.0]],
+                [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+            ]
+        )
+        mask = np.array(
+            [
+                [1, 1, 0],
+                [1, 1, 1],
+                [0, 0, 0],
+            ],
+            dtype=np.int64,
+        )
+
+        result = mean_pooling(model_output, mask)
+        # Batch 0: mean([1, 2], [3, 4]) -> [2, 3]
+        np.testing.assert_allclose(result[0], [2.0, 3.0])
+        # Batch 1: mean([2, 4], [4, 8], [1, 1]) -> [(2+4+1)/3, (4+8+1)/3] -> [7/3, 13/3] -> [2.333, 4.333]
+        np.testing.assert_allclose(result[1], [7 / 3.0, 13 / 3.0])
+        # Batch 2: empty mask -> [0, 0]
+        np.testing.assert_allclose(result[2], [0.0, 0.0])
+
 
 class TestIterBatch:
     """Tests for iter_batch utility function."""
