@@ -251,3 +251,15 @@ class TestRemoveNonAlphanumeric:
     def test_multiple_consecutive_punctuation(self) -> None:
         """Multiple punctuations each get replaced with a space."""
         assert remove_non_alphanumeric("hello... world!!!") == "hello    world   "
+
+    def test_only_non_alphanumeric(self) -> None:
+        """Strings with only non-alphanumeric characters should become spaces."""
+        assert remove_non_alphanumeric("!@#$%^&*()") == "          "
+
+    def test_whitespace_preservation(self) -> None:
+        """Newlines, tabs, and other whitespace should be preserved (\\s)."""
+        assert remove_non_alphanumeric("hello\nworld\t123") == "hello\nworld\t123"
+
+    def test_math_and_currency_symbols(self) -> None:
+        """Math and currency symbols should be removed."""
+        assert remove_non_alphanumeric("price: $100 + €50 = £150 ± ∞") == "price   100    50    150    "
