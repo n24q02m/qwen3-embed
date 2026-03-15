@@ -57,19 +57,13 @@ class OnnxModel(Generic[T]):
         """
         return onnx_input
 
-    def _load_onnx_model(
+    def _determine_providers(
         self,
-        model_dir: Path,
-        model_file: str,
-        threads: int | None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_id: int | None = None,
-        extra_session_options: dict[str, Any] | None = None,
-    ) -> None:
-        model_path = model_dir / model_file
-        # List of Execution Providers: https://onnxruntime.ai/docs/execution-providers
-        available_providers = ort.get_available_providers()  # type: ignore[possibly-missing-attribute]
+        providers: Sequence[OnnxProvider] | None,
+        cuda: bool | Device,
+        device_id: int | None,
+        available_providers: list[str],
+    ) -> list[OnnxProvider]:
         cuda_available = "CUDAExecutionProvider" in available_providers
         explicit_cuda = cuda is True or cuda == Device.CUDA
 
@@ -79,7 +73,7 @@ class OnnxModel(Generic[T]):
                 f"cuda: {cuda}, providers: {providers}. If you'd like to use providers, cuda should be one of "
                 f"[False, Device.CPU, Device.AUTO].",
                 category=UserWarning,
-                stacklevel=6,
+                stacklevel=7,
             )
 
         dml_available = "DmlExecutionProvider" in available_providers
@@ -96,6 +90,11 @@ class OnnxModel(Generic[T]):
         else:
             onnx_providers = ["CPUExecutionProvider"]
 
+        return onnx_providers
+
+    def _validate_providers(
+        self, onnx_providers: list[OnnxProvider], available_providers: list[str]
+    ) -> list[str]:
         requested_provider_names: list[str] = []
         for provider in onnx_providers:
             # check providers available
@@ -105,7 +104,11 @@ class OnnxModel(Generic[T]):
                 raise ValueError(
                     f"Provider {provider_name} is not available. Available providers: {available_providers}"
                 )
+        return requested_provider_names
 
+    def _create_session_options(
+        self, threads: int | None, extra_session_options: dict[str, Any] | None
+    ) -> Any:
         so = ort.SessionOptions()  # type: ignore[possibly-missing-attribute]
         so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL  # type: ignore[possibly-missing-attribute]
         # Disable memory pattern optimization to prevent ORT from retaining
@@ -118,6 +121,25 @@ class OnnxModel(Generic[T]):
 
         if extra_session_options is not None:
             self.add_extra_session_options(so, extra_session_options)
+        return so
+
+    def _load_onnx_model(
+        self,
+        model_dir: Path,
+        model_file: str,
+        threads: int | None,
+        providers: Sequence[OnnxProvider] | None = None,
+        cuda: bool | Device = Device.AUTO,
+        device_id: int | None = None,
+        extra_session_options: dict[str, Any] | None = None,
+    ) -> None:
+        model_path = model_dir / model_file
+        # List of Execution Providers: https://onnxruntime.ai/docs/execution-providers
+        available_providers = ort.get_available_providers()  # type: ignore[possibly-missing-attribute]
+
+        onnx_providers = self._determine_providers(providers, cuda, device_id, available_providers)
+        requested_provider_names = self._validate_providers(onnx_providers, available_providers)
+        so = self._create_session_options(threads, extra_session_options)
 
         self.model = ort.InferenceSession(
             str(model_path), providers=onnx_providers, sess_options=so
