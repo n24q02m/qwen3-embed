@@ -187,7 +187,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         self,
         query: str,
         documents: Iterable[str],
-        batch_size: int = 64,
+        batch_size: int = 64,  # noqa: ARG002
         **kwargs: Any,
     ) -> Iterable[float]:
         """Rerank documents based on relevance to a query.
@@ -209,8 +209,8 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
     def rerank_pairs(
         self,
         pairs: Iterable[tuple[str, str]],
-        batch_size: int = 64,
-        parallel: int | None = None,
+        batch_size: int = 64,  # noqa: ARG002
+        parallel: int | None = None,  # noqa: ARG002
         **kwargs: Any,
     ) -> Iterable[float]:
         """Rerank pre-formed (query, document) pairs.
