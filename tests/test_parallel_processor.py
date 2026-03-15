@@ -1,5 +1,6 @@
 import time
 from collections.abc import Iterable
+from queue import Empty
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -469,7 +470,7 @@ def test_del_no_processes():
     pool.processes = []
     pool.__del__()  # Should not raise
 
-from queue import Empty
+
 
 def test_process_stream_timeout_raises_empty():
     """Test that Empty exception from output_queue.get(timeout) is re-raised and join_or_terminate is called."""
