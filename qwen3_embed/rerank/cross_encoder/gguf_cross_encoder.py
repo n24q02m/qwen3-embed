@@ -102,7 +102,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         # Accept but ignore ONNX-specific args for compatibility with TextCrossEncoder dispatcher
         providers: Sequence[OnnxProvider] | None = None,
         cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
+        device_ids: list[int] | None = None,  # noqa: ARG002
         lazy_load: bool = False,
         **kwargs: Any,
     ) -> None:
