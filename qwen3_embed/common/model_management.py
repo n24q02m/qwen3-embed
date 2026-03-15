@@ -88,6 +88,38 @@ class ModelManagement(Generic[T]):
 
         raise ValueError(f"Model {model_name} is not supported in {cls.__name__}.")
 
+    @staticmethod
+    def _get_expected_md5(headers: Any) -> str | None:
+        if "x-goog-hash" in headers:
+            x_goog_hash = headers["x-goog-hash"]
+            for part in x_goog_hash.split(","):
+                part = part.strip()
+                if part.startswith("md5="):
+                    return base64.b64decode(part[4:]).hex()
+        return None
+
+    @staticmethod
+    def _download_and_hash_file(
+        response: Any, output_path: str, total_size_in_bytes: int, show_progress: bool
+    ) -> str:
+        show_progress = bool(total_size_in_bytes and show_progress)
+        md5_hash = hashlib.md5()
+        with (
+            tqdm(
+                total=total_size_in_bytes,
+                unit="iB",
+                unit_scale=True,
+                disable=not show_progress,
+            ) as progress_bar,
+            open(output_path, "wb") as file,
+        ):
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:  # Filter out keep-alive new chunks
+                    progress_bar.update(len(chunk))
+                    file.write(chunk)
+                    md5_hash.update(chunk)
+        return md5_hash.hexdigest()
+
     @classmethod
     def download_file_from_gcs(cls, url: str, output_path: str, show_progress: bool = True) -> str:
         """
@@ -120,45 +152,20 @@ class ModelManagement(Generic[T]):
                 "Please check your credentials."
             )
 
-        # Parse expected MD5 hash from x-goog-hash header
-        expected_md5 = None
-        if "x-goog-hash" in response.headers:
-            x_goog_hash = response.headers["x-goog-hash"]
-            for part in x_goog_hash.split(","):
-                part = part.strip()
-                if part.startswith("md5="):
-                    expected_md5 = base64.b64decode(part[4:]).hex()
+        expected_md5 = cls._get_expected_md5(response.headers)
 
-        # Get the total size of the file
         total_size_in_bytes = int(response.headers.get("content-length", 0))
-
-        # Warn if the total size is zero
         if total_size_in_bytes == 0:
             logger.warning(f"Content-length header is missing or zero in the response from {url}.")
 
-        show_progress = bool(total_size_in_bytes and show_progress)
+        calculated_md5 = cls._download_and_hash_file(
+            response, output_path, total_size_in_bytes, show_progress
+        )
 
-        md5_hash = hashlib.md5()
-        with (
-            tqdm(
-                total=total_size_in_bytes,
-                unit="iB",
-                unit_scale=True,
-                disable=not show_progress,
-            ) as progress_bar,
-            open(output_path, "wb") as file,
-        ):
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk:  # Filter out keep-alive new chunks
-                    progress_bar.update(len(chunk))
-                    file.write(chunk)
-                    md5_hash.update(chunk)
-
-        if expected_md5 and expected_md5 != md5_hash.hexdigest():
+        if expected_md5 and expected_md5 != calculated_md5:
             os.remove(output_path)
             raise ValueError(
-                f"File integrity check failed: expected MD5 {expected_md5}, "
-                f"got {md5_hash.hexdigest()}"
+                f"File integrity check failed: expected MD5 {expected_md5}, got {calculated_md5}"
             )
 
         return output_path
