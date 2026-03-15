@@ -210,7 +210,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         self,
         pairs: Iterable[tuple[str, str]],
         batch_size: int = 64,
-        parallel: int | None = None,
+        parallel: int | None = None,  # noqa: ARG002
         **kwargs: Any,
     ) -> Iterable[float]:
         """Rerank pre-formed (query, document) pairs.
