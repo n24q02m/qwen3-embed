@@ -176,6 +176,7 @@ def test_onnx_text_embedding_worker_init(
     mock_onnx_embedding: MagicMock,
 ) -> None:
     worker = OnnxTextEmbeddingWorker.__new__(OnnxTextEmbeddingWorker)
+    worker.__init__ = lambda *args, **kwargs: None
     worker.init_embedding(model_name=_MODEL_NAME, cache_dir="/tmp/cache", extra="arg")
 
     mock_onnx_embedding.assert_called_once_with(
