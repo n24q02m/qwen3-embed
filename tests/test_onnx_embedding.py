@@ -18,6 +18,7 @@ _MODEL_DESC = DenseModelDescription(
     dim=4,
 )
 
+
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding._select_exposed_session_options")
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding._get_model_description")
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding.download_model")
@@ -85,7 +86,11 @@ def test_onnx_text_embedding_embed(
     mock_embed_documents.assert_called_once()
     kwargs = mock_embed_documents.call_args.kwargs
     assert kwargs["model_name"] == _MODEL_NAME
-    assert kwargs["cache_dir"] == str(Path("/tmp/cache").absolute()) if Path("/tmp/cache").is_absolute() else str(Path("/tmp/cache").resolve())
+    assert (
+        kwargs["cache_dir"] == str(Path("/tmp/cache").absolute())
+        if Path("/tmp/cache").is_absolute()
+        else str(Path("/tmp/cache").resolve())
+    )
     assert kwargs["documents"] == docs
     assert kwargs["batch_size"] == 32
     assert kwargs["parallel"] == 4
@@ -178,8 +183,5 @@ def test_onnx_text_embedding_worker_init(
     worker.init_embedding(model_name=_MODEL_NAME, cache_dir="/tmp/cache", extra="arg")
 
     mock_onnx_embedding.assert_called_once_with(
-        model_name=_MODEL_NAME,
-        cache_dir="/tmp/cache",
-        threads=1,
-        extra="arg"
+        model_name=_MODEL_NAME, cache_dir="/tmp/cache", threads=1, extra="arg"
     )
