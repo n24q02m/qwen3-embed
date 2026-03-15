@@ -1,0 +1,4 @@
+🎯 **What:** Removed the unused `from __future__ import annotations` import in `gguf_cross_encoder.py`.
+💡 **Why:** This import is not used anywhere in the file. Removing unused imports improves code clarity, avoids confusion, and adheres to clean code practices.
+✅ **Verification:** Verified that `uv run ruff check` produces no warnings, and ran the full test suite `uv run pytest tests/` which passed successfully.
+✨ **Result:** A cleaner file without unnecessary imports, improving overall code health and maintainability without altering existing functionality.
