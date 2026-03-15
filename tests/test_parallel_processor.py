@@ -471,7 +471,6 @@ def test_del_no_processes():
     pool.__del__()  # Should not raise
 
 
-
 def test_process_stream_timeout_raises_empty():
     """Test that Empty exception from output_queue.get(timeout) is re-raised and join_or_terminate is called."""
     with patch.object(pp_module, "max_internal_batch_size", 1):
@@ -495,6 +494,7 @@ def test_process_stream_timeout_raises_empty():
             list(pool._process_stream([1, 2]))
 
         pool.join_or_terminate.assert_called_once()
+
 
 def test_semi_ordered_map_emergency_shutdown_cancels_join_thread():
     """Test that cancel_join_thread is called in semi_ordered_map finally block if emergency_shutdown is True."""
@@ -529,6 +529,7 @@ def test_semi_ordered_map_emergency_shutdown_cancels_join_thread():
     # Ensure standard join_thread was not called
     mock_input_queue.join_thread.assert_not_called()
     mock_output_queue.join_thread.assert_not_called()
+
 
 def test_worker_multiprocessing_exception_handling():
     """
