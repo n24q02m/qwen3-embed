@@ -468,3 +468,77 @@ def test_del_no_processes():
     pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
     pool.processes = []
     pool.__del__()  # Should not raise
+
+from queue import Empty
+
+def test_process_stream_timeout_raises_empty():
+    """Test that Empty exception from output_queue.get(timeout) is re-raised and join_or_terminate is called."""
+    with patch.object(pp_module, "max_internal_batch_size", 1):
+        pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+        pool.input_queue = MagicMock()
+        pool.output_queue = MagicMock()
+
+        # We need pushed - read >= queue_size. With queue_size=1, on the second iteration (idx=1),
+        # pushed=1, read=0 -> pushed-read=1 >= 1.
+        # So we mock output_queue.get to raise Empty.
+        pool.output_queue.get.side_effect = Empty()
+
+        pool.join_or_terminate = MagicMock()
+        pool.check_worker_health = MagicMock()
+
+        # Processing [1, 2] will cause 2 iterations. First iteration will pass if get_nowait raises Empty
+        # (handled gracefully). Second iteration will trigger the else branch and raise the mock Empty.
+        pool.output_queue.get_nowait.side_effect = Empty()
+
+        with pytest.raises(Empty):
+            list(pool._process_stream([1, 2]))
+
+        pool.join_or_terminate.assert_called_once()
+
+def test_semi_ordered_map_emergency_shutdown_cancels_join_thread():
+    """Test that cancel_join_thread is called in semi_ordered_map finally block if emergency_shutdown is True."""
+    pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
+
+    # Mock necessary methods to avoid actual processing
+    pool.start = MagicMock()
+
+    # We want emergency_shutdown to be True when we hit the finally block
+    def mock_process_stream(*args, **kwargs):
+        pool.emergency_shutdown = True
+        yield from []
+
+    pool._process_stream = mock_process_stream
+    pool.join = MagicMock()
+
+    # Setup mock queues before calling
+    mock_input_queue = MagicMock()
+    mock_output_queue = MagicMock()
+    pool.input_queue = mock_input_queue
+    pool.output_queue = mock_output_queue
+
+    # Need to keep track of the original queues so they aren't overwritten if start() is called,
+    # but since we mocked start, they remain intact.
+
+    list(pool.semi_ordered_map([]))
+
+    # Validate cancel_join_thread was called
+    mock_input_queue.cancel_join_thread.assert_called_once()
+    mock_output_queue.cancel_join_thread.assert_called_once()
+
+    # Ensure standard join_thread was not called
+    mock_input_queue.join_thread.assert_not_called()
+    mock_output_queue.join_thread.assert_not_called()
+
+def test_worker_multiprocessing_exception_handling():
+    """
+    Test multiprocessing exception handling where the child worker process
+    raises an exception. Verifies that the worker puts QueueSignals.error on the queue
+    and the main process subsequently raises a RuntimeError.
+    """
+    # Using FailingWorker with failure_val=2.
+    # When item '2' is processed by the worker subprocess, it raises an exception (Line 90).
+    pool = ParallelWorkerPool(num_workers=2, worker=FailingWorker)
+
+    with pytest.raises(RuntimeError, match="Thread unexpectedly terminated"):
+        # The list consumption forces the stream through the pool
+        list(pool.ordered_map([1, 2, 3], failure_val=2))
