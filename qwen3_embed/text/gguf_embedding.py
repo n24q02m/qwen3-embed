@@ -88,10 +88,10 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
         cache_dir: str | None = None,
         threads: int | None = None,
         # Accept but ignore ONNX-specific args for compatibility with TextEmbedding dispatcher
-        providers: Sequence[OnnxProvider] | None = None,
+        providers: Sequence[OnnxProvider] | None = None,  # noqa: ARG002
         cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        lazy_load: bool = False,
+        device_ids: list[int] | None = None,  # noqa: ARG002
+        lazy_load: bool = False,  # noqa: ARG002
         **kwargs: Any,
     ) -> None:
         _check_llama_cpp()
@@ -133,8 +133,8 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
     def embed(
         self,
         documents: str | Iterable[str],
-        batch_size: int = 1,
-        parallel: int | None = None,
+        batch_size: int = 1,  # noqa: ARG002
+        parallel: int | None = None,  # noqa: ARG002
         **kwargs: Any,
     ) -> Iterable[NumpyArray]:
         """Encode documents into embeddings.
