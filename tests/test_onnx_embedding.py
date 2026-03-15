@@ -171,15 +171,11 @@ def test_onnx_text_embedding_postprocess_3d(
     assert np.array_equal(mock_normalize.call_args[0][0], expected_slice)
 
 
-@patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbeddingWorker.__init__", return_value=None)
-@patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbeddingWorker.model", create=True)
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding")
 def test_onnx_text_embedding_worker_init(
     mock_onnx_embedding: MagicMock,
-    mock_model: MagicMock,
-    mock_worker_init: MagicMock,
 ) -> None:
-    worker = OnnxTextEmbeddingWorker()
+    worker = OnnxTextEmbeddingWorker.__new__(OnnxTextEmbeddingWorker)
     worker.init_embedding(model_name=_MODEL_NAME, cache_dir="/tmp/cache", extra="arg")
 
     mock_onnx_embedding.assert_called_once_with(
