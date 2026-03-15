@@ -262,4 +262,7 @@ class TestRemoveNonAlphanumeric:
 
     def test_math_and_currency_symbols(self) -> None:
         """Math and currency symbols should be removed."""
-        assert remove_non_alphanumeric("price: $100 + €50 = £150 ± ∞") == "price   100    50    150    "
+        assert (
+            remove_non_alphanumeric("price: $100 + €50 = £150 ± ∞")
+            == "price   100    50    150    "
+        )
