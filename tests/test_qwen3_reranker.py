@@ -160,9 +160,7 @@ class TestOptimizedYesNoScoring:
         np.testing.assert_allclose(scores[0], 0.5, atol=1e-6)
 
     def test_optimized_batch(self):
-        output = np.array(
-            [[-10.0, 10.0], [10.0, -10.0], [0.0, 0.0]], dtype=np.float32
-        )  # (3, 2)
+        output = np.array([[-10.0, 10.0], [10.0, -10.0], [0.0, 0.0]], dtype=np.float32)  # (3, 2)
         scores = Qwen3CrossEncoder._compute_yes_no_scores(output)
         assert scores.shape == (3,)
         assert scores[0] > 0.99
