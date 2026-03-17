@@ -1,0 +1,4 @@
+
+## 2024-05-19 - Fast array sum regression vs boolean reduction
+**Learning:** Hugging Face `tokenizers.Encoding` attributes like `attention_mask` are standard Python lists, not NumPy arrays. Trying to optimize `sum(tokens.attention_mask)` by replacing it with `np.sum()` results in a massive 10x performance regression due to the implicit overhead of converting the Python list into a NumPy array. Conversely, when checking if all elements in an actual NumPy array slice are 1 (e.g. `attention_mask[:, -1]`), using the boolean reduction `.all()` is ~10-15% faster than performing an arithmetic sum and comparing to the shape length (`.sum() == shape[0]`).
+**Action:** Always check the underlying data type before applying NumPy-specific optimizations. Use built-in `sum()` for standard Python lists, but use `.all()` for fast boolean condition checks on actual NumPy arrays.
