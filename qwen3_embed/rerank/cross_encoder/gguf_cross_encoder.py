@@ -100,10 +100,10 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         cache_dir: str | None = None,
         threads: int | None = None,
         # Accept but ignore ONNX-specific args for compatibility with TextCrossEncoder dispatcher
-        providers: Sequence[OnnxProvider] | None = None,
+        providers: Sequence[OnnxProvider] | None = None,  # noqa: ARG002
         cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        lazy_load: bool = False,
+        device_ids: list[int] | None = None,  # noqa: ARG002
+        lazy_load: bool = False,  # noqa: ARG002
         **kwargs: Any,
     ) -> None:
         _check_llama_cpp()
