@@ -570,6 +570,70 @@ class TestDownloadFilesFromHuggingFace:
     @patch("qwen3_embed.common.model_management.list_repo_tree")
     @patch("qwen3_embed.common.model_management.model_info")
     @patch("qwen3_embed.common.model_management.snapshot_download")
+    def test_metadata_save_mkdir_oserror_swallowed(
+        self, mock_snap, mock_info, mock_tree, tmp_path
+    ):
+        """OSError while creating metadata directory is logged but does not raise."""
+        snapshot_dir = tmp_path / "models--org--repo"
+        # We DO NOT create snapshot_dir so that .exists() is False
+
+        repo_files = [make_repo_file("model.onnx", size=500, oid="aaa")]
+        mock_info.return_value = Mock(sha="rev123")
+        mock_tree.return_value = repo_files
+        mock_snap.return_value = str(snapshot_dir)
+
+        # Patch Path.mkdir to raise OSError
+        original_mkdir = Path.mkdir
+
+        def patched_mkdir(self, *args, **kwargs):
+            if "models--org--repo" in str(self):
+                raise OSError("permission denied")
+            return original_mkdir(self, *args, **kwargs)
+
+        with patch.object(Path, "mkdir", patched_mkdir):
+            # Should not raise
+            result = ModelManagement.download_files_from_huggingface(
+                hf_source_repo="org/repo",
+                cache_dir=str(tmp_path),
+                extra_patterns=["model.onnx"],
+            )
+        assert result == str(snapshot_dir)
+
+    @patch("qwen3_embed.common.model_management.list_repo_tree")
+    @patch("qwen3_embed.common.model_management.model_info")
+    @patch("qwen3_embed.common.model_management.snapshot_download")
+    def test_metadata_save_mkdir_valueerror_swallowed(
+        self, mock_snap, mock_info, mock_tree, tmp_path
+    ):
+        """ValueError while creating metadata directory is logged but does not raise."""
+        snapshot_dir = tmp_path / "models--org--repo"
+        # We DO NOT create snapshot_dir so that .exists() is False
+
+        repo_files = [make_repo_file("model.onnx", size=500, oid="aaa")]
+        mock_info.return_value = Mock(sha="rev123")
+        mock_tree.return_value = repo_files
+        mock_snap.return_value = str(snapshot_dir)
+
+        # Patch Path.mkdir to raise ValueError
+        original_mkdir = Path.mkdir
+
+        def patched_mkdir(self, *args, **kwargs):
+            if "models--org--repo" in str(self):
+                raise ValueError("invalid path")
+            return original_mkdir(self, *args, **kwargs)
+
+        with patch.object(Path, "mkdir", patched_mkdir):
+            # Should not raise
+            result = ModelManagement.download_files_from_huggingface(
+                hf_source_repo="org/repo",
+                cache_dir=str(tmp_path),
+                extra_patterns=["model.onnx"],
+            )
+        assert result == str(snapshot_dir)
+
+    @patch("qwen3_embed.common.model_management.list_repo_tree")
+    @patch("qwen3_embed.common.model_management.model_info")
+    @patch("qwen3_embed.common.model_management.snapshot_download")
     def test_metadata_save_oserror_is_swallowed(self, mock_snap, mock_info, mock_tree, tmp_path):
         """OSError while saving metadata is logged but does not raise."""
         snapshot_dir = tmp_path / "models--org--repo"
