@@ -1,7 +1,11 @@
 """Unit tests for Qwen3CrossEncoder model registration and scoring logic."""
 
-import numpy as np
+from unittest.mock import MagicMock, patch
 
+import numpy as np
+import pytest
+
+from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import (
     DEFAULT_INSTRUCTION,
     SYSTEM_PROMPT,
@@ -197,3 +201,118 @@ class TestTokenConstants:
 
     def test_token_ids_are_different(self):
         assert TOKEN_YES_ID != TOKEN_NO_ID
+
+
+@pytest.fixture
+def mocked_qwen3_encoder():
+    """Returns a Qwen3CrossEncoder with mocked model and tokenizer."""
+    with patch(
+        "qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder.Qwen3CrossEncoder.download_model",
+        return_value="/tmp/mock",
+    ):
+        encoder = Qwen3CrossEncoder("n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo", lazy_load=True)
+
+    encoder.model = MagicMock()
+    # Mocking output of the ONNX model to be (batch=1, 2) shape
+    encoder.model.run.return_value = [np.array([[-10.0, 10.0]], dtype=np.float32)]
+    encoder.model_input_names = {"input_ids", "attention_mask"}
+
+    mock_tokenizer = MagicMock()
+    mock_encoding = MagicMock()
+    mock_encoding.ids = [1, 2, 3]
+    mock_encoding.attention_mask = [1, 1, 1]
+    mock_tokenizer.encode_batch.return_value = [mock_encoding]
+    encoder.tokenizer = mock_tokenizer
+
+    return encoder
+
+
+class TestQwen3CrossEncoderInference:
+    """Verify ONNX embedding methods override."""
+
+    def test_onnx_embed_texts_missing_model(self):
+        with patch(
+            "qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder.Qwen3CrossEncoder.download_model",
+            return_value="/tmp/mock",
+        ):
+            encoder = Qwen3CrossEncoder("n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo", lazy_load=True)
+        encoder.model = None
+        with pytest.raises(ValueError, match="Model not loaded"):
+            encoder._onnx_embed_texts(["text1"])
+
+    def test_onnx_embed_texts_missing_tokenizer(self):
+        with patch(
+            "qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder.Qwen3CrossEncoder.download_model",
+            return_value="/tmp/mock",
+        ):
+            encoder = Qwen3CrossEncoder("n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo", lazy_load=True)
+        encoder.model = MagicMock()
+        encoder.tokenizer = None
+        with pytest.raises(AssertionError, match="Tokenizer not loaded"):
+            encoder._onnx_embed_texts(["text1"])
+
+    def test_onnx_embed_texts_success(self, mocked_qwen3_encoder):
+        ctx = mocked_qwen3_encoder._onnx_embed_texts(["hello world"])
+        assert isinstance(ctx, OnnxOutputContext)
+        assert ctx.model_output.shape == (1,)
+        # -10.0, 10.0 should give high probability
+        assert ctx.model_output[0] > 0.99
+        mocked_qwen3_encoder.model.run.assert_called_once()
+        mocked_qwen3_encoder.tokenizer.encode_batch.assert_called_once_with(["hello world"])
+
+    def test_onnx_embed_texts_multiple(self, mocked_qwen3_encoder):
+        # We simulate tokenizer returning for a single text, because _onnx_embed_texts loops text by text
+        ctx = mocked_qwen3_encoder._onnx_embed_texts(["text1", "text2"])
+        assert ctx.model_output.shape == (2,)
+        assert mocked_qwen3_encoder.model.run.call_count == 2
+        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 2
+
+    def test_onnx_embed_pairs_success(self, mocked_qwen3_encoder):
+        ctx = mocked_qwen3_encoder.onnx_embed_pairs([("Query1", "Doc1"), ("Query2", "Doc2")])
+        assert ctx.model_output.shape == (2,)
+        assert mocked_qwen3_encoder.model.run.call_count == 2
+        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 2
+
+        # Verify chat template formatting
+        calls = mocked_qwen3_encoder.tokenizer.encode_batch.call_args_list
+        # Call 1
+        text1 = calls[0][0][0][0]
+        assert "<Query>: Query1" in text1
+        assert "<Document>: Doc1" in text1
+        # Call 2
+        text2 = calls[1][0][0][0]
+        assert "<Query>: Query2" in text2
+        assert "<Document>: Doc2" in text2
+
+    def test_onnx_embed_success(self, mocked_qwen3_encoder):
+        ctx = mocked_qwen3_encoder.onnx_embed("Query", ["Doc1", "Doc2"])
+        assert ctx.model_output.shape == (2,)
+        assert mocked_qwen3_encoder.model.run.call_count == 2
+        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 2
+
+        calls = mocked_qwen3_encoder.tokenizer.encode_batch.call_args_list
+        text1 = calls[0][0][0][0]
+        assert "<Query>: Query" in text1
+        assert "<Document>: Doc1" in text1
+
+        text2 = calls[1][0][0][0]
+        assert "<Query>: Query" in text2
+        assert "<Document>: Doc2" in text2
+
+    def test_onnx_embed_custom_instruction(self, mocked_qwen3_encoder):
+        ctx = mocked_qwen3_encoder.onnx_embed("Query", ["Doc"], instruction="Custom Instruction!")
+        assert ctx.model_output.shape == (1,)
+
+        calls = mocked_qwen3_encoder.tokenizer.encode_batch.call_args_list
+        text1 = calls[0][0][0][0]
+        assert "<Instruct>: Custom Instruction!" in text1
+
+    def test_onnx_embed_pairs_custom_instruction(self, mocked_qwen3_encoder):
+        ctx = mocked_qwen3_encoder.onnx_embed_pairs(
+            [("Query", "Doc")], instruction="Custom Pair Instruction!"
+        )
+        assert ctx.model_output.shape == (1,)
+
+        calls = mocked_qwen3_encoder.tokenizer.encode_batch.call_args_list
+        text1 = calls[0][0][0][0]
+        assert "<Instruct>: Custom Pair Instruction!" in text1
