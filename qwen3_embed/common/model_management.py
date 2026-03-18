@@ -451,7 +451,7 @@ class ModelManagement(Generic[T]):
             if (cached_path / model_file).exists():
                 return cached_path
         except Exception:
-            pass
+            logger.debug("Model not found in cache, will attempt download")
         finally:
             enable_progress_bars()
         return None
