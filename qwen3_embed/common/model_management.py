@@ -218,7 +218,7 @@ class ModelManagement(Generic[T]):
     def _save_file_metadata(cls, model_dir: Path, meta: dict[str, dict[str, int | str]]) -> None:
         try:
             if not model_dir.exists():
-                model_dir.mkdir(parents=True, exist_ok=True)
+                model_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
             (model_dir / cls.METADATA_FILE).write_text(json.dumps(meta))
         except (OSError, ValueError) as e:
             logger.exception(e)
@@ -395,7 +395,7 @@ class ModelManagement(Generic[T]):
         if model_tmp_dir.exists():
             shutil.rmtree(model_tmp_dir)
 
-        cache_tmp_dir.mkdir(parents=True, exist_ok=True)
+        cache_tmp_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         with contextlib.suppress(OSError):
             os.chmod(cache_tmp_dir, 0o700)
 
