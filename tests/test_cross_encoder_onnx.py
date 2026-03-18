@@ -265,7 +265,7 @@ class TestBuildOnnxInput:
         m = ConcreteCrossEncoderModel()
         m.model_input_names = {"input_ids"}
         encs = [_make_mock_encoding() for _ in range(3)]
-        result = m._build_onnx_input(encs)
+        result = m._build_onnx_input(encs)  # type: ignore[arg-type]
         assert result["input_ids"].shape[0] == 3
 
 

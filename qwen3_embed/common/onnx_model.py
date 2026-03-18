@@ -57,6 +57,73 @@ class OnnxModel(Generic[T]):
         """
         return onnx_input
 
+    def _determine_providers(
+        self,
+        providers: Sequence[OnnxProvider] | None,
+        cuda: bool | Device,
+        device_id: int | None,
+        available_providers: list[str],
+    ) -> list[OnnxProvider]:
+        cuda_available = "CUDAExecutionProvider" in available_providers
+        explicit_cuda = cuda is True or cuda == Device.CUDA
+
+        if explicit_cuda and providers is not None:
+            warnings.warn(
+                f"`cuda` and `providers` are mutually exclusive parameters, "
+                f"cuda: {cuda}, providers: {providers}. If you'd like to use providers, cuda should be one of "
+                f"[False, Device.CPU, Device.AUTO].",
+                category=UserWarning,
+                stacklevel=7,
+            )
+
+        dml_available = "DmlExecutionProvider" in available_providers
+
+        onnx_providers: list[OnnxProvider]
+        if providers is not None:
+            onnx_providers = list(providers)
+        elif explicit_cuda or (cuda == Device.AUTO and cuda_available):
+            if device_id is None:
+                onnx_providers = ["CUDAExecutionProvider"]
+            else:
+                onnx_providers = [("CUDAExecutionProvider", {"device_id": device_id})]
+        elif cuda == Device.AUTO and dml_available:
+            onnx_providers = ["DmlExecutionProvider"]
+        else:
+            onnx_providers = ["CPUExecutionProvider"]
+
+        return onnx_providers
+
+    def _validate_providers(
+        self, onnx_providers: list[OnnxProvider], available_providers: list[str]
+    ) -> list[str]:
+        requested_provider_names: list[str] = []
+        for provider in onnx_providers:
+            # check providers available
+            provider_name = provider if isinstance(provider, str) else provider[0]
+            requested_provider_names.append(provider_name)
+            if provider_name not in available_providers:
+                raise ValueError(
+                    f"Provider {provider_name} is not available. Available providers: {available_providers}"
+                )
+        return requested_provider_names
+
+    def _create_session_options(
+        self, threads: int | None, extra_session_options: dict[str, Any] | None
+    ) -> Any:
+        so = ort.SessionOptions()  # type: ignore[possibly-missing-attribute]
+        so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL  # type: ignore[possibly-missing-attribute]
+        # Disable memory pattern optimization to prevent ORT from retaining
+        # peak-sized buffers across inferences with varying sequence lengths.
+        so.enable_mem_pattern = False
+
+        if threads is not None:
+            so.intra_op_num_threads = threads
+            so.inter_op_num_threads = threads
+
+        if extra_session_options is not None:
+            self.add_extra_session_options(so, extra_session_options)
+        return so
+
     def _load_onnx_model(
         self,
         model_dir: Path,
@@ -70,54 +137,10 @@ class OnnxModel(Generic[T]):
         model_path = model_dir / model_file
         # List of Execution Providers: https://onnxruntime.ai/docs/execution-providers
         available_providers = ort.get_available_providers()  # type: ignore[possibly-missing-attribute]
-        cuda_available = "CUDAExecutionProvider" in available_providers
-        explicit_cuda = cuda is True or cuda == Device.CUDA
 
-        if explicit_cuda and providers is not None:
-            warnings.warn(
-                f"`cuda` and `providers` are mutually exclusive parameters, "
-                f"cuda: {cuda}, providers: {providers}. If you'd like to use providers, cuda should be one of "
-                f"[False, Device.CPU, Device.AUTO].",
-                category=UserWarning,
-                stacklevel=6,
-            )
-
-        dml_available = "DmlExecutionProvider" in available_providers
-
-        if providers is not None:
-            onnx_providers = list(providers)
-        elif explicit_cuda or (cuda == Device.AUTO and cuda_available):
-            if device_id is None:
-                onnx_providers = ["CUDAExecutionProvider"]
-            else:
-                onnx_providers = [("CUDAExecutionProvider", {"device_id": device_id})]
-        elif cuda == Device.AUTO and dml_available:
-            onnx_providers = ["DmlExecutionProvider"]
-        else:
-            onnx_providers = ["CPUExecutionProvider"]
-
-        requested_provider_names: list[str] = []
-        for provider in onnx_providers:
-            # check providers available
-            provider_name = provider if isinstance(provider, str) else provider[0]
-            requested_provider_names.append(provider_name)
-            if provider_name not in available_providers:
-                raise ValueError(
-                    f"Provider {provider_name} is not available. Available providers: {available_providers}"
-                )
-
-        so = ort.SessionOptions()  # type: ignore[possibly-missing-attribute]
-        so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL  # type: ignore[possibly-missing-attribute]
-        # Disable memory pattern optimization to prevent ORT from retaining
-        # peak-sized buffers across inferences with varying sequence lengths.
-        so.enable_mem_pattern = False
-
-        if threads is not None:
-            so.intra_op_num_threads = threads
-            so.inter_op_num_threads = threads
-
-        if extra_session_options is not None:
-            self.add_extra_session_options(so, extra_session_options)
+        onnx_providers = self._determine_providers(providers, cuda, device_id, available_providers)
+        requested_provider_names = self._validate_providers(onnx_providers, available_providers)
+        so = self._create_session_options(threads, extra_session_options)
 
         self.model = ort.InferenceSession(
             str(model_path), providers=onnx_providers, sess_options=so
@@ -152,7 +175,7 @@ class OnnxModel(Generic[T]):
     def add_extra_session_options(
         cls,
         session_options: "ort.SessionOptions",
-        extra_options: dict[str, Any],  # type: ignore[possibly-missing-attribute]
+        extra_options: dict[str, Any],
     ) -> None:
         """Add extra session options to the existing options object in-place
 
