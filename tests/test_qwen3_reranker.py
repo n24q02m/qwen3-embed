@@ -221,7 +221,12 @@ def mocked_qwen3_encoder():
     mock_encoding = MagicMock()
     mock_encoding.ids = [1, 2, 3]
     mock_encoding.attention_mask = [1, 1, 1]
-    mock_tokenizer.encode_batch.return_value = [mock_encoding]
+
+    # encode_batch returns a list of encodings, one for each text.
+    def mock_encode_batch(texts):
+        return [mock_encoding for _ in texts]
+
+    mock_tokenizer.encode_batch.side_effect = mock_encode_batch
     encoder.tokenizer = mock_tokenizer
 
     return encoder
@@ -265,22 +270,23 @@ class TestQwen3CrossEncoderInference:
         ctx = mocked_qwen3_encoder._onnx_embed_texts(["text1", "text2"])
         assert ctx.model_output.shape == (2,)
         assert mocked_qwen3_encoder.model.run.call_count == 2
-        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 2
+        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 1
 
     def test_onnx_embed_pairs_success(self, mocked_qwen3_encoder):
         ctx = mocked_qwen3_encoder.onnx_embed_pairs([("Query1", "Doc1"), ("Query2", "Doc2")])
         assert ctx.model_output.shape == (2,)
         assert mocked_qwen3_encoder.model.run.call_count == 2
-        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 2
+        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 1
 
         # Verify chat template formatting
         calls = mocked_qwen3_encoder.tokenizer.encode_batch.call_args_list
-        # Call 1
-        text1 = calls[0][0][0][0]
+        # Call 1 (which processed a batch of 2)
+        batch = calls[0][0][0]
+        text1 = batch[0]
         assert "<Query>: Query1" in text1
         assert "<Document>: Doc1" in text1
         # Call 2
-        text2 = calls[1][0][0][0]
+        text2 = batch[1]
         assert "<Query>: Query2" in text2
         assert "<Document>: Doc2" in text2
 
@@ -288,14 +294,15 @@ class TestQwen3CrossEncoderInference:
         ctx = mocked_qwen3_encoder.onnx_embed("Query", ["Doc1", "Doc2"])
         assert ctx.model_output.shape == (2,)
         assert mocked_qwen3_encoder.model.run.call_count == 2
-        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 2
+        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 1
 
         calls = mocked_qwen3_encoder.tokenizer.encode_batch.call_args_list
-        text1 = calls[0][0][0][0]
+        batch = calls[0][0][0]
+        text1 = batch[0]
         assert "<Query>: Query" in text1
         assert "<Document>: Doc1" in text1
 
-        text2 = calls[1][0][0][0]
+        text2 = batch[1]
         assert "<Query>: Query" in text2
         assert "<Document>: Doc2" in text2
 
