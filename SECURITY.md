@@ -18,7 +18,7 @@ If you discover a security vulnerability, please report it responsibly:
 
 ## Security Measures
 
-- Dependencies are regularly updated via Dependabot
+- Dependencies are regularly updated via Renovate
 - All code changes require review before merging
 - CodeQL analysis runs on every push
 - No secrets are hardcoded in the repository
