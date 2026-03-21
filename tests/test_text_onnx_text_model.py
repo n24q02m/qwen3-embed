@@ -295,6 +295,7 @@ class TestOnnxTextModelTokenCount:
         tok = _make_mock_tokenizer()
         enc = tok.encode_batch.return_value[0]
         enc.attention_mask = [1, 1, 0, 0]
+        enc.__len__.return_value = 4
         loaded: list[bool] = []
 
         def _fake_load() -> None:
@@ -313,6 +314,7 @@ class TestOnnxTextModelTokenCount:
         tok = _make_mock_tokenizer()
         enc = tok.encode_batch.return_value[0]
         enc.attention_mask = [1, 1, 1, 0]
+        enc.__len__.return_value = 4
         m.tokenizer = tok
         assert m._token_count("hello") == 3
 
@@ -321,8 +323,10 @@ class TestOnnxTextModelTokenCount:
         m.model = MagicMock()
         enc1 = MagicMock()
         enc1.attention_mask = [1, 1, 0]  # 2 tokens
+        enc1.__len__.return_value = 3
         enc2 = MagicMock()
         enc2.attention_mask = [1, 1, 1]  # 3 tokens
+        enc2.__len__.return_value = 3
         tok = MagicMock()
         tok.encode_batch.return_value = [enc1, enc2]
         m.tokenizer = tok
@@ -565,6 +569,7 @@ class TestOnnxTextEmbeddingMethods:
         """Line 169."""
         enc = onnx_emb.tokenizer.encode_batch.return_value[0]  # type: ignore[unresolved-attribute]
         enc.attention_mask = [1, 1, 0, 0]
+        enc.__len__.return_value = 4
         assert onnx_emb.token_count("hello") == 2
 
     def test_load_onnx_model_delegates_to_load_onnx_model(
