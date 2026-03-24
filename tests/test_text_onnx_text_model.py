@@ -294,6 +294,7 @@ class TestOnnxTextModelTokenCount:
         m.model = None
         tok = _make_mock_tokenizer()
         enc = tok.encode_batch.return_value[0]
+        enc.__len__.return_value = len([1, 1, 0, 0])
         enc.attention_mask = [1, 1, 0, 0]
         loaded: list[bool] = []
 
@@ -312,6 +313,7 @@ class TestOnnxTextModelTokenCount:
         m.model = MagicMock()
         tok = _make_mock_tokenizer()
         enc = tok.encode_batch.return_value[0]
+        enc.__len__.return_value = len([1, 1, 1, 0])
         enc.attention_mask = [1, 1, 1, 0]
         m.tokenizer = tok
         assert m._token_count("hello") == 3
@@ -320,8 +322,10 @@ class TestOnnxTextModelTokenCount:
         m = ConcreteOnnxTextModel()
         m.model = MagicMock()
         enc1 = MagicMock()
+        enc1.__len__.return_value = len([1, 1, 0])
         enc1.attention_mask = [1, 1, 0]  # 2 tokens
         enc2 = MagicMock()
+        enc2.__len__.return_value = len([1, 1, 1])
         enc2.attention_mask = [1, 1, 1]  # 3 tokens
         tok = MagicMock()
         tok.encode_batch.return_value = [enc1, enc2]
@@ -564,6 +568,7 @@ class TestOnnxTextEmbeddingMethods:
     def test_token_count_sums_mask(self, onnx_emb: OnnxTextEmbedding) -> None:
         """Line 169."""
         enc = onnx_emb.tokenizer.encode_batch.return_value[0]  # type: ignore[unresolved-attribute]
+        enc.__len__.return_value = len([1, 1, 0, 0])
         enc.attention_mask = [1, 1, 0, 0]
         assert onnx_emb.token_count("hello") == 2
 

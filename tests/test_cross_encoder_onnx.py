@@ -491,6 +491,7 @@ class TestTokenCount:
         m = ConcreteCrossEncoderModel()
         m.model = MagicMock()
         enc = MagicMock()
+        enc.__len__.return_value = len([1, 1, 1, 0])
         enc.attention_mask = [1, 1, 1, 0]  # 3 tokens
         tok = MagicMock()
         tok.encode_batch.return_value = [enc]
@@ -502,8 +503,10 @@ class TestTokenCount:
         m = ConcreteCrossEncoderModel()
         m.model = MagicMock()
         enc1 = MagicMock()
+        enc1.__len__.return_value = len([1, 1, 0])
         enc1.attention_mask = [1, 1, 0]
         enc2 = MagicMock()
+        enc2.__len__.return_value = len([1, 1, 1])
         enc2.attention_mask = [1, 1, 1]
         tok = MagicMock()
         tok.encode_batch.return_value = [enc1, enc2]
@@ -519,6 +522,7 @@ class TestTokenCount:
         def _fake_load() -> None:
             m.model = MagicMock()
             enc = MagicMock()
+            enc.__len__.return_value = len([1, 0])
             enc.attention_mask = [1, 0]
             tok = MagicMock()
             tok.encode_batch.return_value = [enc]
@@ -746,6 +750,7 @@ class TestOnnxTextCrossEncoderTokenCount:
 
     def test_token_count_delegates(self, onnx_encoder: OnnxTextCrossEncoder) -> None:
         enc = MagicMock()
+        enc.__len__.return_value = len([1, 1, 0, 0])
         enc.attention_mask = [1, 1, 0, 0]
         onnx_encoder.tokenizer.encode_batch.return_value = [enc]  # type: ignore[unresolved-attribute]
         result = onnx_encoder.token_count([("q", "d")])
