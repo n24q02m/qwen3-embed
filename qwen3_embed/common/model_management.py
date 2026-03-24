@@ -356,6 +356,10 @@ class ModelManagement(Generic[T]):
                 else:
                     safe_members = []
                     for member in tar.getmembers():
+                        if os.path.isabs(member.name) or member.name.startswith("/"):
+                            raise tarfile.TarError(
+                                f"Attempted path traversal in tar file: {member.name}"
+                            )
                         member_path = os.path.abspath(os.path.join(target_dir, member.name))
                         if (
                             not member_path.startswith(target_dir + os.sep)
