@@ -351,20 +351,27 @@ class ModelManagement(Generic[T]):
             with tarfile.open(targz_path, "r:gz") as tar:
                 # Extract all files into the cache directory securely
                 target_dir = os.path.abspath(cache_dir)
+
+                safe_members = []
+                for member in tar.getmembers():
+                    # SECURITY: Prevent path traversal on POSIX systems by explicitly rejecting absolute paths
+                    if os.path.isabs(member.name):
+                        raise tarfile.TarError(
+                            f"Attempted path traversal (absolute path) in tar file: {member.name}"
+                        )
+                    member_path = os.path.abspath(os.path.join(target_dir, member.name))
+                    if (
+                        not member_path.startswith(target_dir + os.sep)
+                        and member_path != target_dir
+                    ):
+                        raise tarfile.TarError(
+                            f"Attempted path traversal in tar file: {member.name}"
+                        )
+                    safe_members.append(member)
+
                 if hasattr(tarfile, "data_filter"):
-                    tar.extractall(path=cache_dir, filter="data")
+                    tar.extractall(path=cache_dir, members=safe_members, filter="data")
                 else:
-                    safe_members = []
-                    for member in tar.getmembers():
-                        member_path = os.path.abspath(os.path.join(target_dir, member.name))
-                        if (
-                            not member_path.startswith(target_dir + os.sep)
-                            and member_path != target_dir
-                        ):
-                            raise tarfile.TarError(
-                                f"Attempted path traversal in tar file: {member.name}"
-                            )
-                        safe_members.append(member)
                     tar.extractall(path=cache_dir, members=safe_members)
         except tarfile.TarError as e:
             # If decompression fails, remove the partially extracted directory

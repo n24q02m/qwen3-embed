@@ -369,11 +369,7 @@ class TestDecompressToCache:
 
             os.remove("test.txt")
 
-        error_match = (
-            "Attempted path traversal"
-            if not hasattr(tarfile, "data_filter")
-            else "is outside the destination"
-        )
+        error_match = "Attempted path traversal"
         with pytest.raises(tarfile.TarError, match=error_match):
             ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
 
@@ -393,6 +389,25 @@ class TestDecompressToCache:
             pytest.raises(tarfile.TarError, match="Mid-extraction error"),
         ):
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
+        assert not cache_dir.exists()
+
+    def test_decompress_absolute_path_traversal(self, tmp_path):
+        """Tar slip via absolute path raises TarError and cache dir is removed."""
+        cache_dir = tmp_path / "tmp_cache_dir"
+        cache_dir.mkdir()
+
+        malicious_tar = tmp_path / "malicious_absolute.tar.gz"
+        with tarfile.open(malicious_tar, "w:gz") as tar:
+            info = tarfile.TarInfo(name="/tmp/evil.txt")
+            data = b"evil content"
+            info.size = len(data)
+            fileobj = io.BytesIO(data)
+            tar.addfile(info, fileobj=fileobj)
+
+        error_match = "Attempted path traversal \\(absolute path\\)"
+        with pytest.raises(tarfile.TarError, match=error_match):
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
 
         assert not cache_dir.exists()
 
