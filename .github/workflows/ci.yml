@@ -135,13 +135,13 @@ jobs:
           fi
 
       - name: Authenticate to GCP (Vertex AI)
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.VERTEX_WIF_PROVIDER }}
           service_account: ${{ vars.VERTEX_SERVICE_ACCOUNT }}
 
       - name: PR Agent action step
-        uses: qodo-ai/pr-agent@main
+        uses: qodo-ai/pr-agent@0b0c175f6a0ae73f75bfb12a0eecb440a216a891 # main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERTEXAI_PROJECT: ${{ vars.VERTEX_PROJECT }}
