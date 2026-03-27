@@ -22,6 +22,10 @@ htmlcov/
 # Ruff / ty
 .ruff_cache/
 
+# Secrets / env
+.env
+.env.*
+
 # IDE
 .idea/
 .vscode/
