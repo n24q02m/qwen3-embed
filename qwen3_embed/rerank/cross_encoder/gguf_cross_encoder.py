@@ -146,8 +146,10 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
     @staticmethod
     def _sanitize_input(text: str) -> str:
         """Strip forbidden special tokens from user input."""
-        for token in FORBIDDEN_TOKENS:
-            text = text.replace(token, "")
+        # SECURITY: Prevent prompt injection bypass via iterative payload construction.
+        while any(token in text for token in FORBIDDEN_TOKENS):
+            for token in FORBIDDEN_TOKENS:
+                text = text.replace(token, "")
         return text
 
     @staticmethod
@@ -175,7 +177,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         tokens = self._llm.tokenize(text.encode("utf-8"), add_bos=False)
 
         self._llm.reset()
-        self._llm.eval(tokens)
+        self._llm.eval(tokens)  # nosec B307 # SECURITY: This is llama_cpp.Llama.eval for model inference, not Python's built-in eval().
 
         # Get logits for the last token
         # llama-cpp-python stores scores in _scores array
