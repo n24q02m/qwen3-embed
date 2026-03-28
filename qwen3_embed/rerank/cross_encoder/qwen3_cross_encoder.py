@@ -208,16 +208,17 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         all_scores: list[NumpyArray] = []
         input_names = self.model_input_names or set()
         assert input_names is not None
-        for text in texts:
-            tokenized = self.tokenizer.encode_batch([text])
 
+        # ⚡ Bolt: Use tokenizer.encode_batch(texts) for batched tokenization instead of a loop
+        # The underlying Rust tokenizers library parallelizes processing for batches much faster.
+        all_tokenized = self.tokenizer.encode_batch(texts)
+
+        for tokenized in all_tokenized:
             onnx_input: dict[str, NumpyArray] = {
-                "input_ids": np.array([tokenized[0].ids], dtype=np.int64),
+                "input_ids": np.array([tokenized.ids], dtype=np.int64),
             }
             if "attention_mask" in input_names:
-                onnx_input["attention_mask"] = np.array(
-                    [tokenized[0].attention_mask], dtype=np.int64
-                )
+                onnx_input["attention_mask"] = np.array([tokenized.attention_mask], dtype=np.int64)
             if "token_type_ids" in input_names:
                 onnx_input["token_type_ids"] = np.zeros_like(
                     onnx_input["input_ids"], dtype=np.int64
