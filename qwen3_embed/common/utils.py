@@ -55,7 +55,8 @@ def mean_pooling(input_array: NumpyArray, attention_mask: NDArray[np.int64]) -> 
     # ⚡ Bolt: Fast mean pooling using np.matmul (~5x faster than np.expand_dims and np.sum)
     mask_cast = attention_mask.astype(input_array.dtype)
     sum_embeddings = np.matmul(mask_cast[:, np.newaxis, :], input_array).squeeze(1)
-    sum_mask = np.sum(mask_cast, axis=1, keepdims=True)
+    # ⚡ Bolt: Fast reduction using array method
+    sum_mask = mask_cast.sum(axis=1, keepdims=True)
     pooled_embeddings = sum_embeddings / np.maximum(sum_mask, 1e-9)
     return pooled_embeddings
 
