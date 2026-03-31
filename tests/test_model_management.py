@@ -1133,3 +1133,86 @@ class TestDownloadModel:
         patterns = captured_patterns[0]
         assert "weights.onnx" in patterns
         assert "vocab.txt" in patterns
+
+
+# ---------------------------------------------------------------------------
+# TestCheckHFCache
+# ---------------------------------------------------------------------------
+
+
+class TestCheckHFCache:
+    """Tests for _check_hf_cache method."""
+
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    @patch.object(ModelManagement, "download_files_from_huggingface")
+    def test_returns_path_if_model_exists(self, mock_download, mock_enable, tmp_path):
+        """If the model file exists in the downloaded snapshot, return the path."""
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+
+        # Create dummy model file
+        model_file = "model.onnx"
+        (snapshot_dir / model_file).write_bytes(b"data")
+
+        mock_download.return_value = str(snapshot_dir)
+
+        result = ModelManagement._check_hf_cache(
+            hf_source="org/repo",
+            cache_dir=str(cache_dir),
+            extra_patterns=[model_file],
+            model_file=model_file,
+        )
+
+        assert result == snapshot_dir
+        mock_enable.assert_called_once()
+        mock_download.assert_called_once()
+        # Verify local_files_only was passed as True
+        assert mock_download.call_args[1].get("local_files_only") is True
+
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    @patch.object(ModelManagement, "download_files_from_huggingface")
+    def test_returns_none_if_model_missing(self, mock_download, mock_enable, tmp_path):
+        """If the snapshot directory is downloaded but missing the required file, return None."""
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+
+        # We purposely do not create the model file
+        model_file = "model.onnx"
+
+        mock_download.return_value = str(snapshot_dir)
+
+        result = ModelManagement._check_hf_cache(
+            hf_source="org/repo",
+            cache_dir=str(cache_dir),
+            extra_patterns=[model_file],
+            model_file=model_file,
+        )
+
+        assert result is None
+        mock_enable.assert_called_once()
+
+    @patch("qwen3_embed.common.model_management.logger.debug")
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    @patch.object(ModelManagement, "download_files_from_huggingface")
+    def test_returns_none_on_exception(self, mock_download, mock_enable, mock_logger, tmp_path):
+        """If an Exception is raised during the cache check (e.g. not found), it is caught and None is returned."""
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        mock_download.side_effect = Exception("Not found in cache")
+        model_file = "model.onnx"
+
+        result = ModelManagement._check_hf_cache(
+            hf_source="org/repo",
+            cache_dir=str(cache_dir),
+            extra_patterns=[model_file],
+            model_file=model_file,
+        )
+
+        assert result is None
+        mock_enable.assert_called_once()
+        mock_logger.assert_called_once_with("Model not found in cache, will attempt download")
