@@ -43,8 +43,7 @@ class TextEmbedding(TextEmbeddingBase):
     def add_custom_model(
         cls,
         model_description: DenseModelDescription,
-        pooling: PoolingType,
-        normalization: bool,
+        **kwargs: Any,
     ) -> None:
         registered_models = cls._list_supported_models()
         # ⚡ Bolt: Cache lowercase model name outside loop
@@ -56,10 +55,13 @@ class TextEmbedding(TextEmbeddingBase):
                     f"please use another model name"
                 )
 
+        if "pooling" not in kwargs or "normalization" not in kwargs:
+            raise ValueError("kwargs must contain 'pooling' and 'normalization'")
+
         CustomTextEmbedding.add_model(
             model_description,
-            pooling=pooling,
-            normalization=normalization,
+            pooling=kwargs["pooling"],
+            normalization=kwargs["normalization"],
         )
 
     def __init__(
