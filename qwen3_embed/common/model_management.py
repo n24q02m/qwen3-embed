@@ -103,7 +103,9 @@ class ModelManagement(Generic[T]):
         response: Any, output_path: str, total_size_in_bytes: int, show_progress: bool
     ) -> str:
         show_progress = bool(total_size_in_bytes and show_progress)
-        md5_hash = hashlib.md5()
+        md5_hash = hashlib.md5(
+            usedforsecurity=False
+        )  # SECURITY: MD5 is used solely for non-cryptographic file integrity checking (GCS checksums).
         with (
             tqdm(
                 total=total_size_in_bytes,

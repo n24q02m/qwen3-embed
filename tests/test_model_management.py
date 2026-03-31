@@ -250,7 +250,9 @@ class TestDownloadFileFromGcs:
     def test_hash_mismatch_raises_value_error(self, mock_get, tmp_path):
         """MD5 mismatch between header and downloaded content raises ValueError."""
         chunk = b"actual content"
-        wrong_md5 = base64.b64encode(hashlib.md5(b"different content").digest()).decode()
+        wrong_md5 = base64.b64encode(
+            hashlib.md5(b"different content", usedforsecurity=False).digest()
+        ).decode()  # SECURITY: MD5 is used solely for non-cryptographic file integrity checking.
 
         response = Mock()
         response.status_code = 200
@@ -270,7 +272,9 @@ class TestDownloadFileFromGcs:
     def test_hash_match_succeeds(self, mock_get, tmp_path):
         """Matching MD5 in x-goog-hash header allows download to complete."""
         chunk = b"verified content"
-        correct_md5 = base64.b64encode(hashlib.md5(chunk).digest()).decode()
+        correct_md5 = base64.b64encode(
+            hashlib.md5(chunk, usedforsecurity=False).digest()
+        ).decode()  # SECURITY: MD5 is used solely for non-cryptographic file integrity checking.
 
         response = Mock()
         response.status_code = 200
