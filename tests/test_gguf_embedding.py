@@ -275,11 +275,13 @@ class TestGGUFEmbeddingEmbed:
     def test_embed_l2_normalization(self):
         """Test embed returns L2 normalized embeddings."""
         model = _make_model(embedding_dim=4)
+
         # Override create_embedding to return a known vector
         def custom_create_embedding(docs, *args, **kwargs):
             if isinstance(docs, str):
                 docs = [docs]
             return {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]} for _ in docs]}
+
         model._llm.create_embedding.side_effect = custom_create_embedding
         results = list(model.embed("test"))
         # norm([3, 4, 0, 0]) = 5, normalized = [0.6, 0.8, 0, 0]
@@ -288,10 +290,12 @@ class TestGGUFEmbeddingEmbed:
     def test_embed_zero_vector_not_divided(self):
         """Test embed with zero vector does not divide by zero."""
         model = _make_model(embedding_dim=4)
+
         def zero_create_embedding(docs, *args, **kwargs):
             if isinstance(docs, str):
                 docs = [docs]
             return {"data": [{"embedding": [0.0, 0.0, 0.0, 0.0]} for _ in docs]}
+
         model._llm.create_embedding.side_effect = zero_create_embedding
         results = list(model.embed("zero"))
         # Zero vector stays zero
@@ -312,6 +316,7 @@ class TestGGUFEmbeddingEmbed:
             if isinstance(docs, str):
                 docs = [docs]
             return {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]} for _ in docs]}
+
         model._llm.create_embedding.side_effect = custom_create_embedding
 
         num_docs = 1000
@@ -325,16 +330,19 @@ class TestGGUFEmbeddingEmbed:
         # Verify calls were made with correct documents
         calls = [c[0][0] for c in model._llm.create_embedding.call_args_list]
         import itertools
+
         flattened_calls = list(itertools.chain.from_iterable(calls))
         assert flattened_calls == docs
 
     def test_embed_generator_input(self):
         """Test embed handles generator iterables correctly."""
         model = _make_model(embedding_dim=4)
+
         def custom_create_embedding(docs, *args, **kwargs):
             if isinstance(docs, str):
                 docs = [docs]
             return {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]} for _ in docs]}
+
         model._llm.create_embedding.side_effect = custom_create_embedding
 
         def doc_generator():
