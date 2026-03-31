@@ -1,9 +1,14 @@
 """Unit tests for last_token_pool and other utility functions."""
 
+import os
+from pathlib import Path
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 
 from qwen3_embed.common.utils import (
+    define_cache_dir,
     iter_batch,
     last_token_pool,
     mean_pooling,
@@ -308,3 +313,48 @@ class TestRemoveNonAlphanumeric:
             remove_non_alphanumeric("price: $100 + €50 = £150 ± ∞")
             == "price   100    50    150    "
         )
+
+
+class TestDefineCacheDir:
+    @patch("qwen3_embed.common.utils.Path.mkdir")
+    @patch("qwen3_embed.common.utils.Path.chmod")
+    def test_custom_argument(self, mock_chmod, mock_mkdir):
+        res = define_cache_dir("/custom/arg/path")
+        assert res == Path("/custom/arg/path")
+        mock_mkdir.assert_called_once_with(mode=0o700, parents=True, exist_ok=True)
+        mock_chmod.assert_called_once_with(0o700)
+
+    @patch("qwen3_embed.common.utils.Path.mkdir")
+    @patch("qwen3_embed.common.utils.Path.chmod")
+    @patch.dict(os.environ, {"QWEN3_EMBED_CACHE_PATH": "/custom/env/path"})
+    def test_qwen3_cache_path(self, mock_chmod, mock_mkdir):
+        res = define_cache_dir()
+        assert res == Path("/custom/env/path")
+        mock_mkdir.assert_called_once_with(mode=0o700, parents=True, exist_ok=True)
+        mock_chmod.assert_called_once_with(0o700)
+
+    @patch("qwen3_embed.common.utils.Path.mkdir")
+    @patch("qwen3_embed.common.utils.Path.chmod")
+    @patch.dict(os.environ, {"XDG_CACHE_HOME": "/xdg/cache"}, clear=True)
+    def test_xdg_cache_home(self, mock_chmod, mock_mkdir):
+        res = define_cache_dir()
+        assert res == Path("/xdg/cache/qwen3_embed")
+        mock_mkdir.assert_called_once_with(mode=0o700, parents=True, exist_ok=True)
+        mock_chmod.assert_called_once_with(0o700)
+
+    @patch("qwen3_embed.common.utils.Path.mkdir")
+    @patch("qwen3_embed.common.utils.Path.chmod")
+    @patch.dict(os.environ, {}, clear=True)
+    def test_fallback_home_cache(self, mock_chmod, mock_mkdir):
+        res = define_cache_dir()
+        assert res == Path.home() / ".cache/qwen3_embed"
+        mock_mkdir.assert_called_once_with(mode=0o700, parents=True, exist_ok=True)
+        mock_chmod.assert_called_once_with(0o700)
+
+    @patch("qwen3_embed.common.utils.Path.mkdir")
+    @patch("qwen3_embed.common.utils.Path.chmod", side_effect=OSError("chmod failed"))
+    def test_chmod_oserror_suppressed(self, mock_chmod, mock_mkdir):
+        res = define_cache_dir("/custom/arg/path")
+        assert res == Path("/custom/arg/path")
+        mock_mkdir.assert_called_once_with(mode=0o700, parents=True, exist_ok=True)
+        mock_chmod.assert_called_once_with(0o700)
