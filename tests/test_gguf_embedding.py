@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import sys
 from pathlib import Path
 from typing import Any
@@ -64,10 +65,16 @@ def test_check_llama_cpp_present():
 
 
 def _make_mock_llm(embedding_dim: int = 8) -> MagicMock:
-    """Return a mock Llama instance whose create_embedding returns a random vector."""
+    """Return a mock Llama instance whose create_embedding returns vectors for each input."""
     mock_llm = MagicMock()
     vec = np.random.rand(embedding_dim).astype(np.float32).tolist()
-    mock_llm.create_embedding.return_value = {"data": [{"embedding": vec}]}
+
+    def mock_create_embedding(docs, *args, **kwargs):
+        if isinstance(docs, str):
+            docs = [docs]
+        return {"data": [{"embedding": vec} for _ in docs]}
+
+    mock_llm.create_embedding.side_effect = mock_create_embedding
     return mock_llm
 
 
@@ -248,7 +255,7 @@ class TestGGUFEmbeddingEmbed:
         results = list(model.embed(docs))
 
         assert len(results) == 3
-        assert model._llm.create_embedding.call_count == 3
+        assert model._llm.create_embedding.call_count == 1
 
     def test_embed_mrl_truncation(self):
         """Test embed with dim kwarg truncates to requested dimension."""
@@ -269,7 +276,11 @@ class TestGGUFEmbeddingEmbed:
         """Test embed returns L2 normalized embeddings."""
         model = _make_model(embedding_dim=4)
         # Override create_embedding to return a known vector
-        model._llm.create_embedding.return_value = {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]}]}
+        def custom_create_embedding(docs, *args, **kwargs):
+            if isinstance(docs, str):
+                docs = [docs]
+            return {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]} for _ in docs]}
+        model._llm.create_embedding.side_effect = custom_create_embedding
         results = list(model.embed("test"))
         # norm([3, 4, 0, 0]) = 5, normalized = [0.6, 0.8, 0, 0]
         np.testing.assert_allclose(results[0], [0.6, 0.8, 0.0, 0.0], atol=1e-5)
@@ -277,7 +288,11 @@ class TestGGUFEmbeddingEmbed:
     def test_embed_zero_vector_not_divided(self):
         """Test embed with zero vector does not divide by zero."""
         model = _make_model(embedding_dim=4)
-        model._llm.create_embedding.return_value = {"data": [{"embedding": [0.0, 0.0, 0.0, 0.0]}]}
+        def zero_create_embedding(docs, *args, **kwargs):
+            if isinstance(docs, str):
+                docs = [docs]
+            return {"data": [{"embedding": [0.0, 0.0, 0.0, 0.0]} for _ in docs]}
+        model._llm.create_embedding.side_effect = zero_create_embedding
         results = list(model.embed("zero"))
         # Zero vector stays zero
         np.testing.assert_array_equal(results[0], [0.0, 0.0, 0.0, 0.0])
@@ -286,14 +301,18 @@ class TestGGUFEmbeddingEmbed:
         """Test embed passes the document string to create_embedding."""
         model = _make_model(embedding_dim=4)
         list(model.embed("specific text"))
-        model._llm.create_embedding.assert_called_once_with("specific text")
+        model._llm.create_embedding.assert_called_once_with(["specific text"])
 
     def test_embed_large_batch(self):
         """Test embed with a large number of generated strings to ensure batching logic is correct."""
         model = _make_model(embedding_dim=4)
 
         # Override create_embedding to return a constant vector
-        model._llm.create_embedding.return_value = {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]}]}
+        def custom_create_embedding(docs, *args, **kwargs):
+            if isinstance(docs, str):
+                docs = [docs]
+            return {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]} for _ in docs]}
+        model._llm.create_embedding.side_effect = custom_create_embedding
 
         num_docs = 1000
         docs = [f"document {i}" for i in range(num_docs)]
@@ -301,16 +320,22 @@ class TestGGUFEmbeddingEmbed:
         results = list(model.embed(docs, batch_size=32, parallel=4))
 
         assert len(results) == num_docs
-        assert model._llm.create_embedding.call_count == num_docs
+        assert model._llm.create_embedding.call_count == 32
 
         # Verify calls were made with correct documents
         calls = [c[0][0] for c in model._llm.create_embedding.call_args_list]
-        assert calls == docs
+        import itertools
+        flattened_calls = list(itertools.chain.from_iterable(calls))
+        assert flattened_calls == docs
 
     def test_embed_generator_input(self):
         """Test embed handles generator iterables correctly."""
         model = _make_model(embedding_dim=4)
-        model._llm.create_embedding.return_value = {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]}]}
+        def custom_create_embedding(docs, *args, **kwargs):
+            if isinstance(docs, str):
+                docs = [docs]
+            return {"data": [{"embedding": [3.0, 4.0, 0.0, 0.0]} for _ in docs]}
+        model._llm.create_embedding.side_effect = custom_create_embedding
 
         def doc_generator():
             for i in range(5):
@@ -319,11 +344,12 @@ class TestGGUFEmbeddingEmbed:
         results = list(model.embed(doc_generator()))
 
         assert len(results) == 5
-        assert model._llm.create_embedding.call_count == 5
+        assert model._llm.create_embedding.call_count == 1
 
         calls = [c[0][0] for c in model._llm.create_embedding.call_args_list]
         expected = [f"gen doc {i}" for i in range(5)]
-        assert calls == expected
+        flattened_calls = list(itertools.chain.from_iterable(calls))
+        assert flattened_calls == expected
 
 
 # ---------------------------------------------------------------------------
@@ -405,7 +431,8 @@ class TestGGUFEmbeddingPassageEmbed:
         assert len(results) == 2
         # Verify create_embedding was called with raw text (no instruction prefix)
         calls = [c[0][0] for c in model._llm.create_embedding.call_args_list]
-        assert calls == ["passage 1", "passage 2"]
+        flattened_calls = list(itertools.chain.from_iterable(calls))
+        assert flattened_calls == ["passage 1", "passage 2"]
 
     def test_passage_embed_with_dim(self):
         """Test passage_embed supports dim kwarg for MRL truncation."""

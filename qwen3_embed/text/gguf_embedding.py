@@ -8,6 +8,7 @@ Requires optional dependency: pip install qwen3-embed[gguf]
 
 from __future__ import annotations
 
+import itertools
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
@@ -133,7 +134,7 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
     def embed(
         self,
         documents: str | Iterable[str],
-        batch_size: int = 1,  # noqa: ARG002
+        batch_size: int = 256,
         parallel: int | None = None,  # noqa: ARG002
         **kwargs: Any,
     ) -> Iterable[NumpyArray]:
@@ -141,7 +142,7 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
 
         Args:
             documents: Single document string or iterable of documents.
-            batch_size: Ignored (always 1 for GGUF).
+            batch_size: Number of documents to encode at once.
             parallel: Ignored (single-threaded for GGUF).
             **kwargs: ``dim`` (int) enables MRL truncation.
 
@@ -153,20 +154,23 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
 
         dim: int | None = kwargs.get("dim")
 
-        for doc in documents:
-            result = self._llm.create_embedding(doc)
-            embedding = np.array(result["data"][0]["embedding"], dtype=np.float32)
+        it = iter(documents)
+        while batch := tuple(itertools.islice(it, batch_size)):
+            # PERFORMANCE: Pass batches to create_embedding to allow llama-cpp-python parallelize processing
+            result = self._llm.create_embedding(list(batch))
+            for item in result["data"]:
+                embedding = np.array(item["embedding"], dtype=np.float32)
 
-            # MRL: optionally truncate to requested dimension
-            if dim is not None:
-                embedding = embedding[:dim]
+                # MRL: optionally truncate to requested dimension
+                if dim is not None:
+                    embedding = embedding[:dim]
 
-            # L2 normalize
-            norm = np.linalg.norm(embedding)
-            if norm > 0:
-                embedding = embedding / norm
+                # L2 normalize
+                norm = np.linalg.norm(embedding)
+                if norm > 0:
+                    embedding = embedding / norm
 
-            yield embedding
+                yield embedding
 
     def query_embed(self, query: str | Iterable[str], **kwargs: Any) -> Iterable[NumpyArray]:
         """Embed queries with instruction prefix.
