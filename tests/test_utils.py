@@ -266,6 +266,25 @@ class TestGetAllPunctuation:
         result2 = get_all_punctuation()
         assert result1 is result2
 
+    def test_contains_extended_punctuation(self) -> None:
+        """Should contain extended Unicode punctuation beyond basic ASCII."""
+        from qwen3_embed.common.utils import get_all_punctuation
+
+        punctuation = get_all_punctuation()
+
+        extended_punctuation = [
+            "—",  # Em dash
+            "“",  # Left double quotation mark
+            "”",  # Right double quotation mark
+            "¡",  # Inverted exclamation mark
+            "¿",  # Inverted question mark
+            "«",  # Left-pointing double angle quotation mark
+            "»",  # Right-pointing double angle quotation mark
+            "…",  # Horizontal ellipsis
+        ]
+        for mark in extended_punctuation:
+            assert mark in punctuation, f"Expected {mark} to be in punctuation set"
+
 
 class TestRemoveNonAlphanumeric:
     """Tests for remove_non_alphanumeric utility."""
