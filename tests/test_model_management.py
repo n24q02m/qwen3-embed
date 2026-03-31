@@ -74,7 +74,7 @@ class ConcreteModelManagement(ModelManagement):
         return [{"model": m.model} for m in cls._models]
 
     @classmethod
-    def add_custom_model(cls, *args: Any, **kwargs: Any) -> None:
+    def add_custom_model(cls, model_description: BaseModelDescription, **kwargs: Any) -> None:
         pass
 
 
@@ -92,7 +92,16 @@ class TestAbstractMethods:
 
     def test_add_custom_model_raises(self):
         with pytest.raises(NotImplementedError):
-            ModelManagement.add_custom_model()
+            ModelManagement.add_custom_model(
+                BaseModelDescription(
+                    model="test",
+                    sources=ModelSource(hf="test"),
+                    model_file="model.onnx",
+                    description="",
+                    license="",
+                    size_in_GB=0.0,
+                )
+            )
 
     def test_list_supported_models_private_raises(self):
         with pytest.raises(NotImplementedError):

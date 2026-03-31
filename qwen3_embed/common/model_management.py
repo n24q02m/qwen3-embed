@@ -41,22 +41,15 @@ class ModelManagement(Generic[T]):
     @classmethod
     def add_custom_model(
         cls,
-        *args: Any,
+        model_description: T,
         **kwargs: Any,
     ) -> None:
         """Add a custom model to the existing embedding classes based on the passed model descriptions
 
-        Model description dict should contain the fields same as in one of the model descriptions presented
-         in qwen3_embed.common.model_description
-
-         E.g. for BaseModelDescription:
-              model: str
-              sources: ModelSource
-              model_file: str
-              description: str
-              license: str
-              size_in_GB: float
-              additional_files: list[str]
+        Args:
+            model_description (T): The model description to add, which should be an instance of
+                BaseModelDescription, DenseModelDescription, or similar depending on the class.
+            **kwargs: Additional keyword arguments for specific implementations (e.g. pooling, normalization).
 
         Returns:
             None
