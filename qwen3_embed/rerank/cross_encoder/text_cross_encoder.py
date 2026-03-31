@@ -5,7 +5,6 @@ from typing import Any
 from qwen3_embed.common import OnnxProvider
 from qwen3_embed.common.model_description import (
     BaseModelDescription,
-    ModelSource,
 )
 from qwen3_embed.common.types import Device
 from qwen3_embed.rerank.cross_encoder.custom_text_cross_encoder import CustomTextCrossEncoder
@@ -140,15 +139,27 @@ class TextCrossEncoder(TextCrossEncoderBase):
     @classmethod
     def add_custom_model(
         cls,
-        model: str,
-        sources: ModelSource,
-        model_file: str = "onnx/model.onnx",
-        description: str = "",
-        license: str = "",
-        size_in_gb: float = 0.0,
-        additional_files: list[str] | None = None,
+        **kwargs: Any,
     ) -> None:
         registered_models = cls._list_supported_models()
+
+        # Backward compatibility for size_in_gb
+        if "size_in_gb" in kwargs:
+            kwargs["size_in_GB"] = kwargs.pop("size_in_gb")
+
+        # Defaults
+        if "model_file" not in kwargs:
+            kwargs["model_file"] = "onnx/model.onnx"
+        if "description" not in kwargs:
+            kwargs["description"] = ""
+        if "license" not in kwargs:
+            kwargs["license"] = ""
+        if "size_in_GB" not in kwargs:
+            kwargs["size_in_GB"] = 0.0
+        if "additional_files" not in kwargs or kwargs["additional_files"] is None:
+            kwargs["additional_files"] = []
+
+        model = kwargs["model"]
         model_lower = model.lower()
         for registered_model in registered_models:
             if model_lower == registered_model.model.lower():
@@ -157,17 +168,7 @@ class TextCrossEncoder(TextCrossEncoderBase):
                     f"please use another model name"
                 )
 
-        CustomTextCrossEncoder.add_model(
-            BaseModelDescription(
-                model=model,
-                sources=sources,
-                model_file=model_file,
-                description=description,
-                license=license,
-                size_in_GB=size_in_gb,
-                additional_files=additional_files or [],
-            )
-        )
+        CustomTextCrossEncoder.add_model(BaseModelDescription(**kwargs))
 
     def token_count(
         self, pairs: Iterable[tuple[str, str]], batch_size: int = 1024, **kwargs: Any

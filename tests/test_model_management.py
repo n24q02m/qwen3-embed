@@ -74,7 +74,7 @@ class ConcreteModelManagement(ModelManagement):
         return [{"model": m.model} for m in cls._models]
 
     @classmethod
-    def add_custom_model(cls, *args: Any, **kwargs: Any) -> None:
+    def add_custom_model(cls, **kwargs: Any) -> None:
         pass
 
 
