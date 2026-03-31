@@ -35,12 +35,9 @@ def last_token_pool(input_array: NumpyArray, attention_mask: NDArray[np.int64]) 
     if left_padding:
         return input_array[:, -1]
 
-    batch_size, seq_len = attention_mask.shape
-    # Find the index of the last '1' in the attention mask for each row
-    # argmax returns the *first* occurrence of the max value.
-    # By reversing the mask, we find the first '1' from the end.
-    last_token_indices = seq_len - 1 - np.argmax(attention_mask[:, ::-1], axis=1)
-    return input_array[np.arange(batch_size), last_token_indices]
+    # ⚡ Bolt: Fast reduction using array method
+    last_token_indices = attention_mask.sum(axis=1) - 1
+    return input_array[np.arange(attention_mask.shape[0]), last_token_indices]
 
 
 def normalize(input_array: NumpyArray, p: int = 2, dim: int = 1, eps: float = 1e-12) -> NumpyArray:
@@ -57,8 +54,9 @@ def mean_pooling(input_array: NumpyArray, attention_mask: NDArray[np.int64]) -> 
     sum_embeddings = np.matmul(mask_cast[:, np.newaxis, :], input_array).squeeze(1)
     # ⚡ Bolt: Fast reduction using array method
     sum_mask = mask_cast.sum(axis=1, keepdims=True)
-    pooled_embeddings = sum_embeddings / np.maximum(sum_mask, 1e-9)
-    return pooled_embeddings
+    np.maximum(sum_mask, 1e-9, out=sum_mask)
+    sum_embeddings /= sum_mask
+    return sum_embeddings
 
 
 def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
