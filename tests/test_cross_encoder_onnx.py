@@ -15,7 +15,7 @@ import pytest
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
 from qwen3_embed.common.onnx_model import OnnxOutputContext
-from qwen3_embed.common.types import NumpyArray
+from qwen3_embed.common.types import NumpyArray, RerankWorkerParams
 from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import (
     OnnxTextCrossEncoder,
     TextCrossEncoderWorker,
@@ -337,8 +337,7 @@ class TestRerankPairsIsSmallBranch:
         m.tokenizer = _make_mock_tokenizer(n_pairs=1)
         scores = list(
             m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
+                worker_params=RerankWorkerParams(model_name="m", cache_dir="/tmp"),
                 pairs=[("query", "doc")],
                 batch_size=64,
             )
@@ -351,8 +350,7 @@ class TestRerankPairsIsSmallBranch:
         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=2)
         scores = list(
             loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
+                worker_params=RerankWorkerParams(model_name="m", cache_dir="/tmp"),
                 pairs=pairs,
                 batch_size=64,  # larger than len(pairs)=2 => is_small
             )
@@ -365,11 +363,9 @@ class TestRerankPairsIsSmallBranch:
         loaded_model.model = _make_mock_session(n_pairs=5)
         scores = list(
             loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
+                worker_params=RerankWorkerParams(model_name="m", cache_dir="/tmp", parallel=None),
                 pairs=pairs,
                 batch_size=10,
-                parallel=None,
             )
         )
         assert len(scores) == 5
@@ -388,8 +384,7 @@ class TestRerankPairsIsSmallBranch:
         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
         list(
             m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
+                worker_params=RerankWorkerParams(model_name="m", cache_dir="/tmp"),
                 pairs=[("q", "d")],
                 batch_size=64,
             )
@@ -411,11 +406,9 @@ class TestRerankPairsParallelBranch:
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
+                    worker_params=RerankWorkerParams(model_name="m", cache_dir="/tmp", parallel=0),
                     pairs=self._large_pairs(),
                     batch_size=2,
-                    parallel=0,
                 )
             )
         cls.assert_called_once()
@@ -430,11 +423,9 @@ class TestRerankPairsParallelBranch:
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
+                    worker_params=RerankWorkerParams(model_name="m", cache_dir="/tmp", parallel=3),
                     pairs=self._large_pairs(),
                     batch_size=2,
-                    parallel=3,
                 )
             )
         call_kw = cls.call_args[1]
@@ -450,11 +441,9 @@ class TestRerankPairsParallelBranch:
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
+                    worker_params=RerankWorkerParams(model_name="m", cache_dir="/tmp", parallel=2),
                     pairs=self._large_pairs(),
                     batch_size=2,
-                    parallel=2,
                 )
             )
         call_kw = cls.call_args[1]
@@ -470,12 +459,9 @@ class TestRerankPairsParallelBranch:
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
+                    worker_params=RerankWorkerParams(model_name="m", cache_dir="/tmp", parallel=2, extra_session_options={"enable_cpu_mem_arena": False}),
                     pairs=self._large_pairs(),
                     batch_size=2,
-                    parallel=2,
-                    extra_session_options={"enable_cpu_mem_arena": False},
                 )
             )
         cls.assert_called_once()
