@@ -38,7 +38,9 @@ def test_check_llama_cpp_missing():
 def test_check_llama_cpp_import_error_with_mock():
     """Test that _check_llama_cpp raises ImportError from importlib.import_module."""
     with (
-        patch("importlib.import_module", side_effect=ImportError("Mocked import error for llama_cpp")),
+        patch(
+            "importlib.import_module", side_effect=ImportError("Mocked import error for llama_cpp")
+        ),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
         _check_llama_cpp()
