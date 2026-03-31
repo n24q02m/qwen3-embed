@@ -111,16 +111,17 @@ class OnnxTextModel(OnnxModel[T]):
         model_name: str,
         cache_dir: str,
         documents: str | Iterable[str],
-        batch_size: int = 256,
-        parallel: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        local_files_only: bool = False,
-        specific_model_path: str | None = None,
-        extra_session_options: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Iterable[T]:
+        batch_size: int = kwargs.pop("batch_size", 256)
+        parallel: int | None = kwargs.pop("parallel", None)
+        providers: Sequence[OnnxProvider] | None = kwargs.pop("providers", None)
+        cuda: bool | Device = kwargs.pop("cuda", Device.AUTO)
+        device_ids: list[int] | None = kwargs.pop("device_ids", None)
+        local_files_only: bool = kwargs.pop("local_files_only", False)
+        specific_model_path: str | None = kwargs.pop("specific_model_path", None)
+        extra_session_options: dict[str, Any] | None = kwargs.pop("extra_session_options", None)
+
         is_small = False
 
         if isinstance(documents, str):
