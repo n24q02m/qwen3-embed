@@ -286,13 +286,37 @@ class TestDownloadFileFromGcs:
         assert result == str(output)
         assert output.read_bytes() == chunk
 
+    # ---------------------------------------------------------------------------
+    # TestDecompressToCache
+    # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# TestDecompressToCache
-# ---------------------------------------------------------------------------
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_downloads_file_with_progress_and_hash(self, mock_get, tmp_path):
+        """Tests stream tracking, progress bar updating, and MD5 hashing."""
+        chunk1 = b"chunk1"
+        chunk2 = b"chunk2"
+        full_content = chunk1 + chunk2
+        correct_md5 = base64.b64encode(hashlib.md5(full_content).digest()).decode()
 
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": str(len(full_content)),
+            "x-goog-hash": f"crc32c=abc123, md5={correct_md5}",
+        }
+        response.iter_content.return_value = [chunk1, chunk2]
+        mock_get.return_value = response
 
-class TestDecompressToCache:
+        output = tmp_path / "model.onnx"
+        result = ModelManagement.download_file_from_gcs(
+            f"{self.GCS_URL}/model.onnx", str(output), show_progress=True
+        )
+
+        assert result == str(output)
+        assert output.read_bytes() == full_content
+
+    # ---------------------------------------------------------------------------
+    # class TestDecompressToCache:
     """Tests for decompress_to_cache method."""
 
     def test_decompress_nonexistent_file(self, tmp_path):
