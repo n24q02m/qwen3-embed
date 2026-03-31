@@ -142,10 +142,10 @@ class ModelManagement(Generic[T]):
             raise ValueError(
                 f"Invalid URL: {url}. Only URLs from Google Cloud Storage are allowed."
             )
-
         if os.path.exists(output_path):
             return output_path
-        response = requests.get(url, stream=True, timeout=10)
+        # SECURITY: Explicitly enforce TLS verification to prevent accidental or malicious bypass via environment variables (like REQUESTS_CA_BUNDLE).
+        response = requests.get(url, stream=True, timeout=10, verify=True)
 
         # Handle HTTP errors
         if response.status_code == 403:
@@ -318,7 +318,7 @@ class ModelManagement(Generic[T]):
 
             download_successful = cls._verify_files_from_metadata(
                 snapshot_dir, metadata, repo_files=[]
-            )  # offline verification
+            )
             if not download_successful:
                 raise ValueError(
                     "Files have been corrupted during downloading process. "
