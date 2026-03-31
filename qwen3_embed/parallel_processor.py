@@ -2,6 +2,7 @@ import logging
 import os
 from collections.abc import Iterable
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import Enum
 from multiprocessing import Queue, get_context
 from multiprocessing.context import BaseContext
@@ -63,35 +64,40 @@ def _cleanup_worker(
     logging.info(f"Reader worker {worker_id} finished")
 
 
-def _worker(
-    worker_class: type[Worker],
-    input_queue: Queue,
-    output_queue: Queue,
-    num_active_workers: BaseValue,
-    worker_id: int,
-    kwargs: dict[str, Any] | None = None,
-) -> None:
+@dataclass
+class WorkerConfig:
+    worker_class: type[Worker]
+    input_queue: Queue
+    output_queue: Queue
+    num_active_workers: BaseValue
+    worker_id: int
+    kwargs: dict[str, Any] | None = None
+
+
+def _worker(config: WorkerConfig) -> None:
     """
     A worker that pulls data pints off the input queue, and places the execution result on the output queue.
     When there are no data pints left on the input queue, it decrements
     num_active_workers to signal completion.
     """
 
-    if kwargs is None:
-        kwargs = {}
+    if config.kwargs is None:
+        config.kwargs = {}
 
     logging.info(
-        f"Reader worker: {worker_id} PID: {os.getpid()} Device: {kwargs.get('device_id', 'CPU')}"
+        f"Reader worker: {config.worker_id} PID: {os.getpid()} Device: {config.kwargs.get('device_id', 'CPU')}"
     )
     try:
-        worker = worker_class.start(**kwargs)
-        for processed_item in worker.process(_get_items_from_queue(input_queue)):
-            output_queue.put(processed_item)
+        worker = config.worker_class.start(**config.kwargs)
+        for processed_item in worker.process(_get_items_from_queue(config.input_queue)):
+            config.output_queue.put(processed_item)
     except Exception as e:  # pylint: disable=broad-except
         logging.exception(e)
-        output_queue.put(QueueSignals.error)
+        config.output_queue.put(QueueSignals.error)
     finally:
-        _cleanup_worker(input_queue, output_queue, num_active_workers, worker_id)
+        _cleanup_worker(
+            config.input_queue, config.output_queue, config.num_active_workers, config.worker_id
+        )
 
 
 class ParallelWorkerPool:
@@ -131,16 +137,17 @@ class ParallelWorkerPool:
                 worker_kwargs["cuda"] = self.cuda
 
             assert hasattr(self.ctx, "Process")
+            config = WorkerConfig(
+                worker_class=self.worker_class,
+                input_queue=self.input_queue,
+                output_queue=self.output_queue,
+                num_active_workers=self.num_active_workers,
+                worker_id=worker_id,
+                kwargs=worker_kwargs,
+            )
             process = self.ctx.Process(  # type: ignore[call-non-callable]
                 target=_worker,
-                args=(
-                    self.worker_class,
-                    self.input_queue,
-                    self.output_queue,
-                    self.num_active_workers,
-                    worker_id,
-                    worker_kwargs,
-                ),
+                args=(config,),
             )
             process.start()
             self.processes.append(process)
