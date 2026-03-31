@@ -29,7 +29,7 @@ from qwen3_embed.rerank.cross_encoder.gguf_cross_encoder import (
 def test_check_llama_cpp_missing():
     """Test that ImportError is raised when llama-cpp-python is missing."""
     with (
-        mock.patch.dict(sys.modules, {"llama_cpp": None}),
+        mock.patch("importlib.import_module", side_effect=ImportError("Mocked import error")),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
         _check_llama_cpp()
@@ -39,7 +39,7 @@ def test_check_llama_cpp_present():
     """Test that no error is raised when llama-cpp-python is present."""
     # Mocking a successful import
     mock_module = mock.Mock()
-    with mock.patch.dict(sys.modules, {"llama_cpp": mock_module}):
+    with mock.patch("importlib.import_module", return_value=mock_module):
         try:
             _check_llama_cpp()
         except ImportError:
@@ -49,7 +49,7 @@ def test_check_llama_cpp_present():
 def test_gguf_cross_encoder_init_missing_dependency():
     """Test that Qwen3CrossEncoderGGUF init fails if dependency is missing."""
     with (
-        mock.patch.dict(sys.modules, {"llama_cpp": None}),
+        mock.patch("importlib.import_module", side_effect=ImportError("Mocked error")),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
         # We don't need arguments because it should fail before using them
