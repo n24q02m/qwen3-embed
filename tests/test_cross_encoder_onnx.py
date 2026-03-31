@@ -459,7 +459,12 @@ class TestRerankPairsParallelBranch:
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    worker_params=RerankWorkerParams(model_name="m", cache_dir="/tmp", parallel=2, extra_session_options={"enable_cpu_mem_arena": False}),
+                    worker_params=RerankWorkerParams(
+                        model_name="m",
+                        cache_dir="/tmp",
+                        parallel=2,
+                        extra_session_options={"enable_cpu_mem_arena": False},
+                    ),
                     pairs=self._large_pairs(),
                     batch_size=2,
                 )
