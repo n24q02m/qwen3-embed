@@ -292,6 +292,7 @@ def test_worker_function_start_exception():
         @classmethod
         def start(cls, **kwargs):
             raise ValueError("Failed to start")
+
         def process(self, items):
             yield from []
 
