@@ -46,7 +46,7 @@ def _cleanup_worker(
 ) -> None:
     # It's important that we close and join the queue here before
     # decrementing num_active_workers. Otherwise our parent may join us
-    # before the queue's feeder thread has passed all buffered items to
+    # before the queue's feeder thread has output_queue.put(QueueSignals.error)ed all buffered items to
     # the underlying pipe resulting in a deadlock.
     #
     # See:

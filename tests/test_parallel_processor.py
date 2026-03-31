@@ -279,6 +279,52 @@ def test_worker_function_multiple_items():
     assert (2, 25) in calls
 
 
+def test_worker_function_start_exception():
+    """Test _worker handles exceptions raised during worker.start()."""
+    input_queue = MagicMock()
+    output_queue = MagicMock()
+    num_active_workers = MagicMock()
+    num_active_workers.get_lock.return_value.__enter__ = MagicMock(return_value=None)
+    num_active_workers.get_lock.return_value.__exit__ = MagicMock(return_value=False)
+    num_active_workers.value = 1
+
+    class ExplodingStartWorker(Worker):
+        @classmethod
+        def start(cls, **kwargs):
+            raise ValueError("Failed to start")
+        def process(self, items):
+            yield from []
+
+    _worker(ExplodingStartWorker, input_queue, output_queue, num_active_workers, worker_id=0)
+
+    output_queue.put.assert_called_once_with(QueueSignals.error)
+    input_queue.close.assert_called_once()
+    output_queue.close.assert_called_once()
+    assert num_active_workers.value == 0
+
+
+def test_worker_function_process_mock_exception():
+    """Test _worker handles exceptions raised during worker.process()."""
+    input_queue = MagicMock()
+    output_queue = MagicMock()
+    num_active_workers = MagicMock()
+    num_active_workers.get_lock.return_value.__enter__ = MagicMock(return_value=None)
+    num_active_workers.get_lock.return_value.__exit__ = MagicMock(return_value=False)
+    num_active_workers.value = 1
+
+    mock_worker_class = MagicMock()
+    mock_worker_instance = MagicMock()
+    mock_worker_class.start.return_value = mock_worker_instance
+    mock_worker_instance.process.side_effect = RuntimeError("Process failed")
+
+    _worker(mock_worker_class, input_queue, output_queue, num_active_workers, worker_id=0)
+
+    output_queue.put.assert_called_once_with(QueueSignals.error)
+    input_queue.close.assert_called_once()
+    output_queue.close.assert_called_once()
+    assert num_active_workers.value == 0
+
+
 # --- Tests for device_ids branch (lines 123-126) ---
 
 
