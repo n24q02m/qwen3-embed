@@ -378,6 +378,52 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
+    def test_decompress_safe_relative_symlink_succeeds(self, tmp_path):
+        """Valid relative symlinks that do not traverse outside the target dir are successfully extracted."""
+        cache_dir = tmp_path / "tmp_cache_dir_safe_symlink"
+        cache_dir.mkdir()
+
+        safe_tar = tmp_path / "safe_symlink.tar.gz"
+        with tarfile.open(safe_tar, "w:gz") as tar:
+            # File
+            info = tarfile.TarInfo(name="bar")
+            info.size = 4
+            fileobj = io.BytesIO(b"data")
+            tar.addfile(info, fileobj=fileobj)
+
+            # Directory
+            info = tarfile.TarInfo(name="foo")
+            info.type = tarfile.DIRTYPE
+            tar.addfile(info)
+
+            # Symlink pointing back to file
+            info = tarfile.TarInfo(name="foo/symlink")
+            info.type = tarfile.SYMTYPE
+            info.linkname = "../bar"
+            tar.addfile(info)
+
+        result = ModelManagement.decompress_to_cache(str(safe_tar), str(cache_dir))
+        assert result == str(cache_dir)
+        assert (cache_dir / "foo" / "symlink").exists()
+        assert (cache_dir / "bar").exists()
+
+    def test_decompress_symlink_absolute_path_traversal_prevention(self, tmp_path):
+        """Tar slip via malicious absolute symlink raises TarError and cache dir is removed."""
+        cache_dir = tmp_path / "tmp_cache_dir_symlink"
+        cache_dir.mkdir()
+
+        malicious_tar = tmp_path / "malicious_symlink.tar.gz"
+        with tarfile.open(malicious_tar, "w:gz") as tar:
+            info = tarfile.TarInfo(name="evil_symlink")
+            info.type = tarfile.SYMTYPE
+            info.linkname = "/etc/passwd"
+            tar.addfile(info)
+
+        with pytest.raises(tarfile.TarError):
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
+
+        assert not cache_dir.exists()
+
     def test_decompress_absolute_path_traversal_prevention(self, tmp_path):
         """Tar slip via absolute path raises TarError and cache dir is removed."""
         cache_dir = tmp_path / "tmp_cache_dir_abs"

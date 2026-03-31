@@ -368,6 +368,26 @@ class ModelManagement(Generic[T]):
                         raise tarfile.TarError(
                             f"Attempted path traversal in tar file: {member.name}"
                         )
+                    # SECURITY: Validate symlink and hardlink destinations to prevent arbitrary file overwrite.
+                    if member.issym() or member.islnk():
+                        if os.path.isabs(member.linkname) or member.linkname.startswith("/"):
+                            raise tarfile.TarError(
+                                f"Attempted path traversal via link in tar file: {member.linkname}"
+                            )
+
+                        # Resolve the link relative to the directory containing the symlink
+                        member_dir = os.path.dirname(os.path.join(target_dir, member.name))
+                        link_path = os.path.abspath(os.path.join(member_dir, member.linkname))
+
+                        abs_target_dir = os.path.abspath(target_dir)
+
+                        if (
+                            not link_path.startswith(abs_target_dir + os.sep)
+                            and link_path != abs_target_dir
+                        ):
+                            raise tarfile.TarError(
+                                f"Attempted path traversal via link in tar file: {member.linkname}"
+                            )
                     safe_members.append(member)
 
                 if hasattr(tarfile, "data_filter"):
