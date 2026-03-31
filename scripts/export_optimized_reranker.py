@@ -59,19 +59,8 @@ class Qwen3RerankerYesNo(nn.Module):
         return logits
 
 
-def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    print(f"Loading model: {model_id}")
-    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-    base_model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        dtype=torch.float32,
-        trust_remote_code=True,
-    )
-
-    # Verify token IDs
+def verify_token_ids(tokenizer: AutoTokenizer) -> None:
+    """Verify that 'yes' and 'no' tokens match the expected IDs."""
     yes_token = tokenizer.encode("yes", add_special_tokens=False)
     no_token = tokenizer.encode("no", add_special_tokens=False)
     print(f"Tokenizer 'yes' -> {yes_token}, 'no' -> {no_token}")
@@ -80,11 +69,11 @@ def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
     )
     assert TOKEN_NO_ID in no_token, f"TOKEN_NO_ID mismatch: expected {TOKEN_NO_ID} in {no_token}"
 
-    print("Creating optimized yes/no model...")
-    model = Qwen3RerankerYesNo(base_model)
-    model.eval()
 
-    # Quick sanity check
+def verify_optimized_model_pytorch(
+    tokenizer: AutoTokenizer, model: nn.Module, base_model: AutoModelForCausalLM
+) -> tuple[dict, torch.Tensor]:
+    """Run a quick sanity check and compare with original model."""
     dummy_text = (
         "<|im_start|>system\nJudge<|im_end|>\n"
         "<|im_start|>user\ntest<|im_end|>\n"
@@ -111,8 +100,11 @@ def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
     print(f"Max absolute difference vs original: {diff:.2e}")
     assert diff < 1e-4, f"Output mismatch too large: {diff}"
 
-    # Export to ONNX
-    onnx_fp32_path = output_path / "model.onnx"
+    return dummy_tokens, test_output
+
+
+def export_to_onnx(model: nn.Module, dummy_tokens: dict, onnx_fp32_path: Path, opset: int) -> None:
+    """Export the optimized model to ONNX format."""
     print(f"Exporting ONNX to {onnx_fp32_path}...")
 
     dynamic_axes = {
@@ -137,8 +129,9 @@ def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
     onnx.checker.check_model(str(onnx_fp32_path))
     print(f"ONNX model verified. Size: {onnx_fp32_path.stat().st_size / 1e6:.1f} MB")
 
-    # INT8 dynamic quantization
-    onnx_int8_path = output_path / "model_quantized.onnx"
+
+def quantize_onnx_model(onnx_fp32_path: Path, onnx_int8_path: Path) -> None:
+    """Quantize the exported ONNX model to INT8."""
     print(f"Quantizing to INT8: {onnx_int8_path}...")
     quantize_dynamic(
         str(onnx_fp32_path),
@@ -147,11 +140,11 @@ def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
     )
     print(f"Quantized model size: {onnx_int8_path.stat().st_size / 1e6:.1f} MB")
 
-    # Copy tokenizer files
-    print("Saving tokenizer...")
-    tokenizer.save_pretrained(str(output_path))
 
-    # Verify with onnxruntime
+def verify_onnxruntime(
+    onnx_int8_path: Path, dummy_tokens: dict, test_output: torch.Tensor
+) -> None:
+    """Verify the quantized model with ONNXRuntime."""
     print("Verifying with onnxruntime...")
     import onnxruntime as ort
 
@@ -167,6 +160,39 @@ def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
     # Verify numerical consistency
     ort_diff = np.abs(ort_output[0] - test_output.numpy()).max()
     print(f"ORT vs PyTorch max diff: {ort_diff:.2e}")
+
+
+def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
+    """Export the optimized model and tokenizer."""
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    print(f"Loading model: {model_id}")
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    base_model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        dtype=torch.float32,
+        trust_remote_code=True,
+    )
+
+    verify_token_ids(tokenizer)
+
+    print("Creating optimized yes/no model...")
+    model = Qwen3RerankerYesNo(base_model)
+    model.eval()
+
+    dummy_tokens, test_output = verify_optimized_model_pytorch(tokenizer, model, base_model)
+
+    onnx_fp32_path = output_path / "model.onnx"
+    export_to_onnx(model, dummy_tokens, onnx_fp32_path, opset)
+
+    onnx_int8_path = output_path / "model_quantized.onnx"
+    quantize_onnx_model(onnx_fp32_path, onnx_int8_path)
+
+    print("Saving tokenizer...")
+    tokenizer.save_pretrained(str(output_path))
+
+    verify_onnxruntime(onnx_int8_path, dummy_tokens, test_output)
 
     print(f"\nExport complete! Files in {output_path}:")
     for f in sorted(output_path.iterdir()):
