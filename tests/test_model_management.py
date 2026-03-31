@@ -1129,3 +1129,65 @@ class TestDownloadModel:
         patterns = captured_patterns[0]
         assert "weights.onnx" in patterns
         assert "vocab.txt" in patterns
+
+
+# ---------------------------------------------------------------------------
+# TestSaveFileMetadata
+# ---------------------------------------------------------------------------
+
+
+class TestSaveFileMetadata:
+    """Tests for _save_file_metadata."""
+
+    def test_save_file_metadata_oserror(self, tmp_path):
+        """Test that OSError during write_text is caught and logged."""
+        meta = {"model.onnx": {"size": 500, "blob_id": "aaa"}}
+
+        # We need an existing directory to avoid the mkdir block raising
+        model_dir = tmp_path / "test_dir"
+        model_dir.mkdir()
+
+        def mock_write_text(self, data, *args, **kwargs):
+            raise OSError("Mock disk error")
+
+        with (
+            patch("qwen3_embed.common.model_management.Path.write_text", new=mock_write_text),
+            patch("qwen3_embed.common.model_management.logger.exception") as mock_exception,
+            patch("qwen3_embed.common.model_management.logger.warning") as mock_warning,
+        ):
+            ModelManagement._save_file_metadata(model_dir, meta)
+
+        mock_exception.assert_called_once()
+        args, _ = mock_exception.call_args
+        assert isinstance(args[0], OSError)
+        assert str(args[0]) == "Mock disk error"
+
+        mock_warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
+
+    def test_save_file_metadata_valueerror(self, tmp_path):
+        """Test that ValueError during json.dumps is caught and logged."""
+        meta = {"model.onnx": {"size": 500, "blob_id": "aaa"}}
+
+        model_dir = tmp_path / "test_dir"
+        model_dir.mkdir()
+
+        def mock_dumps(*args, **kwargs):
+            raise ValueError("Mock JSON error")
+
+        with (
+            patch("qwen3_embed.common.model_management.json.dumps", side_effect=mock_dumps),
+            patch("qwen3_embed.common.model_management.logger.exception") as mock_exception,
+            patch("qwen3_embed.common.model_management.logger.warning") as mock_warning,
+        ):
+            ModelManagement._save_file_metadata(model_dir, meta)
+
+        mock_exception.assert_called_once()
+        args, _ = mock_exception.call_args
+        assert isinstance(args[0], ValueError)
+        assert str(args[0]) == "Mock JSON error"
+
+        mock_warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
