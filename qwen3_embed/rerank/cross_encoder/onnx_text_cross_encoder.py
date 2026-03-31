@@ -1,9 +1,8 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from typing import Any
 
 from loguru import logger
 
-from qwen3_embed.common import OnnxProvider
 from qwen3_embed.common.model_description import BaseModelDescription
 from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.common.types import Device
@@ -30,19 +29,7 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
         """
         return supported_onnx_models
 
-    def __init__(
-        self,
-        model_name: str,
-        cache_dir: str | None = None,
-        threads: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        lazy_load: bool = False,
-        device_id: int | None = None,
-        specific_model_path: str | None = None,
-        **kwargs: Any,
-    ):
+    def __init__(self, model_name: str, **kwargs: Any):
         """
         Args:
             model_name (str): The name of the model to use.
@@ -65,14 +52,17 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
         Raises:
             ValueError: If the model_name is not in the format <org>/<model> e.g. Xenova/ms-marco-MiniLM-L-6-v2.
         """
-        super().__init__(model_name, cache_dir, threads, **kwargs)
-        self.providers = providers
-        self.lazy_load = lazy_load
-        self._extra_session_options = self._select_exposed_session_options(kwargs)
+        cache_dir = kwargs.pop("cache_dir", None)
+        threads = kwargs.pop("threads", None)
+        self.providers = kwargs.pop("providers", None)
+        self.cuda = kwargs.pop("cuda", Device.AUTO)
+        self.device_ids = kwargs.pop("device_ids", None)
+        self.lazy_load = kwargs.pop("lazy_load", False)
+        device_id = kwargs.pop("device_id", None)
+        self._specific_model_path = kwargs.pop("specific_model_path", None)
 
-        # List of device ids, that can be used for data parallel processing in workers
-        self.device_ids = device_ids
-        self.cuda = cuda
+        super().__init__(model_name, cache_dir, threads, **kwargs)
+        self._extra_session_options = self._select_exposed_session_options(kwargs)
 
         if self.device_ids is not None and len(self.device_ids) > 1:
             logger.warning(
@@ -89,7 +79,6 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
 
         self.model_description = self._get_model_description(model_name)
         self.cache_dir = str(define_cache_dir(cache_dir))
-        self._specific_model_path = specific_model_path
         self._model_dir = self.download_model(
             self.model_description,
             self.cache_dir,
