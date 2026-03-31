@@ -383,12 +383,14 @@ class ModelManagement(Generic[T]):
     @classmethod
     def retrieve_model_gcs(
         cls,
-        model_name: str,
-        source_url: str,
+        model: "BaseModelDescription",
         cache_dir: str,
-        deprecated_tar_struct: bool = False,
-        local_files_only: bool = False,
+        **kwargs: Any,
     ) -> Path:
+        model_name = model.model
+        source_url = model.sources.url
+        deprecated_tar_struct = model.sources.deprecated_tar_struct
+        local_files_only = kwargs.get("local_files_only", False)
         fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{model_name.split('/')[-1]}"
         cache_tmp_dir = Path(cache_dir) / "tmp"
         model_tmp_dir = cache_tmp_dir / fast_model_name
@@ -489,23 +491,20 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _download_from_gcs(
         cls,
-        model_name: str,
-        url_source: str | None,
+        model: "BaseModelDescription",
         cache_dir: str,
-        deprecated_tar_struct: bool,
-        local_files_only: bool,
+        **kwargs: Any,
     ) -> Path | None:
+        local_files_only = kwargs.get("local_files_only", False)
         try:
             return cls.retrieve_model_gcs(
-                model_name,
-                str(url_source),
-                str(cache_dir),
-                deprecated_tar_struct=deprecated_tar_struct,
-                local_files_only=local_files_only,
+                model=model,
+                cache_dir=cache_dir,
+                **kwargs,
             )
         except Exception:
             if not local_files_only:
-                logger.error(f"Could not download model from url: {url_source}")
+                logger.error(f"Could not download model from url: {model.sources.url}")
         return None
 
     @classmethod
@@ -572,10 +571,8 @@ class ModelManagement(Generic[T]):
 
             if url_source or local_files_only:
                 gcs_path = cls._download_from_gcs(
-                    model_name=model.model,
-                    url_source=url_source,
+                    model=model,
                     cache_dir=cache_dir,
-                    deprecated_tar_struct=model.sources.deprecated_tar_struct,
                     local_files_only=local_files_only,
                 )
                 if gcs_path:
