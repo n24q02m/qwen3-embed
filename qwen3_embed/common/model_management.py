@@ -375,7 +375,9 @@ class ModelManagement(Generic[T]):
                             raise tarfile.TarError(
                                 f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
                             )
-                        link_target_path = os.path.abspath(os.path.join(os.path.dirname(member_path), member.linkname))
+                        link_target_path = os.path.abspath(
+                            os.path.join(os.path.dirname(member_path), member.linkname)
+                        )
                         if (
                             not link_target_path.startswith(target_dir + os.sep)
                             and link_target_path != target_dir
