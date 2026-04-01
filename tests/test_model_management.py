@@ -396,6 +396,40 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
+    def test_decompress_symlink_slip_prevention(self, tmp_path):
+        """Tar slip via symlink traversal raises TarError and cache dir is removed."""
+        cache_dir = tmp_path / "tmp_cache_dir_symlink"
+        cache_dir.mkdir()
+
+        malicious_tar = tmp_path / "malicious_symlink.tar.gz"
+        with tarfile.open(malicious_tar, "w:gz") as tar:
+            info = tarfile.TarInfo(name="evil_symlink")
+            info.type = tarfile.SYMTYPE
+            info.linkname = "../evil.txt"
+            tar.addfile(info)
+
+        with pytest.raises(tarfile.TarError):
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
+
+        assert not cache_dir.exists()
+
+    def test_decompress_symlink_absolute_prevention(self, tmp_path):
+        """Tar slip via absolute symlink raises TarError and cache dir is removed."""
+        cache_dir = tmp_path / "tmp_cache_dir_symlink_abs"
+        cache_dir.mkdir()
+
+        malicious_tar = tmp_path / "malicious_symlink_abs.tar.gz"
+        with tarfile.open(malicious_tar, "w:gz") as tar:
+            info = tarfile.TarInfo(name="evil_symlink_abs")
+            info.type = tarfile.SYMTYPE
+            info.linkname = "/etc/passwd"
+            tar.addfile(info)
+
+        with pytest.raises(tarfile.TarError):
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
+
+        assert not cache_dir.exists()
+
     def test_decompress_mid_extraction_failure(self, tmp_path):
         """Mid-extraction TarError is re-raised and cache dir is removed."""
         tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
