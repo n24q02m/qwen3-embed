@@ -1158,11 +1158,14 @@ class TestCheckHFCache:
 
         mock_download.return_value = str(snapshot_dir)
 
+        model = MagicMock()
+        model.sources.hf = "org/repo"
+        model.model_file = model_file
+        model.additional_files = []
+
         result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+            model=model,
             cache_dir=str(cache_dir),
-            extra_patterns=[model_file],
-            model_file=model_file,
         )
 
         assert result == snapshot_dir
@@ -1185,11 +1188,14 @@ class TestCheckHFCache:
 
         mock_download.return_value = str(snapshot_dir)
 
+        model = MagicMock()
+        model.sources.hf = "org/repo"
+        model.model_file = model_file
+        model.additional_files = []
+
         result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+            model=model,
             cache_dir=str(cache_dir),
-            extra_patterns=[model_file],
-            model_file=model_file,
         )
 
         assert result is None
@@ -1206,11 +1212,14 @@ class TestCheckHFCache:
         mock_download.side_effect = Exception("Not found in cache")
         model_file = "model.onnx"
 
+        model = MagicMock()
+        model.sources.hf = "org/repo"
+        model.model_file = model_file
+        model.additional_files = []
+
         result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+            model=model,
             cache_dir=str(cache_dir),
-            extra_patterns=[model_file],
-            model_file=model_file,
         )
 
         assert result is None

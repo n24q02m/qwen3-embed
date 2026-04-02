@@ -438,18 +438,20 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _check_hf_cache(
         cls,
-        hf_source: str,
+        model: T,
         cache_dir: str,
-        extra_patterns: list[str],
-        model_file: str,
         **kwargs: Any,
     ) -> Path | None:
+        hf_source = model.sources.hf
+        model_file = model.model_file
+        extra_patterns = [model.model_file] + model.additional_files
+
         try:
             cache_kwargs = deepcopy(kwargs)
             cache_kwargs["local_files_only"] = True
             cached_path = Path(
                 cls.download_files_from_huggingface(
-                    hf_source,
+                    hf_source,  # type: ignore
                     cache_dir=cache_dir,
                     extra_patterns=extra_patterns,
                     **cache_kwargs,
@@ -465,14 +467,14 @@ class ModelManagement(Generic[T]):
         return None
 
     @classmethod
-    def _download_from_hf(
-        cls, hf_source: str, cache_dir: str, extra_patterns: list[str], **kwargs: Any
-    ) -> Path | None:
+    def _download_from_hf(cls, model: T, cache_dir: str, **kwargs: Any) -> Path | None:
+        hf_source = model.sources.hf
+        extra_patterns = [model.model_file] + model.additional_files
         local_files_only = kwargs.get("local_files_only", False)
         try:
             return Path(
                 cls.download_files_from_huggingface(
-                    hf_source,
+                    hf_source,  # type: ignore
                     cache_dir=cache_dir,
                     extra_patterns=extra_patterns,
                     **kwargs,
@@ -491,12 +493,13 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _download_from_gcs(
         cls,
-        model_name: str,
-        url_source: str | None,
+        model: T,
         cache_dir: str,
-        deprecated_tar_struct: bool,
         local_files_only: bool,
     ) -> Path | None:
+        model_name = model.model
+        url_source = model.sources.url
+        deprecated_tar_struct = model.sources.deprecated_tar_struct
         try:
             return cls.retrieve_model_gcs(
                 model_name,
@@ -544,15 +547,10 @@ class ModelManagement(Generic[T]):
         hf_source = model.sources.hf
         url_source = model.sources.url
 
-        extra_patterns = [model.model_file]
-        extra_patterns.extend(model.additional_files)
-
         if hf_source:
             cached_path = cls._check_hf_cache(
-                hf_source=hf_source,
+                model=model,
                 cache_dir=cache_dir,
-                extra_patterns=extra_patterns,
-                model_file=model.model_file,
                 **kwargs,
             )
             if cached_path:
@@ -564,9 +562,8 @@ class ModelManagement(Generic[T]):
 
             if hf_source and not local_files_only:
                 hf_path = cls._download_from_hf(
-                    hf_source=hf_source,
+                    model=model,
                     cache_dir=cache_dir,
-                    extra_patterns=extra_patterns,
                     **kwargs,
                 )
                 if hf_path:
@@ -574,10 +571,8 @@ class ModelManagement(Generic[T]):
 
             if url_source or local_files_only:
                 gcs_path = cls._download_from_gcs(
-                    model_name=model.model,
-                    url_source=url_source,
+                    model=model,
                     cache_dir=cache_dir,
-                    deprecated_tar_struct=model.sources.deprecated_tar_struct,
                     local_files_only=local_files_only,
                 )
                 if gcs_path:
