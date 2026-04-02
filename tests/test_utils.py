@@ -358,3 +358,28 @@ class TestDefineCacheDir:
         assert res == Path("/custom/arg/path")
         mock_mkdir.assert_called_once_with(mode=0o700, parents=True, exist_ok=True)
         mock_chmod.assert_called_once_with(0o700)
+
+    @patch("qwen3_embed.common.utils.Path.mkdir")
+    @patch("qwen3_embed.common.utils.Path.chmod")
+    @patch.dict(os.environ, {"QWEN3_EMBED_CACHE_PATH": ""})
+    def test_qwen3_cache_path_empty(self, mock_chmod, mock_mkdir):
+        """Empty environment variable should cause a fallback."""
+        res = define_cache_dir()
+        assert str(res).endswith("qwen3_embed")
+
+    @patch("qwen3_embed.common.utils.Path.mkdir")
+    @patch("qwen3_embed.common.utils.Path.chmod")
+    @patch.dict(os.environ, {"XDG_CACHE_HOME": ""}, clear=True)
+    def test_xdg_cache_home_empty(self, mock_chmod, mock_mkdir):
+        """Empty XDG_CACHE_HOME should cause a fallback to ~/.cache."""
+        res = define_cache_dir()
+        assert res == Path.home() / ".cache/qwen3_embed"
+
+    def test_functional_creation(self, tmp_path: Path) -> None:
+        """Verify the directory is actually created with 0o700 permissions."""
+        cache_dir = tmp_path / "test_cache_dir"
+        res = define_cache_dir(str(cache_dir))
+        assert res.exists()
+        assert res.is_dir()
+        # Verify permissions (mode & 0o777)
+        assert (res.stat().st_mode & 0o777) == 0o700
