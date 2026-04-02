@@ -355,6 +355,7 @@ class ModelManagement(Generic[T]):
                 target_dir = os.path.abspath(cache_dir)
 
                 safe_members = []
+                # SECURITY: Prevent path traversal via member name or link target.
                 for member in tar.getmembers():
                     if os.path.isabs(member.name) or member.name.startswith("/"):
                         raise tarfile.TarError(
@@ -368,8 +369,27 @@ class ModelManagement(Generic[T]):
                         raise tarfile.TarError(
                             f"Attempted path traversal in tar file: {member.name}"
                         )
-                    safe_members.append(member)
 
+                    # Check for traversal via symlinks or hardlinks
+                    if member.issym() or member.islnk():
+                        link_target = member.linkname
+                        if os.path.isabs(link_target) or link_target.startswith("/"):
+                            raise tarfile.TarError(
+                                f"Attempted path traversal via link in tar file: {member.name} -> {link_target}"
+                            )
+                        # Resolve the link target relative to the member's directory
+                        link_path = os.path.abspath(
+                            os.path.join(os.path.dirname(member_path), link_target)
+                        )
+                        if (
+                            not link_path.startswith(target_dir + os.sep)
+                            and link_path != target_dir
+                        ):
+                            raise tarfile.TarError(
+                                f"Attempted path traversal via link in tar file: {member.name} -> {link_target}"
+                            )
+
+                    safe_members.append(member)
                 if hasattr(tarfile, "data_filter"):
                     tar.extractall(path=cache_dir, members=safe_members, filter="data")
                 else:
