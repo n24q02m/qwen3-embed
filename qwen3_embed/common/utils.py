@@ -98,7 +98,7 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
 @functools.lru_cache(maxsize=1)
 def get_all_punctuation() -> frozenset[str]:
     return frozenset(
-        chr(i) for i in range(sys.maxunicode) if unicodedata.category(chr(i)).startswith("P")
+        chr(i) for i in range(sys.maxunicode + 1) if unicodedata.category(chr(i)).startswith("P")
     )
 
 

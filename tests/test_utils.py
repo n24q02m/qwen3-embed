@@ -9,6 +9,7 @@ import pytest
 
 from qwen3_embed.common.utils import (
     define_cache_dir,
+    get_all_punctuation,
     iter_batch,
     last_token_pool,
     mean_pooling,
@@ -221,14 +222,12 @@ class TestGetAllPunctuation:
 
     def test_returns_frozenset(self) -> None:
         """Should return a frozenset."""
-        from qwen3_embed.common.utils import get_all_punctuation
 
         result = get_all_punctuation()
         assert isinstance(result, frozenset)
 
     def test_contains_common_punctuation(self) -> None:
         """Should contain common ASCII punctuation marks."""
-        from qwen3_embed.common.utils import get_all_punctuation
 
         punctuation = get_all_punctuation()
 
@@ -256,7 +255,6 @@ class TestGetAllPunctuation:
 
     def test_does_not_contain_alphanumeric(self) -> None:
         """Should not contain alphanumeric characters."""
-        from qwen3_embed.common.utils import get_all_punctuation
 
         punctuation = get_all_punctuation()
         alphanumeric = ["a", "Z", "0", "9", " ", "\n", "\t"]
@@ -265,11 +263,27 @@ class TestGetAllPunctuation:
 
     def test_caching(self) -> None:
         """Multiple calls should return the exact same object due to lru_cache."""
-        from qwen3_embed.common.utils import get_all_punctuation
 
         result1 = get_all_punctuation()
         result2 = get_all_punctuation()
         assert result1 is result2
+
+    def test_non_ascii_punctuation(self) -> None:
+        """Verify non-ASCII punctuation marks are included."""
+
+        punctuation = get_all_punctuation()
+        assert "¿" in punctuation
+        assert "«" in punctuation
+        assert "—" in punctuation
+
+    def test_excludes_symbols(self) -> None:
+        """Verify math and currency symbols are excluded."""
+
+        punctuation = get_all_punctuation()
+        assert "+" not in punctuation
+        assert "=" not in punctuation
+        assert "$" not in punctuation
+        assert "€" not in punctuation
 
 
 class TestRemoveNonAlphanumeric:
