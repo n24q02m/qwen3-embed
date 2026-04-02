@@ -1,0 +1,365 @@
+diff --git a/pytest_full.log b/pytest_full.log
+new file mode 100644
+index 0000000..24c8995
+--- /dev/null
++++ b/pytest_full.log
+@@ -0,0 +1,17 @@
++============================= test session starts ==============================
++platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
++rootdir: /app
++configfile: pyproject.toml
++testpaths: tests
++plugins: cov-7.0.0, syrupy-5.1.0, anyio-4.12.1, xdist-3.8.0
++collected 482 items
++
++tests/test_cross_encoder_onnx.py ....................................... [  8%]
++...............                                                          [ 11%]
++tests/test_custom_cross_encoder.py ..                                    [ 11%]
++tests/test_custom_model.py ....                                          [ 12%]
++tests/test_custom_text_cross_encoder.py ....                             [ 13%]
++tests/test_custom_text_embedding.py ............................         [ 19%]
++tests/test_gguf_cross_encoder.py ..............................          [ 25%]
++tests/test_gguf_embedding.py ..........................                  [ 30%]
++tests/test_integration.py .................................
+\ No newline at end of file
+diff --git a/pytest_no_int.log b/pytest_no_int.log
+new file mode 100644
+index 0000000..b4ffbda
+--- /dev/null
++++ b/pytest_no_int.log
+@@ -0,0 +1,43 @@
++============================= test session starts ==============================
++platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
++rootdir: /app
++configfile: pyproject.toml
++testpaths: tests
++plugins: cov-7.0.0, syrupy-5.1.0, anyio-4.12.1, xdist-3.8.0
++collected 407 items
++
++tests/test_cross_encoder_onnx.py ....................................... [  9%]
++...............                                                          [ 13%]
++tests/test_custom_cross_encoder.py ..                                    [ 13%]
++tests/test_custom_model.py ....                                          [ 14%]
++tests/test_custom_text_cross_encoder.py ....                             [ 15%]
++tests/test_custom_text_embedding.py ............................         [ 22%]
++tests/test_gguf_cross_encoder.py ..............................          [ 29%]
++tests/test_gguf_embedding.py ..........................                  [ 36%]
++tests/test_model_description.py ......                                   [ 37%]
++tests/test_model_management.py ......................................... [ 47%]
++.................                                                        [ 52%]
++tests/test_onnx_embedding.py .......                                     [ 53%]
++tests/test_onnx_embedding_shapes.py .                                    [ 54%]
++tests/test_onnx_model_loading.py ............                            [ 57%]
++tests/test_parallel_processor.py ...........................             [ 63%]
++tests/test_pooled_embedding.py .....                                     [ 64%]
++tests/test_pooled_normalized_embedding.py ..                             [ 65%]
++tests/test_pooling.py ........                                           [ 67%]
++tests/test_preprocessor_utils.py ...........                             [ 70%]
++tests/test_qwen3_embedding.py .........                                  [ 72%]
++tests/test_qwen3_reranker.py ...........................                 [ 78%]
++tests/test_text_cross_encoder.py ..                                      [ 79%]
++tests/test_text_embedding.py ..                                          [ 79%]
++tests/test_text_onnx_text_model.py ..................................... [ 88%]
++...                                                                      [ 89%]
++tests/test_types.py ....                                                 [ 90%]
++tests/test_utils.py ......................................               [100%]
++
++=============================== warnings summary ===============================
++tests/test_parallel_processor.py: 23 warnings
++  /home/jules/.pyenv/versions/3.12.13/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=138333) is multi-threaded, use of fork() may lead to deadlocks in the child.
++    self.pid = os.fork()
++
++-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
++======================= 407 passed, 23 warnings in 3.50s =======================
+diff --git a/qwen3_embed/rerank/cross_encoder/text_cross_encoder.py b/qwen3_embed/rerank/cross_encoder/text_cross_encoder.py
+index 079c0b2..c1d926c 100644
+--- a/qwen3_embed/rerank/cross_encoder/text_cross_encoder.py
++++ b/qwen3_embed/rerank/cross_encoder/text_cross_encoder.py
+@@ -5,7 +5,6 @@ from typing import Any
+ from qwen3_embed.common import OnnxProvider
+ from qwen3_embed.common.model_description import (
+     BaseModelDescription,
+-    ModelSource,
+ )
+ from qwen3_embed.common.types import Device
+ from qwen3_embed.rerank.cross_encoder.custom_text_cross_encoder import CustomTextCrossEncoder
+@@ -140,34 +139,18 @@ class TextCrossEncoder(TextCrossEncoderBase):
+     @classmethod
+     def add_custom_model(
+         cls,
+-        model: str,
+-        sources: ModelSource,
+-        model_file: str = "onnx/model.onnx",
+-        description: str = "",
+-        license: str = "",
+-        size_in_gb: float = 0.0,
+-        additional_files: list[str] | None = None,
++        model_description: BaseModelDescription,
+     ) -> None:
+         registered_models = cls._list_supported_models()
+-        model_lower = model.lower()
++        model_lower = model_description.model.lower()
+         for registered_model in registered_models:
+             if model_lower == registered_model.model.lower():
+                 raise ValueError(
+-                    f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
+-                    f"please use another model name"
++                    f"Model {model_description.model} is already registered in CrossEncoderModel, "
++                    f"if you still want to add this model, please use another model name"
+                 )
+
+-        CustomTextCrossEncoder.add_model(
+-            BaseModelDescription(
+-                model=model,
+-                sources=sources,
+-                model_file=model_file,
+-                description=description,
+-                license=license,
+-                size_in_GB=size_in_gb,
+-                additional_files=additional_files or [],
+-            )
+-        )
++        CustomTextCrossEncoder.add_model(model_description)
+
+     def token_count(
+         self, pairs: Iterable[tuple[str, str]], batch_size: int = 1024, **kwargs: Any
+diff --git a/qwen3_embed/text/text_embedding.py b/qwen3_embed/text/text_embedding.py
+index ef3ffb9..2ab4130 100644
+--- a/qwen3_embed/text/text_embedding.py
++++ b/qwen3_embed/text/text_embedding.py
+@@ -2,7 +2,7 @@ from collections.abc import Iterable, Sequence
+ from dataclasses import asdict
+ from typing import Any
+
+-from qwen3_embed.common.model_description import DenseModelDescription, ModelSource, PoolingType
++from qwen3_embed.common.model_description import DenseModelDescription, PoolingType
+ from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
+ from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
+ from qwen3_embed.text.gguf_embedding import Qwen3TextEmbeddingGGUF
+@@ -42,38 +42,22 @@ class TextEmbedding(TextEmbeddingBase):
+     @classmethod
+     def add_custom_model(
+         cls,
+-        model: str,
++        model_description: DenseModelDescription,
+         pooling: PoolingType,
+         normalization: bool,
+-        sources: ModelSource,
+-        dim: int,
+-        model_file: str = "onnx/model.onnx",
+-        description: str = "",
+-        license: str = "",
+-        size_in_gb: float = 0.0,
+-        additional_files: list[str] | None = None,
+     ) -> None:
+         registered_models = cls._list_supported_models()
+         # ⚡ Bolt: Cache lowercase model name outside loop
+-        model_lower = model.lower()
++        model_lower = model_description.model.lower()
+         for registered_model in registered_models:
+             if model_lower == registered_model.model.lower():
+                 raise ValueError(
+-                    f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
++                    f"Model {model_description.model} is already registered in TextEmbedding, if you still want to add this model, "
+                     f"please use another model name"
+                 )
+
+         CustomTextEmbedding.add_model(
+-            DenseModelDescription(
+-                model=model,
+-                sources=sources,
+-                dim=dim,
+-                model_file=model_file,
+-                description=description,
+-                license=license,
+-                size_in_GB=size_in_gb,
+-                additional_files=additional_files or [],
+-            ),
++            model_description,
+             pooling=pooling,
+             normalization=normalization,
+         )
+diff --git a/tests/test_custom_cross_encoder.py b/tests/test_custom_cross_encoder.py
+index 7b0f8ae..7254216 100644
+--- a/tests/test_custom_cross_encoder.py
++++ b/tests/test_custom_cross_encoder.py
+@@ -2,7 +2,7 @@
+
+ import pytest
+
+-from qwen3_embed.common.model_description import ModelSource
++from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
+ from qwen3_embed.rerank.cross_encoder.custom_text_cross_encoder import CustomTextCrossEncoder
+ from qwen3_embed.rerank.cross_encoder.text_cross_encoder import TextCrossEncoder
+
+@@ -17,8 +17,14 @@ class TestCustomCrossEncoderRegistration:
+     def test_register_model(self):
+         """Test adding a basic model."""
+         TextCrossEncoder.add_custom_model(
+-            model="test/model",
+-            sources=ModelSource(hf="test/model"),
++            model_description=BaseModelDescription(
++                model="test/model",
++                sources=ModelSource(hf="test/model"),
++                model_file="onnx/model.onnx",
++                description="",
++                license="",
++                size_in_GB=0.0,
++            )
+         )
+         models = TextCrossEncoder.list_supported_models()
+         assert any(m["model"] == "test/model" for m in models)
+@@ -26,8 +32,14 @@ class TestCustomCrossEncoderRegistration:
+     def test_duplicate_model_raises_case_insensitive(self):
+         """Test adding a duplicate model with different casing raises ValueError."""
+         TextCrossEncoder.add_custom_model(
+-            model="Test/Duplicate",
+-            sources=ModelSource(hf="Test/Duplicate"),
++            model_description=BaseModelDescription(
++                model="Test/Duplicate",
++                sources=ModelSource(hf="Test/Duplicate"),
++                model_file="onnx/model.onnx",
++                description="",
++                license="",
++                size_in_GB=0.0,
++            )
+         )
+
+         # Verify it was added
+@@ -37,6 +49,12 @@ class TestCustomCrossEncoderRegistration:
+         # Try adding again with different case
+         with pytest.raises(ValueError, match="already registered"):
+             TextCrossEncoder.add_custom_model(
+-                model="test/duplicate",
+-                sources=ModelSource(hf="test/duplicate"),
++                model_description=BaseModelDescription(
++                    model="test/duplicate",
++                    sources=ModelSource(hf="test/duplicate"),
++                    model_file="onnx/model.onnx",
++                    description="",
++                    license="",
++                    size_in_GB=0.0,
++                )
+             )
+diff --git a/tests/test_custom_model.py b/tests/test_custom_model.py
+index ee09e10..22d293e 100644
+--- a/tests/test_custom_model.py
++++ b/tests/test_custom_model.py
+@@ -2,7 +2,7 @@
+
+ import pytest
+
+-from qwen3_embed.common.model_description import ModelSource, PoolingType
++from qwen3_embed.common.model_description import DenseModelDescription, ModelSource, PoolingType
+ from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
+ from qwen3_embed.text.text_embedding import TextEmbedding
+
+@@ -17,50 +17,80 @@ class TestCustomModelRegistration:
+
+     def test_register_cls_pooling_model(self):
+         TextEmbedding.add_custom_model(
+-            model="test/cls-model",
++            model_description=DenseModelDescription(
++                model="test/cls-model",
++                sources=ModelSource(hf="test/cls-model"),
++                dim=768,
++                model_file="onnx/model.onnx",
++                description="",
++                license="",
++                size_in_GB=0.0,
++            ),
+             pooling=PoolingType.CLS,
+             normalization=True,
+-            sources=ModelSource(hf="test/cls-model"),
+-            dim=768,
+         )
+         models = TextEmbedding.list_supported_models()
+         assert any(m["model"] == "test/cls-model" for m in models)
+
+     def test_register_mean_pooling_model(self):
+         TextEmbedding.add_custom_model(
+-            model="test/mean-model",
++            model_description=DenseModelDescription(
++                model="test/mean-model",
++                sources=ModelSource(hf="test/mean-model"),
++                dim=512,
++                model_file="onnx/model.onnx",
++                description="",
++                license="",
++                size_in_GB=0.0,
++            ),
+             pooling=PoolingType.MEAN,
+             normalization=True,
+-            sources=ModelSource(hf="test/mean-model"),
+-            dim=512,
+         )
+         models = TextEmbedding.list_supported_models()
+         assert any(m["model"] == "test/mean-model" for m in models)
+
+     def test_register_last_token_pooling_model(self):
+         TextEmbedding.add_custom_model(
+-            model="test/last-token-model",
++            model_description=DenseModelDescription(
++                model="test/last-token-model",
++                sources=ModelSource(hf="test/last-token-model"),
++                dim=1024,
++                model_file="onnx/model.onnx",
++                description="",
++                license="",
++                size_in_GB=0.0,
++            ),
+             pooling=PoolingType.LAST_TOKEN,
+             normalization=True,
+-            sources=ModelSource(hf="test/last-token-model"),
+-            dim=1024,
+         )
+         models = TextEmbedding.list_supported_models()
+         assert any(m["model"] == "test/last-token-model" for m in models)
+
+     def test_duplicate_model_raises(self):
+         TextEmbedding.add_custom_model(
+-            model="test/duplicate",
++            model_description=DenseModelDescription(
++                model="test/duplicate",
++                sources=ModelSource(hf="test/duplicate"),
++                dim=256,
++                model_file="onnx/model.onnx",
++                description="",
++                license="",
++                size_in_GB=0.0,
++            ),
+             pooling=PoolingType.CLS,
+             normalization=True,
+-            sources=ModelSource(hf="test/duplicate"),
+-            dim=256,
+         )
+         with pytest.raises(ValueError, match="already registered"):
+             TextEmbedding.add_custom_model(
+-                model="test/duplicate",
++                model_description=DenseModelDescription(
++                    model="test/duplicate",
++                    sources=ModelSource(hf="test/duplicate"),
++                    dim=256,
++                    model_file="onnx/model.onnx",
++                    description="",
++                    license="",
++                    size_in_GB=0.0,
++                ),
+                 pooling=PoolingType.CLS,
+                 normalization=True,
+-                sources=ModelSource(hf="test/duplicate"),
+-                dim=256,
+             )
+diff --git a/uv.lock b/uv.lock
+index badad86..3c3348f 100644
+--- a/uv.lock
++++ b/uv.lock
+@@ -1012,7 +1012,7 @@ wheels = [
+
+ [[package]]
+ name = "qwen3-embed"
+-version = "1.5.1"
++version = "1.6.0"
+ source = { editable = "." }
+ dependencies = [
+     { name = "huggingface-hub" },

@@ -1,0 +1,43 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
+rootdir: /app
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.0.0, syrupy-5.1.0, anyio-4.12.1, xdist-3.8.0
+collected 407 items
+
+tests/test_cross_encoder_onnx.py ....................................... [  9%]
+...............                                                          [ 13%]
+tests/test_custom_cross_encoder.py ..                                    [ 13%]
+tests/test_custom_model.py ....                                          [ 14%]
+tests/test_custom_text_cross_encoder.py ....                             [ 15%]
+tests/test_custom_text_embedding.py ............................         [ 22%]
+tests/test_gguf_cross_encoder.py ..............................          [ 29%]
+tests/test_gguf_embedding.py ..........................                  [ 36%]
+tests/test_model_description.py ......                                   [ 37%]
+tests/test_model_management.py ......................................... [ 47%]
+.................                                                        [ 52%]
+tests/test_onnx_embedding.py .......                                     [ 53%]
+tests/test_onnx_embedding_shapes.py .                                    [ 54%]
+tests/test_onnx_model_loading.py ............                            [ 57%]
+tests/test_parallel_processor.py ...........................             [ 63%]
+tests/test_pooled_embedding.py .....                                     [ 64%]
+tests/test_pooled_normalized_embedding.py ..                             [ 65%]
+tests/test_pooling.py ........                                           [ 67%]
+tests/test_preprocessor_utils.py ...........                             [ 70%]
+tests/test_qwen3_embedding.py .........                                  [ 72%]
+tests/test_qwen3_reranker.py ...........................                 [ 78%]
+tests/test_text_cross_encoder.py ..                                      [ 79%]
+tests/test_text_embedding.py ..                                          [ 79%]
+tests/test_text_onnx_text_model.py ..................................... [ 88%]
+...                                                                      [ 89%]
+tests/test_types.py ....                                                 [ 90%]
+tests/test_utils.py ......................................               [100%]
+
+=============================== warnings summary ===============================
+tests/test_parallel_processor.py: 23 warnings
+  /home/jules/.pyenv/versions/3.12.13/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=138333) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 407 passed, 23 warnings in 3.50s =======================

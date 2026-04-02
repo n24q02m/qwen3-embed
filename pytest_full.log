@@ -1,0 +1,17 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
+rootdir: /app
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.0.0, syrupy-5.1.0, anyio-4.12.1, xdist-3.8.0
+collected 482 items
+
+tests/test_cross_encoder_onnx.py ....................................... [  8%]
+...............                                                          [ 11%]
+tests/test_custom_cross_encoder.py ..                                    [ 11%]
+tests/test_custom_model.py ....                                          [ 12%]
+tests/test_custom_text_cross_encoder.py ....                             [ 13%]
+tests/test_custom_text_embedding.py ............................         [ 19%]
+tests/test_gguf_cross_encoder.py ..............................          [ 25%]
+tests/test_gguf_embedding.py ..........................                  [ 30%]
+tests/test_integration.py .................................
