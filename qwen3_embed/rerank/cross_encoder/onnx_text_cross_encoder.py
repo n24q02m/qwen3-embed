@@ -5,7 +5,7 @@ from loguru import logger
 
 from qwen3_embed.common import OnnxProvider
 from qwen3_embed.common.model_description import BaseModelDescription
-from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxOutputContext, OnnxSessionConfig
 from qwen3_embed.common.types import Device
 from qwen3_embed.common.utils import define_cache_dir
 from qwen3_embed.rerank.cross_encoder.onnx_text_model import (
@@ -101,14 +101,17 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
             self.load_onnx_model()
 
     def load_onnx_model(self) -> None:
-        self._load_onnx_model(
-            model_dir=self._model_dir,
-            model_file=self.model_description.model_file,
+        config = OnnxSessionConfig(
             threads=self.threads,
             providers=self.providers,
             cuda=self.cuda,
             device_id=self.device_id,
             extra_session_options=self._extra_session_options,
+        )
+        self._load_onnx_model(
+            model_dir=self._model_dir,
+            model_file=self.model_description.model_file,
+            config=config,
         )
 
     def rerank(
