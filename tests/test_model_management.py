@@ -10,6 +10,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+import requests
 from huggingface_hub.errors import RepositoryNotFoundError
 from huggingface_hub.hf_api import RepoFile
 
@@ -290,6 +291,41 @@ class TestDownloadFileFromGcs:
         assert result == str(output)
         assert output.read_bytes() == chunk
 
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_404_raises_error(self, mock_get, tmp_path):
+        """Non-403 HTTP errors should be caught by raise_for_status."""
+        response = Mock()
+        response.status_code = 404
+        response.raise_for_status.side_effect = requests.exceptions.HTTPError("404 Client Error")
+        mock_get.return_value = response
+
+        output = tmp_path / "missing.onnx"
+        with pytest.raises(requests.exceptions.HTTPError, match="404 Client Error"):
+            ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/missing.onnx", str(output))
+
+    @patch("qwen3_embed.common.model_management.tqdm")
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_progress_bar_updates(self, mock_get, mock_tqdm, tmp_path):
+        """Verify tqdm progress bar is initialized and updated."""
+        chunk = b"some data"
+        response = Mock()
+        response.status_code = 200
+        response.headers = {"content-length": str(len(chunk))}
+        response.iter_content.return_value = [chunk]
+        mock_get.return_value = response
+
+        mock_pb = MagicMock()
+        mock_tqdm.return_value.__enter__.return_value = mock_pb
+
+        output = tmp_path / "progress.onnx"
+        ModelManagement.download_file_from_gcs(
+            f"{self.GCS_URL}/p.onnx", str(output), show_progress=True
+        )
+
+        mock_tqdm.assert_called_once()
+        assert mock_tqdm.call_args[1]["total"] == len(chunk)
+        mock_pb.update.assert_called_with(len(chunk))
+
 
 # ---------------------------------------------------------------------------
 # TestDecompressToCache
@@ -412,6 +448,24 @@ class TestDecompressToCache:
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
         assert not cache_dir.exists()
+
+    @patch("qwen3_embed.common.model_management.hasattr")
+    def test_decompress_to_cache_no_data_filter_fallback(self, mock_hasattr, tmp_path):
+        """Cover the fallback when tarfile.data_filter is not available."""
+        # Force hasattr(tarfile, "data_filter") to return False
+        original_hasattr = hasattr
+
+        def side_effect(obj, name):
+            if obj is tarfile and name == "data_filter":
+                return False
+            return original_hasattr(obj, name)
+
+        mock_hasattr.side_effect = side_effect
+
+        tar_path = make_tar_gz(tmp_path, "inner.txt")
+        cache_dir = tmp_path / "extracted_fallback"
+        ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+        assert (cache_dir / "inner.txt").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -938,6 +992,32 @@ class TestRetrieveModelGcs:
             )
         assert result.name == "fast-mymodel"
 
+    @patch("qwen3_embed.common.model_management.ModelManagement.download_file_from_gcs")
+    @patch("qwen3_embed.common.model_management.ModelManagement.decompress_to_cache")
+    def test_retrieve_model_gcs_unlinks_existing_tarball(self, mock_dec, mock_down, tmp_path):
+        """retrieve_model_gcs removes existing tar.gz before downloading."""
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+        tar_path = cache_dir / "test-model.tar.gz"
+        tar_path.write_text("old content")
+
+        # Mocking to avoid actual download/extraction
+        mock_down.side_effect = lambda url, output_path, **kwargs: Path(output_path).write_text(
+            "new"
+        )
+
+        # Mock model_tmp_dir rename target
+        def side_effect_dec(targz_path, cache_dir):
+            (Path(cache_dir) / "test-model").mkdir(parents=True, exist_ok=True)
+            return cache_dir
+
+        mock_dec.side_effect = side_effect_dec
+
+        ModelManagement.retrieve_model_gcs(
+            "org/test-model", "https://storage.googleapis.com/test.tar.gz", str(cache_dir)
+        )
+        assert not tar_path.exists()
+
 
 # ---------------------------------------------------------------------------
 # TestDownloadModel
@@ -1216,3 +1296,41 @@ class TestCheckHFCache:
         assert result is None
         mock_enable.assert_called_once()
         mock_logger.assert_called_once_with("Model not found in cache, will attempt download")
+
+
+class TestVerifyFilesFromMetadata:
+    def test_verify_files_missing_file_returns_false(self, tmp_path):
+        """_verify_files_from_metadata returns False if a file is missing."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        metadata = {"missing.txt": {"size": 10}}
+        assert ModelManagement._verify_files_from_metadata(model_dir, metadata, []) is False
+
+    def test_verify_files_mismatch_returns_false(self, tmp_path):
+        """_verify_files_from_metadata returns False if size or blob_id mismatch."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        f = model_dir / "mismatch.txt"
+        f.write_bytes(b"actual")
+
+        # Offline mismatch
+        metadata = {"mismatch.txt": {"size": 100}}
+        assert ModelManagement._verify_files_from_metadata(model_dir, metadata, []) is False
+
+        # Online mismatch
+        metadata = {"mismatch.txt": {"size": 6, "blob_id": "correct"}}
+        repo_files = [make_repo_file("mismatch.txt", size=6, oid="wrong")]
+        assert (
+            ModelManagement._verify_files_from_metadata(model_dir, metadata, repo_files) is False
+        )
+
+    @patch("qwen3_embed.common.model_management.logger.error")
+    def test_verify_files_oserror_returns_false(self, mock_log, tmp_path):
+        """OSError during verification returns False and logs error."""
+        model_dir = tmp_path / "model"
+        # Trigger KeyError which is also caught
+        metadata = {"file.txt": {}}  # Missing 'size'
+        model_dir.mkdir()
+        (model_dir / "file.txt").write_bytes(b"data")
+        assert ModelManagement._verify_files_from_metadata(model_dir, metadata, []) is False
+        mock_log.assert_called_once()
