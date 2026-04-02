@@ -162,11 +162,8 @@ def verify_onnxruntime(
     print(f"ORT vs PyTorch max diff: {ort_diff:.2e}")
 
 
-def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
-    """Export the optimized model and tokenizer."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-
+def _load_and_verify_model(model_id: str) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
+    """Load model/tokenizer and verify token IDs."""
     print(f"Loading model: {model_id}")
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
     base_model = AutoModelForCausalLM.from_pretrained(
@@ -174,8 +171,40 @@ def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
         dtype=torch.float32,
         trust_remote_code=True,
     )
-
     verify_token_ids(tokenizer)
+    return tokenizer, base_model
+
+
+def _run_export_pipeline(
+    model: nn.Module,
+    dummy_tokens: dict,
+    test_output: torch.Tensor,
+    output_path: Path,
+    opset: int,
+) -> None:
+    """Run ONNX export, quantization, and ORT verification."""
+    onnx_fp32_path = output_path / "model.onnx"
+    export_to_onnx(model, dummy_tokens, onnx_fp32_path, opset)
+
+    onnx_int8_path = output_path / "model_quantized.onnx"
+    quantize_onnx_model(onnx_fp32_path, onnx_int8_path)
+
+    verify_onnxruntime(onnx_int8_path, dummy_tokens, test_output)
+
+
+def _print_export_summary(output_path: Path) -> None:
+    """Print summary of exported files."""
+    print(f"\nExport complete! Files in {output_path}:\n")
+    for f in sorted(output_path.iterdir()):
+        print(f"  {f.name} ({f.stat().st_size / 1e6:.1f} MB)")
+
+
+def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
+    """Export the optimized model and tokenizer."""
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    tokenizer, base_model = _load_and_verify_model(model_id)
 
     print("Creating optimized yes/no model...")
     model = Qwen3RerankerYesNo(base_model)
@@ -183,20 +212,12 @@ def export_model(model_id: str, output_dir: str, opset: int = 17) -> None:
 
     dummy_tokens, test_output = verify_optimized_model_pytorch(tokenizer, model, base_model)
 
-    onnx_fp32_path = output_path / "model.onnx"
-    export_to_onnx(model, dummy_tokens, onnx_fp32_path, opset)
-
-    onnx_int8_path = output_path / "model_quantized.onnx"
-    quantize_onnx_model(onnx_fp32_path, onnx_int8_path)
+    _run_export_pipeline(model, dummy_tokens, test_output, output_path, opset)
 
     print("Saving tokenizer...")
     tokenizer.save_pretrained(str(output_path))
 
-    verify_onnxruntime(onnx_int8_path, dummy_tokens, test_output)
-
-    print(f"\nExport complete! Files in {output_path}:")
-    for f in sorted(output_path.iterdir()):
-        print(f"  {f.name} ({f.stat().st_size / 1e6:.1f} MB)")
+    _print_export_summary(output_path)
 
 
 if __name__ == "__main__":
