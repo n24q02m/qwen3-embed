@@ -30,23 +30,22 @@ from qwen3_embed.text.gguf_embedding import (  # noqa: E402
 def test_check_llama_cpp_missing():
     """Test that _check_llama_cpp raises ImportError when llama_cpp is absent."""
     with (
-        patch.dict(sys.modules, {"llama_cpp": None}),
+        patch("importlib.import_module", side_effect=ImportError),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
         _check_llama_cpp()
 
 
 def test_check_llama_cpp_import_error_with_mock():
-    """Test that _check_llama_cpp raises ImportError from builtins.__import__."""
-    original_import = __import__
+    """Test that _check_llama_cpp raises ImportError when import_module fails."""
 
-    def mock_import(name, *args, **kwargs):
+    def mock_import_module(name, *args, **kwargs):
         if name == "llama_cpp":
             raise ImportError("Mocked import error for llama_cpp")
-        return original_import(name, *args, **kwargs)
+        return MagicMock()
 
     with (
-        patch("builtins.__import__", side_effect=mock_import),
+        patch("importlib.import_module", side_effect=mock_import_module),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
         _check_llama_cpp()
@@ -54,9 +53,9 @@ def test_check_llama_cpp_import_error_with_mock():
 
 def test_check_llama_cpp_present():
     """Test that _check_llama_cpp does not raise when llama_cpp is present."""
-    mock_module = MagicMock()
-    with patch.dict(sys.modules, {"llama_cpp": mock_module}):
+    with patch("importlib.import_module") as mock_import:
         _check_llama_cpp()  # Should not raise
+        mock_import.assert_called_once_with("llama_cpp")
 
 
 # ---------------------------------------------------------------------------
@@ -186,7 +185,7 @@ class TestGGUFEmbeddingInit:
     def test_init_raises_if_llama_cpp_missing(self):
         """Test __init__ raises ImportError if llama_cpp is not installed."""
         with (
-            patch.dict(sys.modules, {"llama_cpp": None}),
+            patch("importlib.import_module", side_effect=ImportError),
             pytest.raises(ImportError, match="llama-cpp-python is required"),
         ):
             Qwen3TextEmbeddingGGUF(model_name="n24q02m/Qwen3-Embedding-0.6B-GGUF")
@@ -201,7 +200,7 @@ class TestGGUFEmbeddingInit:
         mock_llama_module.Llama = mock_llama_cls
 
         with (
-            patch.dict(sys.modules, {"llama_cpp": mock_llama_module}),
+            patch("importlib.import_module", return_value=mock_llama_module),
             patch.object(Qwen3TextEmbeddingGGUF, "download_model", return_value=str(tmp_path)),
             patch("qwen3_embed.text.gguf_embedding.define_cache_dir", return_value=Path("/tmp")),
         ):
@@ -220,7 +219,7 @@ class TestGGUFEmbeddingInit:
         mock_llama_module.Llama = mock_llama_cls
 
         with (
-            patch.dict(sys.modules, {"llama_cpp": mock_llama_module}),
+            patch("importlib.import_module", return_value=mock_llama_module),
             patch.object(Qwen3TextEmbeddingGGUF, "download_model", return_value=str(tmp_path)),
             patch("qwen3_embed.text.gguf_embedding.define_cache_dir", return_value=Path("/tmp")),
         ):

@@ -5,7 +5,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from typing import Any
-from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -13,6 +12,7 @@ import pytest
 
 from qwen3_embed.rerank.cross_encoder.gguf_cross_encoder import (
     DEFAULT_INSTRUCTION,
+    FORBIDDEN_TOKENS,
     RERANK_TEMPLATE,
     SYSTEM_PROMPT,
     TOKEN_NO_ID,
@@ -29,7 +29,22 @@ from qwen3_embed.rerank.cross_encoder.gguf_cross_encoder import (
 def test_check_llama_cpp_missing():
     """Test that ImportError is raised when llama-cpp-python is missing."""
     with (
-        mock.patch.dict(sys.modules, {"llama_cpp": None}),
+        patch("importlib.import_module", side_effect=ImportError),
+        pytest.raises(ImportError, match="llama-cpp-python is required"),
+    ):
+        _check_llama_cpp()
+
+
+def test_check_llama_cpp_import_error_with_mock():
+    """Test that _check_llama_cpp raises ImportError when import_module fails."""
+
+    def mock_import_module(name, *args, **kwargs):
+        if name == "llama_cpp":
+            raise ImportError("Mocked import error for llama_cpp")
+        return MagicMock()
+
+    with (
+        patch("importlib.import_module", side_effect=mock_import_module),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
         _check_llama_cpp()
@@ -37,19 +52,15 @@ def test_check_llama_cpp_missing():
 
 def test_check_llama_cpp_present():
     """Test that no error is raised when llama-cpp-python is present."""
-    # Mocking a successful import
-    mock_module = mock.Mock()
-    with mock.patch.dict(sys.modules, {"llama_cpp": mock_module}):
-        try:
-            _check_llama_cpp()
-        except ImportError:
-            pytest.fail("ImportError raised unexpectedly when llama_cpp is mocked as present")
+    with patch("importlib.import_module") as mock_import:
+        _check_llama_cpp()  # Should not raise
+        mock_import.assert_called_once_with("llama_cpp")
 
 
 def test_gguf_cross_encoder_init_missing_dependency():
     """Test that Qwen3CrossEncoderGGUF init fails if dependency is missing."""
     with (
-        mock.patch.dict(sys.modules, {"llama_cpp": None}),
+        patch("importlib.import_module", side_effect=ImportError),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
         # We don't need arguments because it should fail before using them
@@ -105,7 +116,7 @@ class TestGGUFCrossEncoderInit:
         mock_llama_module.Llama = mock_llama_cls
 
         with (
-            patch.dict(sys.modules, {"llama_cpp": mock_llama_module}),
+            patch("importlib.import_module", return_value=mock_llama_module),
             patch.object(Qwen3CrossEncoderGGUF, "download_model", return_value=str(tmp_path)),
             patch(
                 "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir",
@@ -136,7 +147,7 @@ class TestGGUFCrossEncoderInit:
         mock_llama_module.Llama = mock_llama_cls
 
         with (
-            patch.dict(sys.modules, {"llama_cpp": mock_llama_module}),
+            patch("importlib.import_module", return_value=mock_llama_module),
             patch.object(Qwen3CrossEncoderGGUF, "download_model", return_value=str(tmp_path)),
             patch(
                 "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir",
@@ -466,3 +477,22 @@ class TestRerankPairs:
         assert "test query" in call_arg
         assert "test document" in call_arg
         assert SYSTEM_PROMPT in call_arg
+
+
+class TestGGUFCrossEncoderSanitize:
+    def test_sanitize_input_strips_forbidden_tokens(self):
+        """Test that _sanitize_input strips forbidden tokens, including nested ones."""
+        # Simple case
+        text = f"hello {FORBIDDEN_TOKENS[0]} world"
+        sanitized = Qwen3CrossEncoderGGUF._sanitize_input(text)
+        assert sanitized == "hello  world"
+        assert FORBIDDEN_TOKENS[0] not in sanitized
+
+        # Nested case (e.g. <|<|im_start|>im_start|>)
+        # If we have <|<|im_start|>im_start|>, first pass removes <|im_start|>,
+        # leaving another <|im_start|>, which then gets removed.
+        nested_token = FORBIDDEN_TOKENS[0][:3] + FORBIDDEN_TOKENS[0] + FORBIDDEN_TOKENS[0][3:]
+        sanitized_nested = Qwen3CrossEncoderGGUF._sanitize_input(nested_token)
+        assert sanitized_nested == ""
+        for token in FORBIDDEN_TOKENS:
+            assert token not in sanitized_nested
