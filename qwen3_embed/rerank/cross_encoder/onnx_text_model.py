@@ -1,5 +1,6 @@
 import os
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from multiprocessing import get_all_start_methods
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,18 @@ from qwen3_embed.common.preprocessor_utils import load_tokenizer
 from qwen3_embed.common.types import Device, NumpyArray
 from qwen3_embed.common.utils import iter_batch
 from qwen3_embed.parallel_processor import ParallelWorkerPool
+
+
+@dataclass
+class RerankerModelConfig:
+    model_name: str
+    cache_dir: str
+    providers: Sequence[OnnxProvider] | None = None
+    cuda: bool | Device = Device.AUTO
+    device_ids: list[int] | None = None
+    local_files_only: bool = False
+    specific_model_path: str | None = None
+    extra_session_options: dict[str, Any] | None = None
 
 
 class OnnxCrossEncoderModel(OnnxModel[float]):
@@ -90,17 +103,10 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
 
     def _rerank_pairs(
         self,
-        model_name: str,
-        cache_dir: str,
         pairs: Iterable[tuple[str, str]],
         batch_size: int,
+        config: RerankerModelConfig,
         parallel: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        local_files_only: bool = False,
-        specific_model_path: str | None = None,
-        extra_session_options: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Iterable[float]:
         is_small = False
@@ -123,22 +129,22 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
 
             start_method = "forkserver" if "forkserver" in get_all_start_methods() else "spawn"
             params = {
-                "model_name": model_name,
-                "cache_dir": cache_dir,
-                "providers": providers,
-                "local_files_only": local_files_only,
-                "specific_model_path": specific_model_path,
+                "model_name": config.model_name,
+                "cache_dir": config.cache_dir,
+                "providers": config.providers,
+                "local_files_only": config.local_files_only,
+                "specific_model_path": config.specific_model_path,
                 **kwargs,
             }
 
-            if extra_session_options is not None:
-                params.update(extra_session_options)
+            if config.extra_session_options is not None:
+                params.update(config.extra_session_options)
 
             pool = ParallelWorkerPool(
                 num_workers=parallel or 1,
                 worker=self._get_worker_class(),
-                cuda=cuda,
-                device_ids=device_ids,
+                cuda=config.cuda,
+                device_ids=config.device_ids,
                 start_method=start_method,
             )
             for batch in pool.ordered_map(iter_batch(pairs, batch_size), **params):

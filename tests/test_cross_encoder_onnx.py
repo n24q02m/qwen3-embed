@@ -23,6 +23,7 @@ from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import (
 )
 from qwen3_embed.rerank.cross_encoder.onnx_text_model import (
     OnnxCrossEncoderModel,
+    RerankerModelConfig,
     TextRerankerWorker,
 )
 
@@ -337,10 +338,9 @@ class TestRerankPairsIsSmallBranch:
         m.tokenizer = _make_mock_tokenizer(n_pairs=1)
         scores = list(
             m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=[("query", "doc")],
                 batch_size=64,
+                config=RerankerModelConfig(model_name="m", cache_dir="/tmp"),
             )
         )
         assert len(scores) == 1
@@ -351,10 +351,9 @@ class TestRerankPairsIsSmallBranch:
         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=2)
         scores = list(
             loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=pairs,
                 batch_size=64,  # larger than len(pairs)=2 => is_small
+                config=RerankerModelConfig(model_name="m", cache_dir="/tmp"),
             )
         )
         assert len(scores) == 2
@@ -365,10 +364,9 @@ class TestRerankPairsIsSmallBranch:
         loaded_model.model = _make_mock_session(n_pairs=5)
         scores = list(
             loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=pairs,
                 batch_size=10,
+                config=RerankerModelConfig(model_name="m", cache_dir="/tmp"),
                 parallel=None,
             )
         )
@@ -388,10 +386,9 @@ class TestRerankPairsIsSmallBranch:
         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
         list(
             m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=[("q", "d")],
                 batch_size=64,
+                config=RerankerModelConfig(model_name="m", cache_dir="/tmp"),
             )
         )
         assert loaded
@@ -411,10 +408,9 @@ class TestRerankPairsParallelBranch:
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
                     batch_size=2,
+                    config=RerankerModelConfig(model_name="m", cache_dir="/tmp"),
                     parallel=0,
                 )
             )
@@ -430,10 +426,9 @@ class TestRerankPairsParallelBranch:
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
                     batch_size=2,
+                    config=RerankerModelConfig(model_name="m", cache_dir="/tmp"),
                     parallel=3,
                 )
             )
@@ -450,10 +445,9 @@ class TestRerankPairsParallelBranch:
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
                     batch_size=2,
+                    config=RerankerModelConfig(model_name="m", cache_dir="/tmp"),
                     parallel=2,
                 )
             )
@@ -470,12 +464,14 @@ class TestRerankPairsParallelBranch:
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
                     batch_size=2,
+                    config=RerankerModelConfig(
+                        model_name="m",
+                        cache_dir="/tmp",
+                        extra_session_options={"enable_cpu_mem_arena": False},
+                    ),
                     parallel=2,
-                    extra_session_options={"enable_cpu_mem_arena": False},
                 )
             )
         cls.assert_called_once()

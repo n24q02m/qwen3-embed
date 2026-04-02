@@ -10,6 +10,7 @@ from qwen3_embed.common.types import Device
 from qwen3_embed.common.utils import define_cache_dir
 from qwen3_embed.rerank.cross_encoder.onnx_text_model import (
     OnnxCrossEncoderModel,
+    RerankerModelConfig,
     TextRerankerWorker,
 )
 from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
@@ -140,18 +141,21 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
         parallel: int | None = None,
         **kwargs: Any,
     ) -> Iterable[float]:
-        yield from self._rerank_pairs(
+        config = RerankerModelConfig(
             model_name=self.model_name,
             cache_dir=str(self.cache_dir),
-            pairs=pairs,
-            batch_size=batch_size,
-            parallel=parallel,
             providers=self.providers,
             cuda=self.cuda,
             device_ids=self.device_ids,
             local_files_only=self._local_files_only,
             specific_model_path=self._specific_model_path,
             extra_session_options=self._extra_session_options,
+        )
+        yield from self._rerank_pairs(
+            pairs=pairs,
+            batch_size=batch_size,
+            config=config,
+            parallel=parallel,
             **kwargs,
         )
 
