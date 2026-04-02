@@ -1216,3 +1216,47 @@ class TestCheckHFCache:
         assert result is None
         mock_enable.assert_called_once()
         mock_logger.assert_called_once_with("Model not found in cache, will attempt download")
+
+
+# ---------------------------------------------------------------------------
+# TestSaveFileMetadata
+# ---------------------------------------------------------------------------
+
+
+class TestSaveFileMetadata:
+    """Tests for _save_file_metadata method."""
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_save_file_metadata_handles_oserror(self, mock_logger, tmp_path):
+        """Verify that OSError during file write is caught and logged."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        meta = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        # Mock write_text to raise OSError
+        with patch("pathlib.Path.write_text", side_effect=OSError("Disk full")):
+            ModelManagement._save_file_metadata(model_dir, meta)
+
+        mock_logger.exception.assert_called_once()
+        mock_logger.warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_save_file_metadata_handles_valueerror(self, mock_logger, tmp_path):
+        """Verify that ValueError during json.dumps is caught and logged."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        meta = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        # Mock json.dumps to raise ValueError
+        with patch(
+            "qwen3_embed.common.model_management.json.dumps",
+            side_effect=ValueError("Invalid JSON"),
+        ):
+            ModelManagement._save_file_metadata(model_dir, meta)
+
+        mock_logger.exception.assert_called_once()
+        mock_logger.warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
