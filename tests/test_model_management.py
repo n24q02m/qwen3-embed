@@ -136,6 +136,22 @@ class TestDownloadFileFromGcs:
 
     GCS_URL = "https://storage.googleapis.com"
 
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_requests_get_uses_verify_true(self, mock_get, tmp_path):
+        """requests.get MUST be called with verify=True to prevent accidental bypass."""
+        response = Mock()
+        response.status_code = 200
+        response.headers = {"content-length": "0"}
+        response.iter_content.return_value = []
+        mock_get.return_value = response
+
+        output = tmp_path / "test.onnx"
+        ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/test.onnx", str(output))
+
+        # Assert that verify=True was passed in the call to requests.get
+        args, kwargs = mock_get.call_args
+        assert kwargs.get("verify") is True
+
     def test_invalid_scheme_raises_value_error(self, tmp_path):
         """Non-HTTP(S) schemes must be rejected."""
         output = tmp_path / "model.onnx"
