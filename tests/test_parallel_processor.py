@@ -544,3 +544,36 @@ def test_worker_multiprocessing_exception_handling():
     with pytest.raises(RuntimeError, match="Thread unexpectedly terminated"):
         # The list consumption forces the stream through the pool
         list(pool.ordered_map([1, 2, 3], failure_val=2))
+
+
+class StartFailingWorker(Worker):
+    @classmethod
+    def start(cls, **kwargs: Any) -> "StartFailingWorker":
+        raise RuntimeError("Initialization failed")
+
+    def process(self, items: Iterable[tuple[int, Any]]) -> Iterable[tuple[int, Any]]:
+        yield from items
+
+
+def test_worker_start_exception_handling():
+    input_queue = MagicMock()
+    output_queue = MagicMock()
+    num_active_workers = MagicMock()
+    num_active_workers.get_lock.return_value.__enter__ = MagicMock()
+    num_active_workers.get_lock.return_value.__exit__ = MagicMock()
+    num_active_workers.value = 1
+    worker_id = 0
+
+    _worker(
+        worker_class=StartFailingWorker,
+        input_queue=input_queue,
+        output_queue=output_queue,
+        num_active_workers=num_active_workers,
+        worker_id=worker_id,
+        kwargs={},
+    )
+
+    # Verify that QueueSignals.error was put in the output queue
+    output_queue.put.assert_called_with(QueueSignals.error)
+    # Verify that the worker was cleaned up (num_active_workers decremented)
+    assert num_active_workers.value == 0
