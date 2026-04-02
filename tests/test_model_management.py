@@ -1216,3 +1216,41 @@ class TestCheckHFCache:
         assert result is None
         mock_enable.assert_called_once()
         mock_logger.assert_called_once_with("Model not found in cache, will attempt download")
+
+    @patch("qwen3_embed.common.model_management.deepcopy")
+    @patch("qwen3_embed.common.model_management.logger.debug")
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    def test_check_hf_cache_deepcopy_exception(
+        self, mock_enable, mock_logger, mock_deepcopy, tmp_path
+    ):
+        """Verify that if deepcopy fails, _check_hf_cache returns None and logs debug."""
+        mock_deepcopy.side_effect = Exception("deepcopy failed")
+        result = ModelManagement._check_hf_cache(
+            hf_source="org/repo",
+            cache_dir=str(tmp_path),
+            extra_patterns=["model.onnx"],
+            model_file="model.onnx",
+        )
+        assert result is None
+        mock_logger.assert_called_once_with("Model not found in cache, will attempt download")
+        mock_enable.assert_called_once()
+
+    @patch("qwen3_embed.common.model_management.Path")
+    @patch("qwen3_embed.common.model_management.logger.debug")
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    @patch.object(ModelManagement, "download_files_from_huggingface")
+    def test_check_hf_cache_path_exception(
+        self, mock_download, mock_enable, mock_logger, mock_path, tmp_path
+    ):
+        """Verify that if Path instantiation fails, _check_hf_cache returns None and logs debug."""
+        mock_download.return_value = "/some/path"
+        mock_path.side_effect = Exception("Path failed")
+        result = ModelManagement._check_hf_cache(
+            hf_source="org/repo",
+            cache_dir=str(tmp_path),
+            extra_patterns=["model.onnx"],
+            model_file="model.onnx",
+        )
+        assert result is None
+        mock_logger.assert_called_once_with("Model not found in cache, will attempt download")
+        mock_enable.assert_called_once()
