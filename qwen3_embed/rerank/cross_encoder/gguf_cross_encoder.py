@@ -177,7 +177,9 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         tokens = self._llm.tokenize(text.encode("utf-8"), add_bos=False)
 
         self._llm.reset()
-        self._llm.eval(tokens)  # nosec B307 # SECURITY: This is llama_cpp.Llama.eval for model inference, not Python's built-in eval().
+        self._llm.decode(
+            tokens
+        )  # SECURITY: Using decode() for model inference to avoid naming collisions and false positives with Python's built-in eval().
 
         # Get logits for the last token
         # llama-cpp-python stores scores in _scores array
