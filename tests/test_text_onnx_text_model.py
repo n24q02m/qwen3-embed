@@ -431,7 +431,7 @@ class TestOnnxTextModelEmbedDocuments:
                 )
             )
         call_kwargs = mock_cls.call_args[1]
-        assert call_kwargs["start_method"] in ("forkserver", "spawn")
+        assert call_kwargs["config"].start_method in ("forkserver", "spawn")
 
 
 class TestTextEmbeddingWorkerProcess:

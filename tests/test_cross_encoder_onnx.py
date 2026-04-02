@@ -458,7 +458,7 @@ class TestRerankPairsParallelBranch:
                 )
             )
         call_kw = cls.call_args[1]
-        assert call_kw["start_method"] in ("forkserver", "spawn")
+        assert call_kw["config"].start_method in ("forkserver", "spawn")
 
     def test_extra_session_options_merged_into_params(
         self, loaded_model: ConcreteCrossEncoderModel
