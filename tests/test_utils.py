@@ -271,6 +271,15 @@ class TestGetAllPunctuation:
         result2 = get_all_punctuation()
         assert result1 is result2
 
+    def test_unicode_punctuation_extended(self) -> None:
+        """Should contain non-ASCII Unicode punctuation."""
+        from qwen3_embed.common.utils import get_all_punctuation
+
+        punctuation = get_all_punctuation()
+        extended_punctuation = ["¿", "¡", "«", "»", "‐", "—"]
+        for mark in extended_punctuation:
+            assert mark in punctuation, f"Expected {mark} to be in punctuation set"
+
 
 class TestRemoveNonAlphanumeric:
     """Tests for remove_non_alphanumeric utility."""
@@ -278,6 +287,14 @@ class TestRemoveNonAlphanumeric:
     def test_basic_punctuation(self) -> None:
         """Punctuation should be replaced by spaces."""
         assert remove_non_alphanumeric("hello, world!") == "hello  world "
+
+    def test_cjk_characters(self) -> None:
+        r"""CJK characters are alphanumeric (\w) and should be kept."""
+        assert remove_non_alphanumeric("你好，世界！") == "你好 世界 "
+
+    def test_control_characters(self) -> None:
+        r"""Control characters are not \w or \s and should be replaced."""
+        assert remove_non_alphanumeric("hello\x01world") == "hello world"
 
     def test_underscore_is_kept(self) -> None:
         """Underscores are alphanumeric in regex terms (\\w)."""
