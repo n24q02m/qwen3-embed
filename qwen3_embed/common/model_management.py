@@ -21,7 +21,7 @@ from huggingface_hub.utils import (
 from loguru import logger
 from tqdm import tqdm
 
-from qwen3_embed.common.model_description import BaseModelDescription
+from qwen3_embed.common.model_description import BaseModelDescription, GCSModelDownloadConfig
 
 T = TypeVar("T", bound=BaseModelDescription)
 
@@ -385,16 +385,14 @@ class ModelManagement(Generic[T]):
     @classmethod
     def retrieve_model_gcs(
         cls,
-        model_name: str,
-        source_url: str,
-        cache_dir: str,
-        deprecated_tar_struct: bool = False,
-        local_files_only: bool = False,
+        config: GCSModelDownloadConfig,
     ) -> Path:
-        fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{model_name.split('/')[-1]}"
-        cache_tmp_dir = Path(cache_dir) / "tmp"
+        fast_model_name = (
+            f"{'fast-' if config.deprecated_tar_struct else ''}{config.model_name.split('/')[-1]}"
+        )
+        cache_tmp_dir = Path(config.cache_dir) / "tmp"
         model_tmp_dir = cache_tmp_dir / fast_model_name
-        model_dir = Path(cache_dir) / fast_model_name
+        model_dir = Path(config.cache_dir) / fast_model_name
 
         # check if the model_dir and the model files are both present for macOS
         if model_dir.exists() and len(list(model_dir.glob("*"))) > 0:
@@ -407,14 +405,14 @@ class ModelManagement(Generic[T]):
         with contextlib.suppress(OSError):
             os.chmod(cache_tmp_dir, 0o700)
 
-        model_tar_gz = Path(cache_dir) / f"{fast_model_name}.tar.gz"
+        model_tar_gz = Path(config.cache_dir) / f"{fast_model_name}.tar.gz"
 
         if model_tar_gz.exists():
             model_tar_gz.unlink()
 
-        if not local_files_only:
+        if not config.local_files_only:
             cls.download_file_from_gcs(
-                source_url,
+                config.source_url,
                 output_path=str(model_tar_gz),
             )
 
@@ -491,23 +489,22 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _download_from_gcs(
         cls,
-        model_name: str,
-        url_source: str | None,
+        model: T,
         cache_dir: str,
-        deprecated_tar_struct: bool,
         local_files_only: bool,
     ) -> Path | None:
         try:
-            return cls.retrieve_model_gcs(
-                model_name,
-                str(url_source),
-                str(cache_dir),
-                deprecated_tar_struct=deprecated_tar_struct,
+            config = GCSModelDownloadConfig(
+                model_name=model.model,
+                source_url=str(model.sources.url) if model.sources.url else "",
+                cache_dir=cache_dir,
+                deprecated_tar_struct=model.sources.deprecated_tar_struct,
                 local_files_only=local_files_only,
             )
+            return cls.retrieve_model_gcs(config)
         except Exception:
             if not local_files_only:
-                logger.error(f"Could not download model from url: {url_source}")
+                logger.error(f"Could not download model from url: {model.sources.url}")
         return None
 
     @classmethod
@@ -574,10 +571,8 @@ class ModelManagement(Generic[T]):
 
             if url_source or local_files_only:
                 gcs_path = cls._download_from_gcs(
-                    model_name=model.model,
-                    url_source=url_source,
+                    model=model,
                     cache_dir=cache_dir,
-                    deprecated_tar_struct=model.sources.deprecated_tar_struct,
                     local_files_only=local_files_only,
                 )
                 if gcs_path:

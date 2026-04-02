@@ -13,7 +13,11 @@ import pytest
 from huggingface_hub.errors import RepositoryNotFoundError
 from huggingface_hub.hf_api import RepoFile
 
-from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
+from qwen3_embed.common.model_description import (
+    BaseModelDescription,
+    GCSModelDownloadConfig,
+    ModelSource,
+)
 from qwen3_embed.common.model_management import ModelManagement
 
 # ---------------------------------------------------------------------------
@@ -825,9 +829,11 @@ class TestRetrieveModelGcs:
 
         with patch.object(ModelManagement, "download_file_from_gcs") as mock_dl:
             result = ModelManagement.retrieve_model_gcs(
-                model_name="model/name",
-                source_url="http://example.com/model.tar.gz",
-                cache_dir=str(tmp_path),
+                GCSModelDownloadConfig(
+                    model_name="model/name",
+                    source_url="http://example.com/model.tar.gz",
+                    cache_dir=str(tmp_path),
+                )
             )
         mock_dl.assert_not_called()
         assert result == model_dir
@@ -836,10 +842,12 @@ class TestRetrieveModelGcs:
         """local_files_only=True when model dir is absent raises ValueError."""
         with pytest.raises(ValueError, match="local_files_only=True"):
             ModelManagement.retrieve_model_gcs(
-                model_name="test/model",
-                source_url="http://example.com/model.tar.gz",
-                cache_dir=str(tmp_path),
-                local_files_only=True,
+                GCSModelDownloadConfig(
+                    model_name="test/model",
+                    source_url="http://example.com/model.tar.gz",
+                    cache_dir=str(tmp_path),
+                    local_files_only=True,
+                )
             )
 
     def test_removes_stale_tmp_dir_before_download(self, tmp_path):
@@ -864,9 +872,11 @@ class TestRetrieveModelGcs:
             patch.object(ModelManagement, "decompress_to_cache", side_effect=fake_decompress),
         ):
             result = ModelManagement.retrieve_model_gcs(
-                model_name="model",
-                source_url="http://example.com/model.tar.gz",
-                cache_dir=str(tmp_path),
+                GCSModelDownloadConfig(
+                    model_name="model",
+                    source_url="http://example.com/model.tar.gz",
+                    cache_dir=str(tmp_path),
+                )
             )
         assert result == tmp_path / "model"
 
@@ -889,9 +899,11 @@ class TestRetrieveModelGcs:
             patch.object(ModelManagement, "decompress_to_cache", side_effect=fake_decompress),
         ):
             result = ModelManagement.retrieve_model_gcs(
-                model_name=model_name,
-                source_url="http://example.com/mymodel.tar.gz",
-                cache_dir=str(tmp_path),
+                GCSModelDownloadConfig(
+                    model_name=model_name,
+                    source_url="http://example.com/mymodel.tar.gz",
+                    cache_dir=str(tmp_path),
+                )
             )
         tar_gz = tmp_path / f"{model_name}.tar.gz"
         assert not tar_gz.exists()
@@ -907,9 +919,11 @@ class TestRetrieveModelGcs:
             pytest.raises(ValueError, match="Could not find"),
         ):
             ModelManagement.retrieve_model_gcs(
-                model_name="missing",
-                source_url="http://example.com/missing.tar.gz",
-                cache_dir=str(tmp_path),
+                GCSModelDownloadConfig(
+                    model_name="missing",
+                    source_url="http://example.com/missing.tar.gz",
+                    cache_dir=str(tmp_path),
+                )
             )
 
     def test_deprecated_tar_struct_prefixes_fast(self, tmp_path):
@@ -931,10 +945,12 @@ class TestRetrieveModelGcs:
             patch.object(ModelManagement, "decompress_to_cache", side_effect=fake_decompress),
         ):
             result = ModelManagement.retrieve_model_gcs(
-                model_name=model_name,
-                source_url="http://example.com/fast-mymodel.tar.gz",
-                cache_dir=str(tmp_path),
-                deprecated_tar_struct=True,
+                GCSModelDownloadConfig(
+                    model_name=model_name,
+                    source_url="http://example.com/fast-mymodel.tar.gz",
+                    cache_dir=str(tmp_path),
+                    deprecated_tar_struct=True,
+                )
             )
         assert result.name == "fast-mymodel"
 

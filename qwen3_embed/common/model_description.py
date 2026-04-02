@@ -32,6 +32,15 @@ class BaseModelDescription:
 
 
 @dataclass(frozen=True)
+class GCSModelDownloadConfig:
+    model_name: str
+    source_url: str
+    cache_dir: str
+    deprecated_tar_struct: bool = False
+    local_files_only: bool = False
+
+
+@dataclass(frozen=True)
 class DenseModelDescription(BaseModelDescription):
     dim: int | None = None
     tasks: dict[str, Any] | None = field(default_factory=dict)
