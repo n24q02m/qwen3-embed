@@ -1376,8 +1376,11 @@ class TestSaveFileMetadata:
         meta = {"file.txt": {"size": 4, "blob_id": "expected_blob"}}
 
         from huggingface_hub.hf_api import RepoFile
+
         # Use 'oid' instead of 'blob_id' as RepoFile expects 'oid' in kwargs
         repo_files = [RepoFile(path="file.txt", size=4, oid="wrong_blob")]
 
-        result = ModelManagement._verify_files_from_metadata(model_dir, meta, repo_files=repo_files)
+        result = ModelManagement._verify_files_from_metadata(
+            model_dir, meta, repo_files=repo_files
+        )
         assert result is False
