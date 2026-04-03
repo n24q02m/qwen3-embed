@@ -5,7 +5,6 @@ from typing import Any
 from qwen3_embed.common import OnnxProvider
 from qwen3_embed.common.model_description import (
     BaseModelDescription,
-    ModelSource,
 )
 from qwen3_embed.common.types import Device
 from qwen3_embed.rerank.cross_encoder.custom_text_cross_encoder import CustomTextCrossEncoder
@@ -140,34 +139,18 @@ class TextCrossEncoder(TextCrossEncoderBase):
     @classmethod
     def add_custom_model(
         cls,
-        model: str,
-        sources: ModelSource,
-        model_file: str = "onnx/model.onnx",
-        description: str = "",
-        license: str = "",
-        size_in_gb: float = 0.0,
-        additional_files: list[str] | None = None,
+        model_description: BaseModelDescription,
     ) -> None:
         registered_models = cls._list_supported_models()
-        model_lower = model.lower()
+        model_lower = model_description.model.lower()
         for registered_model in registered_models:
             if model_lower == registered_model.model.lower():
                 raise ValueError(
-                    f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
-                    f"please use another model name"
+                    f"Model {model_description.model} is already registered in CrossEncoderModel, "
+                    f"if you still want to add this model, please use another model name"
                 )
 
-        CustomTextCrossEncoder.add_model(
-            BaseModelDescription(
-                model=model,
-                sources=sources,
-                model_file=model_file,
-                description=description,
-                license=license,
-                size_in_GB=size_in_gb,
-                additional_files=additional_files or [],
-            )
-        )
+        CustomTextCrossEncoder.add_model(model_description)
 
     def token_count(
         self, pairs: Iterable[tuple[str, str]], batch_size: int = 1024, **kwargs: Any
