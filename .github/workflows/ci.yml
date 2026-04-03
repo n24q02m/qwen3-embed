@@ -49,7 +49,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: "latest"
 
@@ -135,17 +135,17 @@ jobs:
           fi
 
       - name: Authenticate to GCP (Vertex AI)
-        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           workload_identity_provider: ${{ vars.VERTEX_WIF_PROVIDER }}
           service_account: ${{ vars.VERTEX_SERVICE_ACCOUNT }}
 
       - name: PR Agent action step
-        uses: qodo-ai/pr-agent@0b0c175f6a0ae73f75bfb12a0eecb440a216a891 # main
+        uses: qodo-ai/pr-agent@42d55d4182a4839820b11b6c4d06fce855970301
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERTEXAI_PROJECT: ${{ vars.VERTEX_PROJECT }}
-          VERTEXAI_LOCATION: us-central1
+          VERTEXAI_LOCATION: global
           PR_REVIEWER__EXTRA_INSTRUCTIONS: ${{ env.CUSTOM_INSTRUCTIONS }}
           PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: ${{ env.CUSTOM_INSTRUCTIONS }}
           PR_DESCRIPTION__EXTRA_INSTRUCTIONS: ${{ env.CUSTOM_INSTRUCTIONS }}
