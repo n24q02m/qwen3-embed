@@ -112,6 +112,7 @@ class ModelManagement(Generic[T]):
                 unit="iB",
                 unit_scale=True,
                 disable=not show_progress,
+                desc=f"Downloading {Path(output_path).name}",
             ) as progress_bar,
             open(output_path, "wb") as file,
         ):
