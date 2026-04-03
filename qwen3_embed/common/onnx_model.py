@@ -18,6 +18,17 @@ T = TypeVar("T")
 
 
 @dataclass
+class OnnxModelConfig:
+    model_dir: Path
+    model_file: str
+    threads: int | None
+    providers: Sequence[OnnxProvider] | None = None
+    cuda: bool | Device = Device.AUTO
+    device_id: int | None = None
+    extra_session_options: dict[str, Any] | None = None
+
+
+@dataclass
 class OnnxOutputContext:
     model_output: NumpyArray
     attention_mask: NDArray[np.int64] | None = None
@@ -124,23 +135,16 @@ class OnnxModel(Generic[T]):
             self.add_extra_session_options(so, extra_session_options)
         return so
 
-    def _load_onnx_model(
-        self,
-        model_dir: Path,
-        model_file: str,
-        threads: int | None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_id: int | None = None,
-        extra_session_options: dict[str, Any] | None = None,
-    ) -> None:
-        model_path = model_dir / model_file
+    def _load_onnx_model(self, config: OnnxModelConfig) -> None:
+        model_path = config.model_dir / config.model_file
         # List of Execution Providers: https://onnxruntime.ai/docs/execution-providers
         available_providers = ort.get_available_providers()  # type: ignore[possibly-missing-attribute]
 
-        onnx_providers = self._determine_providers(providers, cuda, device_id, available_providers)
+        onnx_providers = self._determine_providers(
+            config.providers, config.cuda, config.device_id, available_providers
+        )
         requested_provider_names = self._validate_providers(onnx_providers, available_providers)
-        so = self._create_session_options(threads, extra_session_options)
+        so = self._create_session_options(config.threads, config.extra_session_options)
 
         self.model = ort.InferenceSession(
             str(model_path), providers=onnx_providers, sess_options=so
