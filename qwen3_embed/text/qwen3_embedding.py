@@ -20,6 +20,7 @@ from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.common.utils import last_token_pool, normalize
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
+from qwen3_embed.text.onnx_text_model import TextModelConfig
 
 # ---------------------------------------------------------------------------
 # Model registry
@@ -122,18 +123,21 @@ class Qwen3TextEmbedding(OnnxTextEmbedding):
         Yields:
             NumpyArray: L2-normalised embeddings, one per document.
         """
-        yield from self._embed_documents(
+        config = TextModelConfig(
             model_name=self.model_name,
             cache_dir=str(self.cache_dir),
-            documents=documents,
-            batch_size=1,
-            parallel=parallel,
             providers=self.providers,
             cuda=self.cuda,
             device_ids=self.device_ids,
             local_files_only=self._local_files_only,
             specific_model_path=self._specific_model_path,
             extra_session_options=self._extra_session_options,
+        )
+        yield from self._embed_documents(
+            config=config,
+            documents=documents,
+            batch_size=1,
+            parallel=parallel,
             **kwargs,
         )
 

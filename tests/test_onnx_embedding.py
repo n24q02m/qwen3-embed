@@ -5,7 +5,9 @@ import numpy as np
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
 from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.utils import define_cache_dir
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
+from qwen3_embed.text.onnx_text_model import TextModelConfig
 
 _MODEL_NAME = "test-org/test-model"
 _MODEL_DESC = DenseModelDescription(
@@ -85,12 +87,10 @@ def test_onnx_text_embedding_embed(
 
     mock_embed_documents.assert_called_once()
     kwargs = mock_embed_documents.call_args.kwargs
-    assert kwargs["model_name"] == _MODEL_NAME
-    assert (
-        kwargs["cache_dir"] == str(Path("/tmp/cache").absolute())
-        if Path("/tmp/cache").is_absolute()
-        else str(Path("/tmp/cache").resolve())
-    )
+    config = kwargs["config"]
+    assert isinstance(config, TextModelConfig)
+    assert config.model_name == _MODEL_NAME
+    assert config.cache_dir == str(define_cache_dir("/tmp/cache"))
     assert kwargs["documents"] == docs
     assert kwargs["batch_size"] == 32
     assert kwargs["parallel"] == 4
