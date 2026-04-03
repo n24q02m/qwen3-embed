@@ -377,3 +377,20 @@ class TestDefineCacheDir:
         assert res == Path("/custom/arg/path")
         mock_mkdir.assert_called_once_with(mode=0o700, parents=True, exist_ok=True)
         mock_chmod.assert_called_once_with(0o700)
+
+    def test_physical_creation_default(self, tmp_path: Path) -> None:
+        """Test that define_cache_dir physically creates the directory with correct permissions."""
+        fake_home = tmp_path / "home"
+        fake_home.mkdir()
+
+        with (
+            patch("qwen3_embed.common.utils.Path.home", return_value=fake_home),
+            patch.dict(os.environ, {}, clear=True),
+        ):
+            res = define_cache_dir()
+            expected_path = fake_home / ".cache" / "qwen3_embed"
+            assert res == expected_path
+            assert res.exists()
+            assert res.is_dir()
+            # Check permissions (0o700)
+            assert (res.stat().st_mode & 0o777) == 0o700
