@@ -457,12 +457,14 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _check_hf_cache(
         cls,
-        hf_source: str,
+        model: T,
         cache_dir: str,
         extra_patterns: list[str],
-        model_file: str,
         **kwargs: Any,
     ) -> Path | None:
+        hf_source = model.sources.hf
+        if not hf_source:
+            return None
         try:
             cache_kwargs = deepcopy(kwargs)
             cache_kwargs["local_files_only"] = True
@@ -475,7 +477,7 @@ class ModelManagement(Generic[T]):
                 )
             )
             # Verify the required model file actually exists in the cached snapshot
-            if (cached_path / model_file).exists():
+            if (cached_path / model.model_file).exists():
                 return cached_path
         except Exception:
             logger.debug("Model not found in cache, will attempt download")
@@ -485,8 +487,11 @@ class ModelManagement(Generic[T]):
 
     @classmethod
     def _download_from_hf(
-        cls, hf_source: str, cache_dir: str, extra_patterns: list[str], **kwargs: Any
+        cls, model: T, cache_dir: str, extra_patterns: list[str], **kwargs: Any
     ) -> Path | None:
+        hf_source = model.sources.hf
+        if not hf_source:
+            return None
         local_files_only = kwargs.get("local_files_only", False)
         try:
             return Path(
@@ -510,18 +515,19 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _download_from_gcs(
         cls,
-        model_name: str,
-        url_source: str | None,
+        model: T,
         cache_dir: str,
-        deprecated_tar_struct: bool,
         local_files_only: bool,
     ) -> Path | None:
+        url_source = model.sources.url
+        if not url_source and not local_files_only:
+            return None
         try:
             return cls.retrieve_model_gcs(
-                model_name,
+                model.model,
                 str(url_source),
                 str(cache_dir),
-                deprecated_tar_struct=deprecated_tar_struct,
+                deprecated_tar_struct=model.sources.deprecated_tar_struct,
                 local_files_only=local_files_only,
             )
         except Exception:
@@ -568,10 +574,9 @@ class ModelManagement(Generic[T]):
 
         if hf_source:
             cached_path = cls._check_hf_cache(
-                hf_source=hf_source,
+                model=model,
                 cache_dir=cache_dir,
                 extra_patterns=extra_patterns,
-                model_file=model.model_file,
                 **kwargs,
             )
             if cached_path:
@@ -583,7 +588,7 @@ class ModelManagement(Generic[T]):
 
             if hf_source and not local_files_only:
                 hf_path = cls._download_from_hf(
-                    hf_source=hf_source,
+                    model=model,
                     cache_dir=cache_dir,
                     extra_patterns=extra_patterns,
                     **kwargs,
@@ -593,10 +598,8 @@ class ModelManagement(Generic[T]):
 
             if url_source or local_files_only:
                 gcs_path = cls._download_from_gcs(
-                    model_name=model.model,
-                    url_source=url_source,
+                    model=model,
                     cache_dir=cache_dir,
-                    deprecated_tar_struct=model.sources.deprecated_tar_struct,
                     local_files_only=local_files_only,
                 )
                 if gcs_path:
