@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
-from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxModelConfig, OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import (
     OnnxTextCrossEncoder,
@@ -572,7 +572,7 @@ class TestLoadOnnxModel:
             session_mock.get_inputs.return_value = []
             mock_ort.InferenceSession.return_value = session_mock
 
-            m._load_onnx_model(tmp_path, "model.onnx", threads=None)
+            m._load_onnx_model(OnnxModelConfig(tmp_path, "model.onnx", threads=None))
 
         assert m.tokenizer is mock_tokenizer
 
@@ -676,13 +676,15 @@ class TestOnnxTextCrossEncoderLoadOnnxModel:
             enc.load_onnx_model()
 
         mock_load.assert_called_once_with(
-            model_dir=tmp_path,
-            model_file=_MODEL_DESC.model_file,
-            threads=enc.threads,
-            providers=enc.providers,
-            cuda=enc.cuda,
-            device_id=enc.device_id,
-            extra_session_options=enc._extra_session_options,
+            OnnxModelConfig(
+                model_dir=tmp_path,
+                model_file=_MODEL_DESC.model_file,
+                threads=enc.threads,
+                providers=enc.providers,
+                cuda=enc.cuda,
+                device_id=enc.device_id,
+                extra_session_options=enc._extra_session_options,
+            )
         )
 
 
