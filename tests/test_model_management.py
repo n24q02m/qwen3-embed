@@ -1323,3 +1323,61 @@ class TestSaveFileMetadata:
         mock_logger.warning.assert_called_once_with(
             "Failed to save metadata file. Next load may take longer to verify."
         )
+
+    def test_save_file_metadata_creates_dir_if_not_exists(self, tmp_path):
+        """Verify that _save_file_metadata creates the directory if it does not exist."""
+        model_dir = tmp_path / "new_model_dir"
+        meta = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        # Directory should not exist yet
+        assert not model_dir.exists()
+
+        ModelManagement._save_file_metadata(model_dir, meta)
+
+        # Directory and metadata file should now exist
+        assert model_dir.exists()
+        metadata_file = model_dir / ModelManagement.METADATA_FILE
+        assert metadata_file.exists()
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_save_file_metadata_handles_mkdir_oserror(self, mock_logger, tmp_path):
+        """Verify that OSError during mkdir is caught and logged."""
+        model_dir = tmp_path / "fail_dir"
+        meta = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        # Mock mkdir to raise OSError
+        with patch("pathlib.Path.mkdir", side_effect=OSError("Permission denied")):
+            ModelManagement._save_file_metadata(model_dir, meta)
+
+        mock_logger.exception.assert_called_once()
+        mock_logger.warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_verify_files_from_metadata_handles_missing_file(self, mock_logger, tmp_path):
+        """Verify that _verify_files_from_metadata returns False if a file is missing."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        meta = {"missing_file.txt": {"size": 100, "blob_id": "abc"}}
+
+        # Pass empty repo_files to satisfy argument requirement
+        result = ModelManagement._verify_files_from_metadata(model_dir, meta, repo_files=[])
+        assert result is False
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_verify_files_from_metadata_handles_wrong_online_blob(self, mock_logger, tmp_path):
+        """Verify that _verify_files_from_metadata returns False if blob_id mismatch in online mode."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        file_path = model_dir / "file.txt"
+        file_path.write_bytes(b"data")
+
+        meta = {"file.txt": {"size": 4, "blob_id": "expected_blob"}}
+
+        from huggingface_hub.hf_api import RepoFile
+        # Use 'oid' instead of 'blob_id' as RepoFile expects 'oid' in kwargs
+        repo_files = [RepoFile(path="file.txt", size=4, oid="wrong_blob")]
+
+        result = ModelManagement._verify_files_from_metadata(model_dir, meta, repo_files=repo_files)
+        assert result is False
