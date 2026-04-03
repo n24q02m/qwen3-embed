@@ -21,18 +21,18 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy>=2.0",
-    "onnxruntime>1.20.0,<1.24; python_version < '3.11'",
+    "numpy>=2.4.4",
+    "onnxruntime>1.20.0,<1.25; python_version < '3.11'",
     "onnxruntime>1.20.0; python_version >= '3.11'",
-    "tqdm>=4.67",
-    "requests>=2.32",
-    "tokenizers>=0.21,<1.0",
-    "huggingface-hub>=0.27,<2.0",
-    "loguru>=0.7",
+    "tqdm>=4.67.3",
+    "requests>=2.33.1",
+    "tokenizers>=0.22.2,<1.0",
+    "huggingface-hub>=0.36.2,<2.0",
+    "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
-gguf = ["llama-cpp-python>=0.3.16"]
+gguf = ["llama-cpp-python>=0.3.20"]
 
 [project.urls]
 Homepage = "https://github.com/n24q02m/qwen3-embed"
@@ -40,12 +40,12 @@ Repository = "https://github.com/n24q02m/qwen3-embed"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.2",
-    "pytest-cov>=7.0.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.1.0",
     "pytest-xdist>=3.8.0",
-    "syrupy>=4.9.1",
-    "ruff>=0.15.5",
-    "ty>=0.0.21",
+    "syrupy>=5.1.0",
+    "ruff>=0.15.9",
+    "ty>=0.0.28",
 ]
 
 [build-system]
