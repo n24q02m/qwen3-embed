@@ -8,6 +8,7 @@ Requires optional dependency: pip install qwen3-embed[gguf]
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
@@ -66,7 +67,7 @@ supported_qwen3_reranker_gguf_models: list[BaseModelDescription] = [
 def _check_llama_cpp() -> None:
     """Check that llama-cpp-python is installed."""
     try:
-        import llama_cpp  # type: ignore[unresolved-import] # noqa: F401
+        importlib.import_module("llama_cpp")
     except ImportError as e:
         msg = (
             "llama-cpp-python is required for GGUF models. "
