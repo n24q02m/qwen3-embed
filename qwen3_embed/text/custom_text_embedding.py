@@ -99,6 +99,8 @@ class CustomTextEmbedding(OnnxTextEmbedding):
         normalization: bool,
     ) -> None:
         cls.SUPPORTED_MODELS.append(model_description)
+        if hasattr(cls, "_supported_models_lower_set"):
+            cls._supported_models_lower_set.add(model_description.model.lower())
         cls.POSTPROCESSING_MAPPING[model_description.model] = PostprocessingConfig(
             pooling=pooling, normalization=normalization
         )

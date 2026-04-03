@@ -15,3 +15,5 @@ class CustomTextCrossEncoder(OnnxTextCrossEncoder):
         model_description: BaseModelDescription,
     ) -> None:
         cls.SUPPORTED_MODELS.append(model_description)
+        if hasattr(cls, "_supported_models_lower_set"):
+            cls._supported_models_lower_set.add(model_description.model.lower())

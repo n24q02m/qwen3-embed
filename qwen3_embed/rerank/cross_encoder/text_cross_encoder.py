@@ -68,10 +68,15 @@ class TextCrossEncoder(TextCrossEncoderBase):
     ):
         super().__init__(model_name, cache_dir, threads, **kwargs)
 
+        # ⚡ Bolt: Cache lowercase model names on the class to avoid redundant .lower() calls and provide O(1) lookup.
         model_name_lower = model_name.lower()
         for CROSS_ENCODER_TYPE in self.CROSS_ENCODER_REGISTRY:
-            supported_models = CROSS_ENCODER_TYPE._list_supported_models()
-            if any(model_name_lower == model.model.lower() for model in supported_models):
+            if not hasattr(CROSS_ENCODER_TYPE, "_supported_models_lower_set"):
+                CROSS_ENCODER_TYPE._supported_models_lower_set = {
+                    m.model.lower() for m in CROSS_ENCODER_TYPE._list_supported_models()
+                }
+
+            if model_name_lower in CROSS_ENCODER_TYPE._supported_models_lower_set:
                 self.model = CROSS_ENCODER_TYPE(
                     model_name=model_name,
                     cache_dir=cache_dir,
@@ -149,13 +154,12 @@ class TextCrossEncoder(TextCrossEncoderBase):
         additional_files: list[str] | None = None,
     ) -> None:
         registered_models = cls._list_supported_models()
-        model_lower = model.lower()
-        for registered_model in registered_models:
-            if model_lower == registered_model.model.lower():
-                raise ValueError(
-                    f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
-                    f"please use another model name"
-                )
+        # ⚡ Bolt: Use set for O(1) membership check.
+        if model.lower() in {m.model.lower() for m in registered_models}:
+            raise ValueError(
+                f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
+                f"please use another model name"
+            )
 
         CustomTextCrossEncoder.add_model(
             BaseModelDescription(
