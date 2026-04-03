@@ -153,6 +153,7 @@ class ModelManagement(Generic[T]):
                 "Authentication Error: You do not have permission to access this resource. "
                 "Please check your credentials."
             )
+        response.raise_for_status()
 
         expected_md5 = cls._get_expected_md5(response.headers)
 
@@ -368,6 +369,24 @@ class ModelManagement(Generic[T]):
                         raise tarfile.TarError(
                             f"Attempted path traversal in tar file: {member.name}"
                         )
+                    # SECURITY: Validate symlink and hardlink targets to prevent
+                    # arbitrary file writes outside the extraction directory.
+                    if member.issym() or member.islnk():
+                        if os.path.isabs(member.linkname):
+                            raise tarfile.TarError(
+                                f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
+                            )
+                        link_target_path = os.path.abspath(
+                            os.path.join(os.path.dirname(member_path), member.linkname)
+                        )
+                        if (
+                            not link_target_path.startswith(target_dir + os.sep)
+                            and link_target_path != target_dir
+                        ):
+                            raise tarfile.TarError(
+                                f"Attempted path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
+                            )
+
                     safe_members.append(member)
 
                 if hasattr(tarfile, "data_filter"):
