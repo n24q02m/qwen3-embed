@@ -271,6 +271,25 @@ class TestGetAllPunctuation:
         result2 = get_all_punctuation()
         assert result1 is result2
 
+    def test_non_ascii_punctuation(self) -> None:
+        """Verify non-ASCII punctuation marks are included."""
+        from qwen3_embed.common.utils import get_all_punctuation
+
+        punctuation = get_all_punctuation()
+        assert "\u00bf" in punctuation  # inverted question mark
+        assert "\u00ab" in punctuation  # left double angle quotation mark
+        assert "\u2014" in punctuation  # em dash
+
+    def test_excludes_symbols(self) -> None:
+        """Verify math and currency symbols are excluded."""
+        from qwen3_embed.common.utils import get_all_punctuation
+
+        punctuation = get_all_punctuation()
+        assert "+" not in punctuation
+        assert "=" not in punctuation
+        assert "$" not in punctuation
+        assert "\u20ac" not in punctuation  # euro sign
+
 
 class TestRemoveNonAlphanumeric:
     """Tests for remove_non_alphanumeric utility."""

@@ -10,6 +10,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+import requests
 from huggingface_hub.errors import RepositoryNotFoundError
 from huggingface_hub.hf_api import RepoFile
 
@@ -135,6 +136,34 @@ class TestDownloadFileFromGcs:
     """Tests for download_file_from_gcs."""
 
     GCS_URL = "https://storage.googleapis.com"
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_requests_get_uses_verify_true(self, mock_get, tmp_path):
+        """requests.get MUST be called with verify=True to prevent accidental bypass."""
+        response = Mock()
+        response.status_code = 200
+        response.headers = {"content-length": "0"}
+        response.iter_content.return_value = []
+        mock_get.return_value = response
+
+        output = tmp_path / "test.onnx"
+        ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/test.onnx", str(output))
+
+        # Assert that verify=True was passed in the call to requests.get
+        args, kwargs = mock_get.call_args
+        assert kwargs.get("verify") is True
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_404_raises_error(self, mock_get, tmp_path):
+        """Non-403 HTTP errors should be caught by raise_for_status."""
+        response = Mock()
+        response.status_code = 404
+        response.raise_for_status.side_effect = requests.exceptions.HTTPError("404 Client Error")
+        mock_get.return_value = response
+
+        output = tmp_path / "missing.onnx"
+        with pytest.raises(requests.exceptions.HTTPError, match="404 Client Error"):
+            ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/missing.onnx", str(output))
 
     def test_invalid_scheme_raises_value_error(self, tmp_path):
         """Non-HTTP(S) schemes must be rejected."""
@@ -390,6 +419,40 @@ class TestDecompressToCache:
             info.size = len(data)
             fileobj = io.BytesIO(data)
             tar.addfile(info, fileobj=fileobj)
+
+        with pytest.raises(tarfile.TarError):
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
+
+        assert not cache_dir.exists()
+
+    def test_decompress_symlink_slip_prevention(self, tmp_path):
+        """Tar slip via symlink traversal raises TarError and cache dir is removed."""
+        cache_dir = tmp_path / "tmp_cache_dir_symlink"
+        cache_dir.mkdir()
+
+        malicious_tar = tmp_path / "malicious_symlink.tar.gz"
+        with tarfile.open(malicious_tar, "w:gz") as tar:
+            info = tarfile.TarInfo(name="evil_symlink")
+            info.type = tarfile.SYMTYPE
+            info.linkname = "../evil.txt"
+            tar.addfile(info)
+
+        with pytest.raises(tarfile.TarError):
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
+
+        assert not cache_dir.exists()
+
+    def test_decompress_symlink_absolute_prevention(self, tmp_path):
+        """Tar slip via absolute symlink raises TarError and cache dir is removed."""
+        cache_dir = tmp_path / "tmp_cache_dir_symlink_abs"
+        cache_dir.mkdir()
+
+        malicious_tar = tmp_path / "malicious_symlink_abs.tar.gz"
+        with tarfile.open(malicious_tar, "w:gz") as tar:
+            info = tarfile.TarInfo(name="evil_symlink_abs")
+            info.type = tarfile.SYMTYPE
+            info.linkname = "/etc/passwd"
+            tar.addfile(info)
 
         with pytest.raises(tarfile.TarError):
             ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
@@ -1216,3 +1279,47 @@ class TestCheckHFCache:
         assert result is None
         mock_enable.assert_called_once()
         mock_logger.assert_called_once_with("Model not found in cache, will attempt download")
+
+
+# ---------------------------------------------------------------------------
+# TestSaveFileMetadata
+# ---------------------------------------------------------------------------
+
+
+class TestSaveFileMetadata:
+    """Tests for _save_file_metadata method."""
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_save_file_metadata_handles_oserror(self, mock_logger, tmp_path):
+        """Verify that OSError during file write is caught and logged."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        meta = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        # Mock write_text to raise OSError
+        with patch("pathlib.Path.write_text", side_effect=OSError("Disk full")):
+            ModelManagement._save_file_metadata(model_dir, meta)
+
+        mock_logger.exception.assert_called_once()
+        mock_logger.warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_save_file_metadata_handles_valueerror(self, mock_logger, tmp_path):
+        """Verify that ValueError during json.dumps is caught and logged."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        meta = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        # Mock json.dumps to raise ValueError
+        with patch(
+            "qwen3_embed.common.model_management.json.dumps",
+            side_effect=ValueError("Invalid JSON"),
+        ):
+            ModelManagement._save_file_metadata(model_dir, meta)
+
+        mock_logger.exception.assert_called_once()
+        mock_logger.warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
