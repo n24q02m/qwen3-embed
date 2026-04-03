@@ -319,6 +319,78 @@ class TestDownloadFileFromGcs:
         assert result == str(output)
         assert output.read_bytes() == chunk
 
+    @patch("qwen3_embed.common.model_management.tqdm")
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_updates_progress_bar(self, mock_get, mock_tqdm, tmp_path):
+        """Verify that tqdm is used and updated during download."""
+        chunk1 = b"chunk1"
+        chunk2 = b"chunk2"
+        total_size = len(chunk1) + len(chunk2)
+
+        response = MagicMock()
+        response.status_code = 200
+        response.headers = {"content-length": str(total_size)}
+        response.iter_content.return_value = [chunk1, chunk2]
+        mock_get.return_value = response
+
+        progress_bar = MagicMock()
+        mock_tqdm.return_value.__enter__.return_value = progress_bar
+
+        output = tmp_path / "progress_test.onnx"
+        ModelManagement.download_file_from_gcs(
+            f"{self.GCS_URL}/test.onnx", str(output), show_progress=True
+        )
+
+        # Verify tqdm initialization
+        mock_tqdm.assert_called_once()
+        assert mock_tqdm.call_args[1]["total"] == total_size
+        assert mock_tqdm.call_args[1]["disable"] is False
+
+        # Verify progress bar updates
+        assert progress_bar.update.call_count == 2
+        progress_bar.update.assert_any_call(len(chunk1))
+        progress_bar.update.assert_any_call(len(chunk2))
+
+
+# ---------------------------------------------------------------------------
+# TestVerifyFilesFromMetadata
+# ---------------------------------------------------------------------------
+
+
+class TestVerifyFilesFromMetadata:
+    """Tests for _verify_files_from_metadata method."""
+
+    def test_verify_files_from_metadata_file_missing(self, tmp_path):
+        """Line 185: return False if file does not exist."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        stored_metadata = {"missing.txt": {"size": 10, "blob_id": "abc"}}
+
+        result = ModelManagement._verify_files_from_metadata(
+            model_dir=model_dir, stored_metadata=stored_metadata, repo_files=[]
+        )
+        assert result is False
+
+    def test_verify_files_from_metadata_online_mismatch(self, tmp_path):
+        """Line 194: return False if online verification fails (blob_id mismatch)."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        file_path = model_dir / "file.txt"
+        file_path.write_bytes(b"content")
+
+        stored_metadata = {"file.txt": {"size": 7, "blob_id": "correct_id"}}
+
+        # RepoFile with different blob_id
+        repo_file = MagicMock(spec=RepoFile)
+        repo_file.path = "file.txt"
+        repo_file.size = 7
+        repo_file.blob_id = "wrong_id"
+
+        result = ModelManagement._verify_files_from_metadata(
+            model_dir=model_dir, stored_metadata=stored_metadata, repo_files=[repo_file]
+        )
+        assert result is False
+
 
 # ---------------------------------------------------------------------------
 # TestDecompressToCache
@@ -476,10 +548,40 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
+    # ---------------------------------------------------------------------------
+    # TestDownloadFilesFromHuggingFace
+    # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# TestDownloadFilesFromHuggingFace
-# ---------------------------------------------------------------------------
+    @patch("qwen3_embed.common.model_management.tarfile.open")
+    def test_decompress_to_cache_fallback_no_data_filter(self, mock_tar_open, tmp_path):
+        """Line 395: tar.extractall without filter='data' when it's missing."""
+        targz_path = tmp_path / "test.tar.gz"
+        targz_path.write_bytes(b"fake data")
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        mock_tar = MagicMock()
+        mock_tar_open.return_value.__enter__.return_value = mock_tar
+
+        # Mock member to pass security checks
+        member = MagicMock()
+        member.name = "file.txt"
+        member.isabs.return_value = False
+        member.issym.return_value = False
+        member.islnk.return_value = False
+        mock_tar.getmembers.return_value = [member]
+
+        # Simulate tarfile NOT having data_filter
+        with patch("qwen3_embed.common.model_management.tarfile") as mock_tarfile_module:
+            if hasattr(mock_tarfile_module, "data_filter"):
+                del mock_tarfile_module.data_filter
+
+            # Re-mock open because we mocked the whole module
+            mock_tarfile_module.open = mock_tar_open
+
+            ModelManagement.decompress_to_cache(str(targz_path), str(cache_dir))
+
+            mock_tar.extractall.assert_called_once_with(path=str(cache_dir), members=[member])
 
 
 class TestDownloadFilesFromHuggingFace:
@@ -1001,6 +1103,44 @@ class TestRetrieveModelGcs:
             )
         assert result.name == "fast-mymodel"
 
+    @patch("qwen3_embed.common.model_management.ModelManagement.download_file_from_gcs")
+    @patch("qwen3_embed.common.model_management.ModelManagement.decompress_to_cache")
+    def test_retrieve_model_gcs_unlinks_existing_tar_gz(
+        self, mock_decompress, mock_download, tmp_path
+    ):
+        """Line 432: model_tar_gz.unlink() if it exists."""
+        model_name = "test_model"
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        # Create the file that should be unlinked
+        model_tar_gz = cache_dir / "test_model.tar.gz"
+        model_tar_gz.write_bytes(b"old data")
+
+        def side_effect_download(url, output_path, **kwargs):
+            # Simulate downloading by recreating the file
+            Path(output_path).write_bytes(b"new data")
+            return output_path
+
+        mock_download.side_effect = side_effect_download
+
+        # Mock decompress to create the expected directory
+        def side_effect_decompress(targz_path, cache_dir):
+            out = Path(cache_dir) / "test_model"
+            out.mkdir(parents=True, exist_ok=True)
+            (out / "model.onnx").write_bytes(b"data")
+            return cache_dir
+
+        mock_decompress.side_effect = side_effect_decompress
+
+        ModelManagement.retrieve_model_gcs(
+            model_name=model_name,
+            source_url="https://storage.googleapis.com/bucket/test_model.tar.gz",
+            cache_dir=str(cache_dir),
+        )
+
+        assert not model_tar_gz.exists()
+
 
 # ---------------------------------------------------------------------------
 # TestDownloadModel
@@ -1322,115 +1462,4 @@ class TestSaveFileMetadata:
         mock_logger.exception.assert_called_once()
         mock_logger.warning.assert_called_once_with(
             "Failed to save metadata file. Next load may take longer to verify."
-        )
-
-
-# ---------------------------------------------------------------------------
-# TestDownloadFileFromGCS
-# ---------------------------------------------------------------------------
-
-
-class TestDownloadFileFromGCS:
-    """Tests for download_file_from_gcs and _download_and_hash_file."""
-
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_download_file_from_gcs_success(self, mock_get, tmp_path):
-        url = "https://storage.googleapis.com/test-bucket/model.tar.gz"
-        output_path = str(tmp_path / "model.tar.gz")
-        content = b"some model data"
-        md5_b64 = base64.b64encode(hashlib.md5(content).digest()).decode()
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.headers = {
-            "content-length": str(len(content)),
-            "x-goog-hash": f"crc32c=abc, md5={md5_b64}",
-        }
-        mock_response.iter_content.return_value = [content]
-        mock_get.return_value = mock_response
-
-        result = ModelManagement.download_file_from_gcs(url, output_path, show_progress=False)
-
-        assert result == output_path
-        assert Path(output_path).read_bytes() == content
-        mock_get.assert_called_once_with(url, stream=True, timeout=10, verify=True)
-
-    def test_download_file_from_gcs_invalid_url(self):
-        url = "https://example.com/not-gcs"
-        with pytest.raises(ValueError, match="Invalid URL"):
-            ModelManagement.download_file_from_gcs(url, "some/path")
-
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_download_file_from_gcs_file_exists(self, mock_get, tmp_path):
-        output_path = tmp_path / "exists.txt"
-        output_path.write_text("already here")
-
-        result = ModelManagement.download_file_from_gcs(
-            "https://storage.googleapis.com/b/o", str(output_path)
-        )
-
-        assert result == str(output_path)
-        mock_get.assert_not_called()
-
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_download_file_from_gcs_403_forbidden(self, mock_get):
-        mock_response = MagicMock()
-        mock_response.status_code = 403
-        mock_get.return_value = mock_response
-
-        url = "https://storage.googleapis.com/private/model"
-        with pytest.raises(PermissionError, match="Authentication Error"):
-            ModelManagement.download_file_from_gcs(url, "out")
-
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_download_file_from_gcs_http_error(self, mock_get):
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("404 Not Found")
-        mock_get.return_value = mock_response
-
-        url = "https://storage.googleapis.com/missing/model"
-        with pytest.raises(requests.exceptions.HTTPError):
-            ModelManagement.download_file_from_gcs(url, "out")
-
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_download_file_from_gcs_md5_mismatch(self, mock_get, tmp_path):
-        url = "https://storage.googleapis.com/test/model"
-        output_path = str(tmp_path / "mismatch.bin")
-        content = b"correct data"
-        wrong_md5_b64 = base64.b64encode(b"wronghash123456").decode()
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.headers = {
-            "content-length": str(len(content)),
-            "x-goog-hash": f"md5={wrong_md5_b64}",
-        }
-        mock_response.iter_content.return_value = [content]
-        mock_get.return_value = mock_response
-
-        with pytest.raises(ValueError, match="File integrity check failed"):
-            ModelManagement.download_file_from_gcs(url, output_path, show_progress=False)
-
-        assert not Path(output_path).exists()
-
-    @patch("qwen3_embed.common.model_management.requests.get")
-    @patch("qwen3_embed.common.model_management.logger")
-    def test_download_file_from_gcs_missing_content_length(self, mock_logger, mock_get, tmp_path):
-        url = "https://storage.googleapis.com/test/model"
-        output_path = str(tmp_path / "no_len.bin")
-        content = b"some data"
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.headers = {}  # Missing content-length
-        mock_response.iter_content.return_value = [content]
-        mock_get.return_value = mock_response
-
-        result = ModelManagement.download_file_from_gcs(url, output_path, show_progress=False)
-
-        assert result == output_path
-        assert Path(output_path).read_bytes() == content
-        mock_logger.warning.assert_called_with(
-            f"Content-length header is missing or zero in the response from {url}."
         )
