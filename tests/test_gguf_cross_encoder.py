@@ -324,14 +324,14 @@ class TestScoreText:
 
         assert abs(score - 0.5) < 1e-5
 
-    def test_score_text_calls_tokenize_and_eval(self):
-        """Test _score_text calls tokenize, reset, and eval on the LLM."""
+    def test_score_text_calls_tokenize_and_decode(self):
+        """Test _score_text calls tokenize, reset, and decode on the LLM."""
         model = _make_model()
         model._score_text("evaluate this")
 
         model._llm.tokenize.assert_called_once_with(b"evaluate this", add_bos=False)
         model._llm.reset.assert_called_once()
-        model._llm.eval.assert_called_once()
+        model._llm.decode.assert_called_once()
 
     def test_score_text_uses_last_token_logits(self):
         """Test _score_text indexes scores with len(tokens)-1 (last token)."""
