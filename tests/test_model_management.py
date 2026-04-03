@@ -201,6 +201,20 @@ class TestDownloadFileFromGcs:
             ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/x.onnx", str(output))
 
     @patch("qwen3_embed.common.model_management.requests.get")
+    def test_non_403_raises_http_error(self, mock_get, tmp_path):
+        """HTTP errors other than 403 are raised via raise_for_status."""
+        from requests import HTTPError
+
+        response = Mock()
+        response.status_code = 500
+        response.raise_for_status.side_effect = HTTPError("Internal Server Error")
+        mock_get.return_value = response
+
+        output = tmp_path / "new_model.onnx"
+        with pytest.raises(HTTPError, match="Internal Server Error"):
+            ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/x.onnx", str(output))
+
+    @patch("qwen3_embed.common.model_management.requests.get")
     def test_missing_content_length_logs_warning(self, mock_get, tmp_path):
         response = Mock()
         response.status_code = 200

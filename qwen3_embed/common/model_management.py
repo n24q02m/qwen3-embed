@@ -153,6 +153,7 @@ class ModelManagement(Generic[T]):
                 "Authentication Error: You do not have permission to access this resource. "
                 "Please check your credentials."
             )
+        response.raise_for_status()
 
         expected_md5 = cls._get_expected_md5(response.headers)
 
