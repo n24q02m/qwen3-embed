@@ -24,17 +24,17 @@ class ModelSource:
 class BaseModelDescription:
     model: str
     sources: ModelSource
-    model_file: str
-    description: str
-    license: str
-    size_in_GB: float
+    model_file: str = "onnx/model.onnx"
+    description: str = ""
+    license: str = ""
+    size_in_GB: float = 0.0
     additional_files: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
 class DenseModelDescription(BaseModelDescription):
-    dim: int | None = None
-    tasks: dict[str, Any] | None = field(default_factory=dict)
+    dim: int | None = field(default=None, kw_only=True)
+    tasks: dict[str, Any] | None = field(default_factory=dict, kw_only=True)
 
     def __post_init__(self) -> None:
         if self.dim is None:
@@ -43,8 +43,8 @@ class DenseModelDescription(BaseModelDescription):
 
 @dataclass(frozen=True)
 class SparseModelDescription(BaseModelDescription):
-    requires_idf: bool | None = None
-    vocab_size: int | None = None
+    requires_idf: bool | None = field(default=None, kw_only=True)
+    vocab_size: int | None = field(default=None, kw_only=True)
 
 
 class PoolingType(str, Enum):

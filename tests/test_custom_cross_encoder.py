@@ -16,18 +16,26 @@ class TestCustomCrossEncoderRegistration:
 
     def test_register_model(self):
         """Test adding a basic model."""
+        from qwen3_embed.common.model_description import BaseModelDescription
+
         TextCrossEncoder.add_custom_model(
-            model="test/model",
-            sources=ModelSource(hf="test/model"),
+            BaseModelDescription(
+                model="test/model",
+                sources=ModelSource(hf="test/model"),
+            )
         )
         models = TextCrossEncoder.list_supported_models()
         assert any(m["model"] == "test/model" for m in models)
 
     def test_duplicate_model_raises_case_insensitive(self):
         """Test adding a duplicate model with different casing raises ValueError."""
+        from qwen3_embed.common.model_description import BaseModelDescription
+
         TextCrossEncoder.add_custom_model(
-            model="Test/Duplicate",
-            sources=ModelSource(hf="Test/Duplicate"),
+            BaseModelDescription(
+                model="Test/Duplicate",
+                sources=ModelSource(hf="Test/Duplicate"),
+            )
         )
 
         # Verify it was added
@@ -37,6 +45,8 @@ class TestCustomCrossEncoderRegistration:
         # Try adding again with different case
         with pytest.raises(ValueError, match="already registered"):
             TextCrossEncoder.add_custom_model(
-                model="test/duplicate",
-                sources=ModelSource(hf="test/duplicate"),
+                BaseModelDescription(
+                    model="test/duplicate",
+                    sources=ModelSource(hf="test/duplicate"),
+                )
             )

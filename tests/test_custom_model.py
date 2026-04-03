@@ -16,51 +16,66 @@ class TestCustomModelRegistration:
         CustomTextEmbedding.POSTPROCESSING_MAPPING.clear()
 
     def test_register_cls_pooling_model(self):
+        from qwen3_embed.common.model_description import DenseModelDescription
+
         TextEmbedding.add_custom_model(
-            model="test/cls-model",
+            DenseModelDescription(
+                model="test/cls-model",
+                sources=ModelSource(hf="test/cls-model"),
+                dim=768,
+            ),
             pooling=PoolingType.CLS,
             normalization=True,
-            sources=ModelSource(hf="test/cls-model"),
-            dim=768,
         )
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/cls-model" for m in models)
 
     def test_register_mean_pooling_model(self):
+        from qwen3_embed.common.model_description import DenseModelDescription
+
         TextEmbedding.add_custom_model(
-            model="test/mean-model",
+            DenseModelDescription(
+                model="test/mean-model",
+                sources=ModelSource(hf="test/mean-model"),
+                dim=512,
+            ),
             pooling=PoolingType.MEAN,
             normalization=True,
-            sources=ModelSource(hf="test/mean-model"),
-            dim=512,
         )
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/mean-model" for m in models)
 
     def test_register_last_token_pooling_model(self):
+        from qwen3_embed.common.model_description import DenseModelDescription
+
         TextEmbedding.add_custom_model(
-            model="test/last-token-model",
+            DenseModelDescription(
+                model="test/last-token-model",
+                sources=ModelSource(hf="test/last-token-model"),
+                dim=1024,
+            ),
             pooling=PoolingType.LAST_TOKEN,
             normalization=True,
-            sources=ModelSource(hf="test/last-token-model"),
-            dim=1024,
         )
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/last-token-model" for m in models)
 
     def test_duplicate_model_raises(self):
-        TextEmbedding.add_custom_model(
+        from qwen3_embed.common.model_description import DenseModelDescription
+
+        description = DenseModelDescription(
             model="test/duplicate",
-            pooling=PoolingType.CLS,
-            normalization=True,
             sources=ModelSource(hf="test/duplicate"),
             dim=256,
         )
+        TextEmbedding.add_custom_model(
+            description,
+            pooling=PoolingType.CLS,
+            normalization=True,
+        )
         with pytest.raises(ValueError, match="already registered"):
             TextEmbedding.add_custom_model(
-                model="test/duplicate",
+                description,
                 pooling=PoolingType.CLS,
                 normalization=True,
-                sources=ModelSource(hf="test/duplicate"),
-                dim=256,
             )
