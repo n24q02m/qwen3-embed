@@ -353,34 +353,45 @@ class ModelManagement(Generic[T]):
             # Open the tar.gz file
             with tarfile.open(targz_path, "r:gz") as tar:
                 # Extract all files into the cache directory securely
+                # Ensure target_dir ends with a separator to prevent partial name matching
                 target_dir = os.path.abspath(cache_dir)
+                target_dir_sep = target_dir + os.sep
 
                 safe_members = []
                 for member in tar.getmembers():
+                    # Check for absolute paths or path traversal in member name
                     if os.path.isabs(member.name) or member.name.startswith("/"):
                         raise tarfile.TarError(
                             f"Attempted path traversal in tar file: {member.name}"
                         )
+
                     member_path = os.path.abspath(os.path.join(target_dir, member.name))
-                    if (
-                        not member_path.startswith(target_dir + os.sep)
-                        and member_path != target_dir
-                    ):
+                    if not member_path.startswith(target_dir_sep) and member_path != target_dir:
                         raise tarfile.TarError(
                             f"Attempted path traversal in tar file: {member.name}"
                         )
+
                     # SECURITY: Validate symlink and hardlink targets to prevent
                     # arbitrary file writes outside the extraction directory.
                     if member.issym() or member.islnk():
-                        if os.path.isabs(member.linkname):
+                        if os.path.isabs(member.linkname) or member.linkname.startswith("/"):
                             raise tarfile.TarError(
                                 f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
                             )
-                        link_target_path = os.path.abspath(
-                            os.path.join(os.path.dirname(member_path), member.linkname)
-                        )
+
+                        if member.issym():
+                            # Symlinks are resolved relative to the directory containing the link
+                            link_target_path = os.path.abspath(
+                                os.path.join(os.path.dirname(member_path), member.linkname)
+                            )
+                        else:
+                            # Hardlinks (LNKTYPE) are resolved relative to the extraction root
+                            link_target_path = os.path.abspath(
+                                os.path.join(target_dir, member.linkname)
+                            )
+
                         if (
-                            not link_target_path.startswith(target_dir + os.sep)
+                            not link_target_path.startswith(target_dir_sep)
                             and link_target_path != target_dir
                         ):
                             raise tarfile.TarError(

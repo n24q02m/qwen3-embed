@@ -476,6 +476,25 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
+    def test_decompress_hardlink_traversal_prevention(self, tmp_path):
+        """Tar slip via nested hardlink traversal (relative to root) might bypass current logic."""
+        cache_dir = tmp_path / "tmp_cache_dir_hardlink_nested"
+        cache_dir.mkdir()
+
+        malicious_tar = tmp_path / "malicious_hardlink_nested.tar.gz"
+        with tarfile.open(malicious_tar, "w:gz") as tar:
+            # Create a hardlink in a nested directory
+            # pointing to a path that would be outside if resolved from the root.
+            info = tarfile.TarInfo(name="sub/nested/evil_hardlink")
+            info.type = tarfile.LNKTYPE
+            info.linkname = "../evil.txt"  # Resolved relative to ROOT -> OUTSIDE
+            tar.addfile(info)
+
+        with pytest.raises(tarfile.TarError):
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
+
+        assert not cache_dir.exists()
+
 
 # ---------------------------------------------------------------------------
 # TestDownloadFilesFromHuggingFace
