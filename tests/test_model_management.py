@@ -1323,3 +1323,114 @@ class TestSaveFileMetadata:
         mock_logger.warning.assert_called_once_with(
             "Failed to save metadata file. Next load may take longer to verify."
         )
+
+
+# ---------------------------------------------------------------------------
+# TestDownloadFileFromGCS
+# ---------------------------------------------------------------------------
+
+
+class TestDownloadFileFromGCS:
+    """Tests for download_file_from_gcs and _download_and_hash_file."""
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_success(self, mock_get, tmp_path):
+        url = "https://storage.googleapis.com/test-bucket/model.tar.gz"
+        output_path = str(tmp_path / "model.tar.gz")
+        content = b"some model data"
+        md5_b64 = base64.b64encode(hashlib.md5(content).digest()).decode()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {
+            "content-length": str(len(content)),
+            "x-goog-hash": f"crc32c=abc, md5={md5_b64}",
+        }
+        mock_response.iter_content.return_value = [content]
+        mock_get.return_value = mock_response
+
+        result = ModelManagement.download_file_from_gcs(url, output_path, show_progress=False)
+
+        assert result == output_path
+        assert Path(output_path).read_bytes() == content
+        mock_get.assert_called_once_with(url, stream=True, timeout=10, verify=True)
+
+    def test_download_file_from_gcs_invalid_url(self):
+        url = "https://example.com/not-gcs"
+        with pytest.raises(ValueError, match="Invalid URL"):
+            ModelManagement.download_file_from_gcs(url, "some/path")
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_file_exists(self, mock_get, tmp_path):
+        output_path = tmp_path / "exists.txt"
+        output_path.write_text("already here")
+
+        result = ModelManagement.download_file_from_gcs(
+            "https://storage.googleapis.com/b/o", str(output_path)
+        )
+
+        assert result == str(output_path)
+        mock_get.assert_not_called()
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_403_forbidden(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        mock_get.return_value = mock_response
+
+        url = "https://storage.googleapis.com/private/model"
+        with pytest.raises(PermissionError, match="Authentication Error"):
+            ModelManagement.download_file_from_gcs(url, "out")
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_http_error(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("404 Not Found")
+        mock_get.return_value = mock_response
+
+        url = "https://storage.googleapis.com/missing/model"
+        with pytest.raises(requests.exceptions.HTTPError):
+            ModelManagement.download_file_from_gcs(url, "out")
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    def test_download_file_from_gcs_md5_mismatch(self, mock_get, tmp_path):
+        url = "https://storage.googleapis.com/test/model"
+        output_path = str(tmp_path / "mismatch.bin")
+        content = b"correct data"
+        wrong_md5_b64 = base64.b64encode(b"wronghash123456").decode()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {
+            "content-length": str(len(content)),
+            "x-goog-hash": f"md5={wrong_md5_b64}",
+        }
+        mock_response.iter_content.return_value = [content]
+        mock_get.return_value = mock_response
+
+        with pytest.raises(ValueError, match="File integrity check failed"):
+            ModelManagement.download_file_from_gcs(url, output_path, show_progress=False)
+
+        assert not Path(output_path).exists()
+
+    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_download_file_from_gcs_missing_content_length(self, mock_logger, mock_get, tmp_path):
+        url = "https://storage.googleapis.com/test/model"
+        output_path = str(tmp_path / "no_len.bin")
+        content = b"some data"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {}  # Missing content-length
+        mock_response.iter_content.return_value = [content]
+        mock_get.return_value = mock_response
+
+        result = ModelManagement.download_file_from_gcs(url, output_path, show_progress=False)
+
+        assert result == output_path
+        assert Path(output_path).read_bytes() == content
+        mock_logger.warning.assert_called_with(
+            f"Content-length header is missing or zero in the response from {url}."
+        )
