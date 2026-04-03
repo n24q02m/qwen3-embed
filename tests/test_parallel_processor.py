@@ -11,6 +11,7 @@ from qwen3_embed.parallel_processor import (
     ParallelWorkerPool,
     QueueSignals,
     Worker,
+    WorkerConfig,
     _worker,
 )
 
@@ -194,7 +195,15 @@ def test_worker_function_basic():
     # Worker processes items: (0, 5) -> (0, 25), then stops
     input_queue.get.side_effect = [(0, 5), QueueSignals.stop]
 
-    _worker(SquareWorker, input_queue, output_queue, num_active_workers, worker_id=0)
+    config = WorkerConfig(
+        worker_class=SquareWorker,
+        input_queue=input_queue,
+        output_queue=output_queue,
+        num_active_workers=num_active_workers,
+        worker_id=0,
+        kwargs={},
+    )
+    _worker(config)
 
     # Should put the squared result
     output_queue.put.assert_called_once_with((0, 25))
@@ -219,8 +228,16 @@ def test_worker_function_with_kwargs():
 
     input_queue.get.side_effect = [QueueSignals.stop]
 
-    # Call with kwargs=None (should default to {})
-    _worker(SquareWorker, input_queue, output_queue, num_active_workers, worker_id=1, kwargs=None)
+    # Call with kwargs={}
+    config = WorkerConfig(
+        worker_class=SquareWorker,
+        input_queue=input_queue,
+        output_queue=output_queue,
+        num_active_workers=num_active_workers,
+        worker_id=1,
+        kwargs={},
+    )
+    _worker(config)
 
     output_queue.put.assert_not_called()
     input_queue.close.assert_called_once()
@@ -238,14 +255,15 @@ def test_worker_function_exception_handling():
     # failure_val=5 means item 5 raises an exception
     input_queue.get.side_effect = [(0, 5), QueueSignals.stop]
 
-    _worker(
-        FailingWorker,
-        input_queue,
-        output_queue,
-        num_active_workers,
+    config = WorkerConfig(
+        worker_class=FailingWorker,
+        input_queue=input_queue,
+        output_queue=output_queue,
+        num_active_workers=num_active_workers,
         worker_id=0,
         kwargs={"failure_val": 5},
     )
+    _worker(config)
 
     # Should put the error signal
     output_queue.put.assert_called_once_with(QueueSignals.error)
@@ -269,7 +287,15 @@ def test_worker_function_multiple_items():
 
     input_queue.get.side_effect = [(0, 3), (1, 4), (2, 5), QueueSignals.stop]
 
-    _worker(SquareWorker, input_queue, output_queue, num_active_workers, worker_id=0)
+    config = WorkerConfig(
+        worker_class=SquareWorker,
+        input_queue=input_queue,
+        output_queue=output_queue,
+        num_active_workers=num_active_workers,
+        worker_id=0,
+        kwargs={},
+    )
+    _worker(config)
 
     # Should put 3 squared results
     assert output_queue.put.call_count == 3
@@ -565,7 +591,7 @@ def test_worker_start_exception_handling():
     num_active_workers.value = 1
     worker_id = 0
 
-    _worker(
+    config = WorkerConfig(
         worker_class=StartFailingWorker,
         input_queue=input_queue,
         output_queue=output_queue,
@@ -573,6 +599,7 @@ def test_worker_start_exception_handling():
         worker_id=worker_id,
         kwargs={},
     )
+    _worker(config)
 
     # Verify that QueueSignals.error was put in the output queue
     output_queue.put.assert_called_with(QueueSignals.error)
