@@ -459,6 +459,29 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
+    def test_decompress_hardlink_traversal_prevention(self, tmp_path):
+        """Tar slip via hardlink resolved relative to extraction root is caught.
+
+        Hardlinks in tar archives resolve linkname relative to the archive root
+        (extraction directory), NOT relative to the containing directory like
+        symlinks. A nested hardlink with '../evil.txt' linkname must be detected
+        as escaping the target directory.
+        """
+        cache_dir = tmp_path / "tmp_cache_dir_hardlink_nested"
+        cache_dir.mkdir()
+
+        malicious_tar = tmp_path / "malicious_hardlink_nested.tar.gz"
+        with tarfile.open(malicious_tar, "w:gz") as tar:
+            info = tarfile.TarInfo(name="sub/nested/evil_hardlink")
+            info.type = tarfile.LNKTYPE
+            info.linkname = "../evil.txt"
+            tar.addfile(info)
+
+        with pytest.raises(tarfile.TarError):
+            ModelManagement.decompress_to_cache(str(malicious_tar), str(cache_dir))
+
+        assert not cache_dir.exists()
+
     def test_decompress_mid_extraction_failure(self, tmp_path):
         """Mid-extraction TarError is re-raised and cache dir is removed."""
         tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
