@@ -372,13 +372,20 @@ class ModelManagement(Generic[T]):
                     # SECURITY: Validate symlink and hardlink targets to prevent
                     # arbitrary file writes outside the extraction directory.
                     if member.issym() or member.islnk():
-                        if os.path.isabs(member.linkname):
+                        if os.path.isabs(member.linkname) or member.linkname.startswith("/"):
                             raise tarfile.TarError(
                                 f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
                             )
-                        link_target_path = os.path.abspath(
-                            os.path.join(os.path.dirname(member_path), member.linkname)
-                        )
+                        if member.issym():
+                            # Symlinks resolve relative to the directory containing the link
+                            link_target_path = os.path.abspath(
+                                os.path.join(os.path.dirname(member_path), member.linkname)
+                            )
+                        else:
+                            # Hardlinks (LNKTYPE) resolve relative to the extraction root
+                            link_target_path = os.path.abspath(
+                                os.path.join(target_dir, member.linkname)
+                            )
                         if (
                             not link_target_path.startswith(target_dir + os.sep)
                             and link_target_path != target_dir
