@@ -1,14 +1,19 @@
 import os
 from collections.abc import Iterable, Sequence
 from multiprocessing import get_all_start_methods
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 from tokenizers import Encoding, Tokenizer
 
-from qwen3_embed.common.onnx_model import EmbeddingWorker, OnnxModel, OnnxModelConfig, OnnxOutputContext, T
+from qwen3_embed.common.onnx_model import (
+    EmbeddingWorker,
+    OnnxModel,
+    OnnxModelConfig,
+    OnnxOutputContext,
+    T,
+)
 from qwen3_embed.common.preprocessor_utils import load_tokenizer
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
 from qwen3_embed.common.utils import iter_batch

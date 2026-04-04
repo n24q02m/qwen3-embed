@@ -1,7 +1,6 @@
 import os
 from collections.abc import Iterable, Sequence
 from multiprocessing import get_all_start_methods
-from pathlib import Path
 from typing import Any
 
 import numpy as np
