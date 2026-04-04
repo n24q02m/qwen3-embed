@@ -54,12 +54,14 @@ class TextEmbedding(TextEmbeddingBase):
         additional_files: list[str] | None = None,
     ) -> None:
         registered_models = cls._list_supported_models()
-        # ⚡ Bolt: Use set for O(1) membership check.
-        if model.lower() in {m.model.lower() for m in registered_models}:
-            raise ValueError(
-                f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
-                f"please use another model name"
-            )
+        # ⚡ Bolt: Cache lowercase model name outside loop
+        model_lower = model.lower()
+        for registered_model in registered_models:
+            if model_lower == registered_model.model.lower():
+                raise ValueError(
+                    f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
+                    f"please use another model name"
+                )
 
         CustomTextEmbedding.add_model(
             DenseModelDescription(
@@ -88,15 +90,11 @@ class TextEmbedding(TextEmbeddingBase):
         **kwargs: Any,
     ):
         super().__init__(model_name, cache_dir, threads, **kwargs)
-        # ⚡ Bolt: Cache lowercase model names on the class to avoid redundant .lower() calls and provide O(1) lookup.
+        # ⚡ Bolt: Cache lowercase model name outside loop
         model_name_lower = model_name.lower()
         for EMBEDDING_MODEL_TYPE in self.EMBEDDINGS_REGISTRY:
-            if not hasattr(EMBEDDING_MODEL_TYPE, "_supported_models_lower_set"):
-                EMBEDDING_MODEL_TYPE._supported_models_lower_set = {
-                    m.model.lower() for m in EMBEDDING_MODEL_TYPE._list_supported_models()
-                }
-
-            if model_name_lower in EMBEDDING_MODEL_TYPE._supported_models_lower_set:
+            supported_models = EMBEDDING_MODEL_TYPE._list_supported_models()
+            if any(model_name_lower == model.model.lower() for model in supported_models):
                 self.model = EMBEDDING_MODEL_TYPE(
                     model_name=model_name,
                     cache_dir=cache_dir,
@@ -135,9 +133,13 @@ class TextEmbedding(TextEmbeddingBase):
             ValueError: If the model name is not found in the supported models.
         """
         descriptions = cls._list_supported_models()
-        # ⚡ Bolt: Use dict for O(1) lookup.
-        model_map = {m.model.lower(): m.dim for m in descriptions}
-        embedding_size = model_map.get(model_name.lower())
+        embedding_size: int | None = None
+        # ⚡ Bolt: Cache lowercase model name outside loop
+        model_name_lower = model_name.lower()
+        for description in descriptions:
+            if description.model.lower() == model_name_lower:
+                embedding_size = description.dim
+                break
         if embedding_size is None:
             model_names = [description.model for description in descriptions]
             raise ValueError(
