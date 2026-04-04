@@ -178,14 +178,17 @@ class ModelManagement(Generic[T]):
         cls, model_dir: Path, stored_metadata: dict[str, Any], repo_files: list[RepoFile]
     ) -> bool:
         try:
+            # ⚡ Bolt: Replace O(N*M) nested loop with O(N+M) dictionary lookup for faster file verification
+            repo_files_map = {f.path: f for f in repo_files} if repo_files else None
+
             for rel_path, meta in stored_metadata.items():
                 file_path = model_dir / rel_path
 
                 if not file_path.exists():
                     return False
 
-                if repo_files:  # online verification
-                    file_info = next((f for f in repo_files if f.path == file_path.name), None)
+                if repo_files_map is not None:  # online verification
+                    file_info = repo_files_map.get(file_path.name)
                     if (
                         not file_info
                         or file_info.size != meta["size"]
