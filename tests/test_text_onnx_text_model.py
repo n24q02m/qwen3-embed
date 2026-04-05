@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
-from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxModelConfig, OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.text.onnx_embedding import (
     OnnxTextEmbedding,
@@ -280,7 +280,9 @@ class TestOnnxTextModelLoadOnnxModel:
             session_mock.get_inputs.return_value = []
             mock_ort.InferenceSession.return_value = session_mock
 
-            m._load_onnx_model(tmp_path, "model.onnx", threads=None)
+            m._load_onnx_model(
+                OnnxModelConfig(model_dir=tmp_path, model_file="model.onnx", threads=None)
+            )
 
         assert m.tokenizer is mock_tokenizer
         assert m.special_token_to_id is mock_special
@@ -578,13 +580,15 @@ class TestOnnxTextEmbeddingMethods:
             emb.load_onnx_model()
 
         mock_load.assert_called_once_with(
-            model_dir=tmp_path,
-            model_file=_MODEL_DESC.model_file,
-            threads=emb.threads,
-            providers=emb.providers,
-            cuda=emb.cuda,
-            device_id=emb.device_id,
-            extra_session_options=emb._extra_session_options,
+            config=OnnxModelConfig(
+                model_dir=tmp_path,
+                model_file=_MODEL_DESC.model_file,
+                threads=emb.threads,
+                providers=emb.providers,
+                cuda=emb.cuda,
+                device_id=emb.device_id,
+                extra_session_options=emb._extra_session_options,
+            )
         )
 
 
