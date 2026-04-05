@@ -484,8 +484,8 @@ class ModelManagement(Generic[T]):
             # Verify the required model file actually exists in the cached snapshot
             if (cached_path / model_file).exists():
                 return cached_path
-        except Exception:
-            logger.debug("Model not found in cache, will attempt download")
+        except (OSError, ValueError, RepositoryNotFoundError) as e:
+            logger.debug(f"Model not found in cache: {e}")
         finally:
             enable_progress_bars()
         return None
@@ -531,9 +531,9 @@ class ModelManagement(Generic[T]):
                 deprecated_tar_struct=deprecated_tar_struct,
                 local_files_only=local_files_only,
             )
-        except Exception:
+        except (OSError, ValueError, requests.RequestException, tarfile.TarError) as e:
             if not local_files_only:
-                logger.error(f"Could not download model from url: {url_source}")
+                logger.error(f"Could not download model from url {url_source}: {e}")
         return None
 
     @classmethod
