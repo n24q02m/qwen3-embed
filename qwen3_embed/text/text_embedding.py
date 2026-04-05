@@ -159,7 +159,7 @@ class TextEmbedding(TextEmbeddingBase):
         _, desc_cache = cls._get_embedding_caches()
         model_name_lower = model_name.lower()
         if model_name_lower in desc_cache:
-            return desc_cache[model_name_lower].dim
+            return desc_cache[model_name_lower].dim or 0
 
         model_names = list(desc_cache.keys())
         raise ValueError(
