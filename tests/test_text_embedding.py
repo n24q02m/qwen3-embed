@@ -23,3 +23,23 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+
+def test_get_embedding_size_valid():
+    """Verify that get_embedding_size returns a positive integer for a valid model."""
+    size = TextEmbedding.get_embedding_size("n24q02m/Qwen3-Embedding-0.6B-ONNX")
+    assert isinstance(size, int)
+    assert size > 0
+
+
+def test_get_embedding_size_invalid():
+    """Verify that get_embedding_size raises a ValueError for an invalid model."""
+    with pytest.raises(ValueError, match="Embedding size for model non-existent-model was None"):
+        TextEmbedding.get_embedding_size("non-existent-model")
+
+
+def test_get_embedding_size_case_insensitive():
+    """Verify that get_embedding_size is case-insensitive."""
+    size_lower = TextEmbedding.get_embedding_size("n24q02m/Qwen3-Embedding-0.6B-ONNX")
+    size_upper = TextEmbedding.get_embedding_size("N24Q02M/QWEN3-EMBEDDING-0.6B-ONNX")
+    assert size_lower == size_upper
