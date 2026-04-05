@@ -143,8 +143,8 @@ class TextEmbedding(TextEmbeddingBase):
         if embedding_size is None:
             model_names = [description.model for description in descriptions]
             raise ValueError(
-                f"Embedding size for model {model_name} was None. "
-                f"Available model names: {model_names}"
+                f"Model {model_name} is not supported in TextEmbedding.\n"
+                f"Available models: {model_names}"
             )
         return embedding_size
 
