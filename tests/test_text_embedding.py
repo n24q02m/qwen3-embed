@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from qwen3_embed.text.text_embedding import TextEmbedding
@@ -23,3 +25,43 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+
+def test_embedding_size_property():
+    """Verify that the embedding_size property correctly delegates to the underlying model."""
+    # Mocking the dispatcher to avoid actual model initialization
+    with patch("qwen3_embed.text.text_embedding.TextEmbedding.__init__", return_value=None):
+        embedding = TextEmbedding()
+        embedding.model = MagicMock()
+        embedding.model.embedding_size = 768
+        embedding._embedding_size = None
+
+        assert embedding.embedding_size == 768
+        # Test caching
+        embedding.model.embedding_size = 1024
+        assert embedding.embedding_size == 768
+
+
+def test_embedding_size_integration():
+    """Verify embedding_size on a real (but lazy-loaded) TextEmbedding instance."""
+    model_name = "n24q02m/Qwen3-Embedding-0.6B-ONNX"
+    with patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding.__init__", return_value=None):
+        embedding = TextEmbedding(model_name=model_name, lazy_load=True)
+        # We need to mock the model_description.dim since we mocked __init__
+        embedding.model.model_description = MagicMock()
+        embedding.model.model_description.dim = 1024
+
+        assert embedding.embedding_size == 1024
+
+
+def test_get_embedding_size_class_method():
+    """Verify the get_embedding_size class method."""
+    model_name = "n24q02m/Qwen3-Embedding-0.6B-ONNX"
+    size = TextEmbedding.get_embedding_size(model_name)
+    assert size == 1024
+
+
+def test_get_embedding_size_invalid_model():
+    """Verify that get_embedding_size raises ValueError for unknown models."""
+    with pytest.raises(ValueError, match="Embedding size for model .* was None"):
+        TextEmbedding.get_embedding_size("invalid-model")

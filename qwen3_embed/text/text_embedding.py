@@ -116,7 +116,7 @@ class TextEmbedding(TextEmbeddingBase):
     def embedding_size(self) -> int:
         """Get the embedding size of the current model"""
         if self._embedding_size is None:
-            self._embedding_size = self.get_embedding_size(self.model_name)
+            self._embedding_size = self.model.embedding_size
         return self._embedding_size
 
     @classmethod
