@@ -24,6 +24,35 @@ class TextCrossEncoder(TextCrossEncoderBase):
     ]
 
     @classmethod
+    def _get_cross_encoder_caches(
+        cls,
+    ) -> tuple[dict[str, type[TextCrossEncoderBase]], dict[str, BaseModelDescription]]:
+        type_cache = vars(cls).get("_cross_encoder_type_cache")
+        desc_cache = vars(cls).get("_cross_encoder_description_cache")
+        if type_cache is None or desc_cache is None:
+            # ⚡ Bolt: Implement O(1) dictionary caches for the cross-encoder registry and model descriptions
+            type_cache = {}
+            desc_cache = {}
+            # We iterate in reverse to preserve the original behavior of returning the first match
+            # when converting to a dictionary where later entries would overwrite earlier ones.
+            for encoder_type in reversed(cls.CROSS_ENCODER_REGISTRY):
+                for model in encoder_type._list_supported_models():
+                    m_lower = model.model.lower()
+                    type_cache[m_lower] = encoder_type
+                    desc_cache[m_lower] = model
+            cls._cross_encoder_type_cache = type_cache
+            cls._cross_encoder_description_cache = desc_cache
+        return type_cache, desc_cache
+
+    @classmethod
+    def _clear_cross_encoder_caches(cls) -> None:
+        """Clears the cross-encoder caches for the current class."""
+        if "_cross_encoder_type_cache" in vars(cls):
+            delattr(cls, "_cross_encoder_type_cache")
+        if "_cross_encoder_description_cache" in vars(cls):
+            delattr(cls, "_cross_encoder_description_cache")
+
+    @classmethod
     def list_supported_models(cls) -> list[dict[str, Any]]:
         """Lists the supported models.
 
@@ -50,10 +79,8 @@ class TextCrossEncoder(TextCrossEncoderBase):
 
     @classmethod
     def _list_supported_models(cls) -> list[BaseModelDescription]:
-        result: list[BaseModelDescription] = []
-        for encoder in cls.CROSS_ENCODER_REGISTRY:
-            result.extend(encoder._list_supported_models())
-        return result
+        _, desc_cache = cls._get_cross_encoder_caches()
+        return list(desc_cache.values())
 
     def __init__(
         self,
@@ -68,21 +95,22 @@ class TextCrossEncoder(TextCrossEncoderBase):
     ):
         super().__init__(model_name, cache_dir, threads, **kwargs)
 
+        type_cache, _ = self._get_cross_encoder_caches()
         model_name_lower = model_name.lower()
-        for CROSS_ENCODER_TYPE in self.CROSS_ENCODER_REGISTRY:
-            supported_models = CROSS_ENCODER_TYPE._list_supported_models()
-            if any(model_name_lower == model.model.lower() for model in supported_models):
-                self.model = CROSS_ENCODER_TYPE(
-                    model_name=model_name,
-                    cache_dir=cache_dir,
-                    threads=threads,
-                    providers=providers,
-                    cuda=cuda,
-                    device_ids=device_ids,
-                    lazy_load=lazy_load,
-                    **kwargs,
-                )
-                return
+
+        if model_name_lower in type_cache:
+            encoder_type = type_cache[model_name_lower]
+            self.model = encoder_type(
+                model_name=model_name,
+                cache_dir=cache_dir,
+                threads=threads,
+                providers=providers,
+                cuda=cuda,
+                device_ids=device_ids,
+                lazy_load=lazy_load,
+                **kwargs,
+            )
+            return
 
         raise ValueError(
             f"Model {model_name} is not supported in TextCrossEncoder."
@@ -148,14 +176,13 @@ class TextCrossEncoder(TextCrossEncoderBase):
         size_in_gb: float = 0.0,
         additional_files: list[str] | None = None,
     ) -> None:
-        registered_models = cls._list_supported_models()
+        type_cache, _ = cls._get_cross_encoder_caches()
         model_lower = model.lower()
-        for registered_model in registered_models:
-            if model_lower == registered_model.model.lower():
-                raise ValueError(
-                    f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
-                    f"please use another model name"
-                )
+        if model_lower in type_cache:
+            raise ValueError(
+                f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
+                f"please use another model name"
+            )
 
         CustomTextCrossEncoder.add_model(
             BaseModelDescription(
@@ -168,6 +195,8 @@ class TextCrossEncoder(TextCrossEncoderBase):
                 additional_files=additional_files or [],
             )
         )
+        cls._clear_cross_encoder_caches()
+        CustomTextCrossEncoder._clear_model_cache()
 
     def token_count(
         self, pairs: Iterable[tuple[str, str]], batch_size: int = 1024, **kwargs: Any
