@@ -174,29 +174,42 @@ class ModelManagement(Generic[T]):
         return output_path
 
     @classmethod
+    def _verify_online(
+        cls, model_dir: Path, stored_metadata: dict[str, Any], repo_files: list[RepoFile]
+    ) -> bool:
+        repo_file_map = {f.path: f for f in repo_files}
+        for rel_path, meta in stored_metadata.items():
+            file_path = model_dir / rel_path
+
+            if not file_path.exists():
+                return False
+
+            file_info = repo_file_map.get(file_path.name)
+            if (
+                not file_info
+                or file_info.size != meta["size"]
+                or file_info.blob_id != meta["blob_id"]
+            ):
+                return False
+        return True
+
+    @classmethod
+    def _verify_offline(cls, model_dir: Path, stored_metadata: dict[str, Any]) -> bool:
+        for rel_path, meta in stored_metadata.items():
+            file_path = model_dir / rel_path
+
+            if not file_path.exists() or file_path.stat().st_size != meta["size"]:
+                return False
+        return True
+
+    @classmethod
     def _verify_files_from_metadata(
         cls, model_dir: Path, stored_metadata: dict[str, Any], repo_files: list[RepoFile]
     ) -> bool:
         try:
-            for rel_path, meta in stored_metadata.items():
-                file_path = model_dir / rel_path
-
-                if not file_path.exists():
-                    return False
-
-                if repo_files:  # online verification
-                    file_info = next((f for f in repo_files if f.path == file_path.name), None)
-                    if (
-                        not file_info
-                        or file_info.size != meta["size"]
-                        or file_info.blob_id != meta["blob_id"]
-                    ):
-                        return False
-
-                else:  # offline verification
-                    if file_path.stat().st_size != meta["size"]:
-                        return False
-            return True
+            if repo_files:
+                return cls._verify_online(model_dir, stored_metadata, repo_files)
+            return cls._verify_offline(model_dir, stored_metadata)
         except (OSError, KeyError) as e:
             logger.error(f"Error verifying files: {str(e)}")
             return False
