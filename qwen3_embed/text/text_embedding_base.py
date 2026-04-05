@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, cast
 
 from qwen3_embed.common.model_description import DenseModelDescription
 from qwen3_embed.common.model_management import ModelManagement
@@ -19,6 +19,7 @@ class TextEmbeddingBase(ModelManagement[DenseModelDescription]):
         self.threads = threads
         self._local_files_only = kwargs.pop("local_files_only", False)
         self._embedding_size: int | None = None
+        self.model_description: DenseModelDescription
 
     def embed(
         self,
@@ -69,7 +70,7 @@ class TextEmbeddingBase(ModelManagement[DenseModelDescription]):
     @property
     def embedding_size(self) -> int:
         """Returns embedding size for the current model"""
-        raise NotImplementedError("Subclasses must implement this method")
+        return cast(int, self.model_description.dim)
 
     def token_count(self, texts: str | Iterable[str], **kwargs: Any) -> int:
         """Returns the number of tokens in the texts."""
