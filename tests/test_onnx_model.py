@@ -1,10 +1,12 @@
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 
-from qwen3_embed.common.onnx_model import OnnxModel, OnnxOutputContext
+from qwen3_embed.common.onnx_model import EmbeddingWorker, OnnxModel, OnnxOutputContext
 from qwen3_embed.common.types import Device
 
 
@@ -21,6 +23,14 @@ class ConcreteOnnxModel(OnnxModel[Any]):
 
     def onnx_embed(self, *args: Any, **kwargs: Any) -> OnnxOutputContext:
         return OnnxOutputContext(model_output=MagicMock())
+
+
+class ConcreteWorker(EmbeddingWorker[Any]):
+    def init_embedding(self, model_name: str, cache_dir: str, **kwargs: Any) -> OnnxModel[Any]:
+        return ConcreteOnnxModel()
+
+    def process(self, items: Iterable[tuple[int, Any]]) -> Iterable[tuple[int, Any]]:
+        return []
 
 
 @pytest.fixture
@@ -73,6 +83,25 @@ def test_load_cuda_explicit(model: ConcreteOnnxModel, mock_ort):
     mock_ort.InferenceSession.assert_called_with(
         "dummy/model.onnx",
         providers=["CUDAExecutionProvider"],
+        sess_options=mock_ort.SessionOptions.return_value,
+    )
+
+
+def test_load_cuda_explicit_with_device_id(model: ConcreteOnnxModel, mock_ort):
+    """Test explicit CUDA request with device_id."""
+    mock_ort.get_available_providers.return_value = [
+        "CUDAExecutionProvider",
+        "CPUExecutionProvider",
+    ]
+
+    # Mock session to report CUDA provider present
+    mock_ort.InferenceSession.return_value.get_providers.return_value = ["CUDAExecutionProvider"]
+
+    model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=True, device_id=1)
+
+    mock_ort.InferenceSession.assert_called_with(
+        "dummy/model.onnx",
+        providers=[("CUDAExecutionProvider", {"device_id": 1})],
         sess_options=mock_ort.SessionOptions.return_value,
     )
 
@@ -151,7 +180,7 @@ def test_load_cuda_and_providers_warning(model: ConcreteOnnxModel, mock_ort):
     # Mock session to report CUDA provider present
     mock_ort.InferenceSession.return_value.get_providers.return_value = ["CUDAExecutionProvider"]
 
-    with pytest.warns(UserWarning, match="`cuda` and `providers` are mutually exclusive"):
+    with pytest.warns(UserWarning, match=r"`cuda` and `providers` are mutually exclusive"):
         model._load_onnx_model(
             Path("dummy"),
             "model.onnx",
@@ -234,6 +263,56 @@ def test_add_extra_session_options():
     # Test invalid option
     with pytest.raises(
         ValueError,
-        match="invalid_option is unknown or not exposed \\(exposed options: \\('enable_cpu_mem_arena',\\)\\)",
+        match=r"invalid_option is unknown or not exposed \(exposed options: \('enable_cpu_mem_arena',\)\)",
     ):
         ConcreteOnnxModel.add_extra_session_options(session_options, {"invalid_option": True})
+
+
+def test_not_implemented_errors():
+    class BaseOnnxModel(OnnxModel[Any]):
+        pass
+
+    model = BaseOnnxModel()
+
+    with pytest.raises(NotImplementedError, match="Subclasses must implement this method"):
+        BaseOnnxModel._get_worker_class()
+
+    with pytest.raises(NotImplementedError, match="Subclasses must implement this method"):
+        model._post_process_onnx_output(MagicMock())
+
+    with pytest.raises(NotImplementedError, match="Subclasses must implement this method"):
+        model.load_onnx_model()
+
+    with pytest.raises(NotImplementedError, match="Subclasses must implement this method"):
+        model.onnx_embed()
+
+    class BaseWorker(EmbeddingWorker[Any]):
+        pass
+
+    with pytest.raises(NotImplementedError):
+        BaseWorker(model_name="test", cache_dir="test")
+
+    class PartialWorker(EmbeddingWorker[Any]):
+        def init_embedding(self, model_name, cache_dir, **kwargs):
+            return MagicMock()
+
+    worker = PartialWorker(model_name="test", cache_dir="test")
+    with pytest.raises(NotImplementedError, match="Subclasses must implement this method"):
+        worker.process([])
+
+
+def test_preprocess_onnx_input(model):
+    data = {"input": np.array([1, 2, 3])}
+    assert model._preprocess_onnx_input(data) is data
+
+
+def test_select_exposed_session_options():
+    kwargs = {"enable_cpu_mem_arena": True, "invalid": False}
+    selected = OnnxModel._select_exposed_session_options(kwargs)
+    assert selected == {"enable_cpu_mem_arena": True}
+
+
+def test_embedding_worker_start():
+    with patch.object(ConcreteWorker, "__init__", return_value=None) as mock_init:
+        ConcreteWorker.start(model_name="test", cache_dir="test", extra="param")
+        mock_init.assert_called_once_with(model_name="test", cache_dir="test", extra="param")
