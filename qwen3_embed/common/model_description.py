@@ -41,12 +41,6 @@ class DenseModelDescription(BaseModelDescription):
             raise ValueError("dim is required for dense model description")
 
 
-@dataclass(frozen=True)
-class SparseModelDescription(BaseModelDescription):
-    requires_idf: bool | None = None
-    vocab_size: int | None = None
-
-
 class PoolingType(str, Enum):
     CLS = "CLS"
     MEAN = "MEAN"
