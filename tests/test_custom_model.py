@@ -160,7 +160,7 @@ class TestCustomModelRegistration:
             # Verify initialization called MockCustomEmb with correct args
             MockCustomEmb.assert_called_once()
             _, kwargs = MockCustomEmb.call_args
-            assert kwargs['model_name'] == model_name
+            assert kwargs["model_name"] == model_name
 
             # Verify embedding size property
             assert emb.embedding_size == 384
