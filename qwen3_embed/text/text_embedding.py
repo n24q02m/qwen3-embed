@@ -194,7 +194,7 @@ class TextEmbedding(TextEmbeddingBase):
             **kwargs: Additional keyword argument to pass to the embed method.
 
         Yields:
-            Iterable[SparseEmbedding]: The sparse embeddings.
+            Iterable[NumpyArray]: The embeddings.
         """
         # This is model-specific, so that different models can have specialized implementations
         yield from self.model.passage_embed(texts, **kwargs)
