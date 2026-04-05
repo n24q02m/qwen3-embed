@@ -81,12 +81,23 @@ class ModelManagement(Generic[T]):
         Returns:
             T: The model description.
         """
+        cache = vars(cls).get("_model_description_cache")
+        if cache is None:
+            # ⚡ Bolt: Use dictionary lookup to avoid redundant .lower() calls and provide O(1) membership check.
+            cache = {m.model.lower(): m for m in cls._list_supported_models()}
+            setattr(cls, "_model_description_cache", cache)
+
         model_name_lower = model_name.lower()
-        for model in cls._list_supported_models():
-            if model_name_lower == model.model.lower():
-                return model
+        if model_name_lower in cache:
+            return cache[model_name_lower]
 
         raise ValueError(f"Model {model_name} is not supported in {cls.__name__}.")
+
+    @classmethod
+    def _clear_model_cache(cls) -> None:
+        """Clears the model description cache for the current class."""
+        if "_model_description_cache" in vars(cls):
+            delattr(cls, "_model_description_cache")
 
     @staticmethod
     def _get_expected_md5(headers: Any) -> str | None:
