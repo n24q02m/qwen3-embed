@@ -85,7 +85,7 @@ class ModelManagement(Generic[T]):
         if cache is None:
             # ⚡ Bolt: Use dictionary lookup to avoid redundant .lower() calls and provide O(1) membership check.
             cache = {m.model.lower(): m for m in cls._list_supported_models()}
-            setattr(cls, "_model_description_cache", cache)
+            cls._model_description_cache = cache
 
         model_name_lower = model_name.lower()
         if model_name_lower in cache:

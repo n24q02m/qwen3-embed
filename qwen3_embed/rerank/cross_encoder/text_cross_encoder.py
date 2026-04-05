@@ -40,8 +40,8 @@ class TextCrossEncoder(TextCrossEncoderBase):
                     m_lower = model.model.lower()
                     type_cache[m_lower] = encoder_type
                     desc_cache[m_lower] = model
-            setattr(cls, "_cross_encoder_type_cache", type_cache)
-            setattr(cls, "_cross_encoder_description_cache", desc_cache)
+            cls._cross_encoder_type_cache = type_cache
+            cls._cross_encoder_description_cache = desc_cache
         return type_cache, desc_cache
 
     @classmethod

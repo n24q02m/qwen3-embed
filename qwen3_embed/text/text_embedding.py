@@ -38,8 +38,8 @@ class TextEmbedding(TextEmbeddingBase):
                     m_lower = model.model.lower()
                     type_cache[m_lower] = embedding_type
                     desc_cache[m_lower] = model
-            setattr(cls, "_embedding_type_cache", type_cache)
-            setattr(cls, "_embedding_description_cache", desc_cache)
+            cls._embedding_type_cache = type_cache
+            cls._embedding_description_cache = desc_cache
         return type_cache, desc_cache
 
     @classmethod
