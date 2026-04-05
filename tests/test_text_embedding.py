@@ -23,3 +23,9 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+
+def test_get_embedding_size_unsupported_model_raises_value_error():
+    """Verify that get_embedding_size raises a ValueError when passed an unsupported model."""
+    with pytest.raises(ValueError, match="is not supported in TextEmbedding"):
+        TextEmbedding.get_embedding_size(model_name="unsupported-model-name")
