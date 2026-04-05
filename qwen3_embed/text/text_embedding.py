@@ -163,8 +163,7 @@ class TextEmbedding(TextEmbeddingBase):
 
         model_names = list(desc_cache.keys())
         raise ValueError(
-            f"Embedding size for model {model_name} was None. "
-            f"Available model names: {model_names}"
+            f"Embedding size for model {model_name} was None. Available model names: {model_names}"
         )
 
     def embed(
