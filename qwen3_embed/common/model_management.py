@@ -14,6 +14,7 @@ import requests
 from huggingface_hub import list_repo_tree, model_info, snapshot_download
 from huggingface_hub.hf_api import RepoFile
 from huggingface_hub.utils import (
+    LocalEntryNotFoundError,
     RepositoryNotFoundError,
     disable_progress_bars,
     enable_progress_bars,
@@ -484,7 +485,7 @@ class ModelManagement(Generic[T]):
             # Verify the required model file actually exists in the cached snapshot
             if (cached_path / model_file).exists():
                 return cached_path
-        except Exception:
+        except (LocalEntryNotFoundError, ValueError, OSError):
             logger.debug("Model not found in cache, will attempt download")
         finally:
             enable_progress_bars()
@@ -531,7 +532,7 @@ class ModelManagement(Generic[T]):
                 deprecated_tar_struct=deprecated_tar_struct,
                 local_files_only=local_files_only,
             )
-        except Exception:
+        except (OSError, ValueError, requests.exceptions.RequestException):
             if not local_files_only:
                 logger.error(f"Could not download model from url: {url_source}")
         return None
