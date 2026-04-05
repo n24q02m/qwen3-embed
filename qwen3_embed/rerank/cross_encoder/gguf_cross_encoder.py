@@ -8,6 +8,7 @@ Requires optional dependency: pip install qwen3-embed[gguf]
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,9 @@ RERANK_TEMPLATE = (
 
 # Tokens that must be stripped from user input to prevent prompt injection
 FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
+
+# ⚡ Bolt: Pre-compile regex for faster sanitization
+_FORBIDDEN_PATTERN = re.compile("|".join(re.escape(t) for t in FORBIDDEN_TOKENS))
 
 # ---------------------------------------------------------------------------
 # Model registry
@@ -146,10 +150,12 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
     @staticmethod
     def _sanitize_input(text: str) -> str:
         """Strip forbidden special tokens from user input."""
+        # ⚡ Bolt: Use regex subn in a loop for O(N) sanitization with minimal allocations.
         # SECURITY: Prevent prompt injection bypass via iterative payload construction.
-        while any(token in text for token in FORBIDDEN_TOKENS):
-            for token in FORBIDDEN_TOKENS:
-                text = text.replace(token, "")
+        while True:
+            text, count = _FORBIDDEN_PATTERN.subn("", text)
+            if count == 0:
+                break
         return text
 
     @staticmethod

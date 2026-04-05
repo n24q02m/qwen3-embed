@@ -8,11 +8,12 @@ Qwen3 reranker:
 2. Runs a **causal language model** (Qwen3ForCausalLM).
 3. Extracts the **last-token logits** for the "yes" and "no" tokens.
 4. Applies **softmax** to obtain the relevance probability.
-
+import re
 This means the ONNX model output has shape ``(batch, seq_len, vocab_size)``
 instead of the typical ``(batch, num_labels)`` from cross-encoders.
 """
 
+import re
 from typing import Any
 
 import numpy as np
@@ -51,6 +52,9 @@ RERANK_TEMPLATE = (
 
 # Tokens that must be stripped from user input to prevent prompt injection
 FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
+
+# ⚡ Bolt: Pre-compile regex for faster sanitization
+_FORBIDDEN_PATTERN = re.compile("|".join(re.escape(t) for t in FORBIDDEN_TOKENS))
 
 # ---------------------------------------------------------------------------
 # Model registry
@@ -126,8 +130,12 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     @staticmethod
     def _sanitize_input(text: str) -> str:
         """Strip forbidden special tokens from user input."""
-        for token in FORBIDDEN_TOKENS:
-            text = text.replace(token, "")
+        # ⚡ Bolt: Use regex subn in a loop for O(N) sanitization with minimal allocations.
+        # SECURITY: Prevent prompt injection bypass via iterative payload construction.
+        while True:
+            text, count = _FORBIDDEN_PATTERN.subn("", text)
+            if count == 0:
+                break
         return text
 
     @staticmethod
