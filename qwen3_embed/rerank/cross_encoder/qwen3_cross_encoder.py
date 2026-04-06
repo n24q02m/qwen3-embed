@@ -13,6 +13,7 @@ This means the ONNX model output has shape ``(batch, seq_len, vocab_size)``
 instead of the typical ``(batch, num_labels)`` from cross-encoders.
 """
 
+import re
 from typing import Any
 
 import numpy as np
@@ -51,6 +52,7 @@ RERANK_TEMPLATE = (
 
 # Tokens that must be stripped from user input to prevent prompt injection
 FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
+_FORBIDDEN_REGEX = re.compile("|".join(re.escape(t) for t in FORBIDDEN_TOKENS))
 
 # ---------------------------------------------------------------------------
 # Model registry
@@ -126,8 +128,11 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     @staticmethod
     def _sanitize_input(text: str) -> str:
         """Strip forbidden special tokens from user input."""
-        for token in FORBIDDEN_TOKENS:
-            text = text.replace(token, "")
+        # SECURITY: Prevent prompt injection bypass via iterative payload construction.
+        while True:
+            text, count = _FORBIDDEN_REGEX.subn("", text)
+            if count == 0:
+                break
         return text
 
     @staticmethod
