@@ -108,6 +108,7 @@ class ModelManagement(Generic[T]):
         )  # SECURITY: MD5 is used solely for non-cryptographic file integrity checking (GCS checksums).
         with (
             tqdm(
+                desc=f"Downloading {Path(output_path).name}",
                 total=total_size_in_bytes,
                 unit="iB",
                 unit_scale=True,
