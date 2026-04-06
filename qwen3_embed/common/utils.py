@@ -66,6 +66,17 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
     >>> list(iter_batch([1,2,3,4,5], 3))
     [[1, 2, 3], [4, 5]]
     """
+    # ⚡ Bolt: Fast path for indexable sequences like lists and tuples
+    # Direct slicing avoids the overhead of itertools.islice and iterator creation
+    if isinstance(iterable, (list, tuple)):
+        if size < 0:
+            raise ValueError("Stop argument for islice() must be None or an integer: 0 <= x <= sys.maxsize.")
+        if size == 0:
+            return
+        for i in range(0, len(iterable), size):
+            yield list(iterable[i : i + size])
+        return
+
     source_iter = iter(iterable)
     while source_iter:
         b = list(islice(source_iter, size))
