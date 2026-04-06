@@ -74,7 +74,7 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
     # ⚡ Bolt: Fast path for lists/tuples/sequences to avoid iterator overhead (~3x faster)
     if isinstance(iterable, (list, tuple)):
         for i in range(0, len(iterable), size):
-            yield list(iterable[i:i + size])
+            yield list(iterable[i : i + size])
     else:
         source_iter = iter(iterable)
         while True:
