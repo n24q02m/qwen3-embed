@@ -70,7 +70,9 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
     # Direct slicing avoids the overhead of itertools.islice and iterator creation
     if isinstance(iterable, (list, tuple)):
         if size < 0:
-            raise ValueError("Stop argument for islice() must be None or an integer: 0 <= x <= sys.maxsize.")
+            raise ValueError(
+                "Stop argument for islice() must be None or an integer: 0 <= x <= sys.maxsize."
+            )
         if size == 0:
             return
         for i in range(0, len(iterable), size):
