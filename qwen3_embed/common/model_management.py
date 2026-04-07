@@ -30,6 +30,11 @@ class ModelManagement(Generic[T]):
     METADATA_FILE = "files_metadata.json"
 
     @classmethod
+    def _clear_model_cache(cls) -> None:
+        if "_model_description_cache" in vars(cls):
+            delattr(cls, "_model_description_cache")
+
+    @classmethod
     def list_supported_models(cls) -> list[dict[str, Any]]:
         """Lists the supported models.
 
@@ -81,10 +86,14 @@ class ModelManagement(Generic[T]):
         Returns:
             T: The model description.
         """
+        cache = vars(cls).get("_model_description_cache")
+        if cache is None:
+            cache = {model.model.lower(): model for model in cls._list_supported_models()}
+            cls._model_description_cache = cache
+
         model_name_lower = model_name.lower()
-        for model in cls._list_supported_models():
-            if model_name_lower == model.model.lower():
-                return model
+        if model_name_lower in cache:
+            return cache[model_name_lower]
 
         raise ValueError(f"Model {model_name} is not supported in {cls.__name__}.")
 

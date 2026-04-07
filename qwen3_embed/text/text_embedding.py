@@ -14,6 +14,12 @@ from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
 
 class TextEmbedding(TextEmbeddingBase):
+    @classmethod
+    def _clear_model_cache(cls) -> None:
+        super()._clear_model_cache()
+        if "_embedding_type_cache" in vars(cls):
+            delattr(cls, "_embedding_type_cache")
+
     EMBEDDINGS_REGISTRY: list[type[TextEmbeddingBase]] = [
         Qwen3TextEmbedding,
         Qwen3TextEmbeddingGGUF,
@@ -53,15 +59,15 @@ class TextEmbedding(TextEmbeddingBase):
         size_in_gb: float = 0.0,
         additional_files: list[str] | None = None,
     ) -> None:
-        registered_models = cls._list_supported_models()
-        # ⚡ Bolt: Cache lowercase model name outside loop
-        model_lower = model.lower()
-        for registered_model in registered_models:
-            if model_lower == registered_model.model.lower():
-                raise ValueError(
-                    f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
-                    f"please use another model name"
-                )
+        try:
+            cls._get_model_description(model)
+        except ValueError:
+            pass
+        else:
+            raise ValueError(
+                f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
+                f"please use another model name"
+            )
 
         CustomTextEmbedding.add_model(
             DenseModelDescription(
@@ -77,6 +83,28 @@ class TextEmbedding(TextEmbeddingBase):
             pooling=pooling,
             normalization=normalization,
         )
+        cls._clear_model_cache()
+        if "_embedding_type_cache" in vars(cls):
+            delattr(cls, "_embedding_type_cache")
+
+    @classmethod
+    def _get_embedding_type(cls, model_name: str) -> type[TextEmbeddingBase]:
+        cache = vars(cls).get("_embedding_type_cache")
+        if cache is None:
+            cache = {}
+            for embedding_type in cls.EMBEDDINGS_REGISTRY:
+                for model in embedding_type._list_supported_models():
+                    cache[model.model.lower()] = embedding_type
+            cls._embedding_type_cache = cache
+
+        model_name_lower = model_name.lower()
+        if model_name_lower in cache:
+            return cache[model_name_lower]
+
+        raise ValueError(
+            f"Model {model_name} is not supported in TextEmbedding. "
+            "Please check the supported models using `TextEmbedding.list_supported_models()`"
+        )
 
     def __init__(
         self,
@@ -90,26 +118,16 @@ class TextEmbedding(TextEmbeddingBase):
         **kwargs: Any,
     ):
         super().__init__(model_name, cache_dir, threads, **kwargs)
-        # ⚡ Bolt: Cache lowercase model name outside loop
-        model_name_lower = model_name.lower()
-        for EMBEDDING_MODEL_TYPE in self.EMBEDDINGS_REGISTRY:
-            supported_models = EMBEDDING_MODEL_TYPE._list_supported_models()
-            if any(model_name_lower == model.model.lower() for model in supported_models):
-                self.model = EMBEDDING_MODEL_TYPE(
-                    model_name=model_name,
-                    cache_dir=cache_dir,
-                    threads=threads,
-                    providers=providers,
-                    cuda=cuda,
-                    device_ids=device_ids,
-                    lazy_load=lazy_load,
-                    **kwargs,
-                )
-                return
-
-        raise ValueError(
-            f"Model {model_name} is not supported in TextEmbedding. "
-            "Please check the supported models using `TextEmbedding.list_supported_models()`"
+        EMBEDDING_MODEL_TYPE = self._get_embedding_type(model_name)
+        self.model = EMBEDDING_MODEL_TYPE(
+            model_name=model_name,
+            cache_dir=cache_dir,
+            threads=threads,
+            providers=providers,
+            cuda=cuda,
+            device_ids=device_ids,
+            lazy_load=lazy_load,
+            **kwargs,
         )
 
     @property
@@ -132,21 +150,17 @@ class TextEmbedding(TextEmbeddingBase):
         Raises:
             ValueError: If the model name is not found in the supported models.
         """
-        descriptions = cls._list_supported_models()
-        embedding_size: int | None = None
-        # ⚡ Bolt: Cache lowercase model name outside loop
-        model_name_lower = model_name.lower()
-        for description in descriptions:
-            if description.model.lower() == model_name_lower:
-                embedding_size = description.dim
-                break
-        if embedding_size is None:
+        try:
+            desc = cls._get_model_description(model_name)
+            assert desc.dim is not None
+            return desc.dim
+        except ValueError:
+            descriptions = cls._list_supported_models()
             model_names = [description.model for description in descriptions]
             raise ValueError(
                 f"Embedding size for model {model_name} was None. "
                 f"Available model names: {model_names}"
-            )
-        return embedding_size
+            ) from None
 
     def embed(
         self,
