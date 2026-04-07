@@ -2,14 +2,16 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 
-from qwen3_embed.common.onnx_model import OnnxModel, OnnxOutputContext
+from qwen3_embed.common.onnx_model import EmbeddingWorker, OnnxModel, OnnxOutputContext
 from qwen3_embed.common.types import Device
 
 
-# Concrete implementation for testing
+# Concrete implementation for testing OnnxModel
 class ConcreteOnnxModel(OnnxModel[Any]):
+    @classmethod
     def _get_worker_class(cls):
         return MagicMock()
 
@@ -151,7 +153,7 @@ def test_load_cuda_and_providers_warning(model: ConcreteOnnxModel, mock_ort):
     # Mock session to report CUDA provider present
     mock_ort.InferenceSession.return_value.get_providers.return_value = ["CUDAExecutionProvider"]
 
-    with pytest.warns(UserWarning, match="`cuda` and `providers` are mutually exclusive"):
+    with pytest.warns(UserWarning, match=r"`cuda` and `providers` are mutually exclusive"):
         model._load_onnx_model(
             Path("dummy"),
             "model.onnx",
@@ -234,6 +236,90 @@ def test_add_extra_session_options():
     # Test invalid option
     with pytest.raises(
         ValueError,
-        match="invalid_option is unknown or not exposed \\(exposed options: \\('enable_cpu_mem_arena',\\)\\)",
+        match=r"invalid_option is unknown or not exposed \(exposed options: \('enable_cpu_mem_arena',\)\)",
     ):
         ConcreteOnnxModel.add_extra_session_options(session_options, {"invalid_option": True})
+
+
+# Concrete implementation for testing EmbeddingWorker
+class ConcreteEmbeddingWorker(EmbeddingWorker[Any]):
+    def init_embedding(self, model_name: str, cache_dir: str, **kwargs: Any) -> OnnxModel[Any]:
+        return ConcreteOnnxModel()
+
+    def process(self, items):
+        return []
+
+
+def test_embedding_worker_init():
+    worker = ConcreteEmbeddingWorker(model_name="test_model", cache_dir="test_cache")
+    assert isinstance(worker.model, ConcreteOnnxModel)
+
+
+def test_embedding_worker_start():
+    worker = ConcreteEmbeddingWorker.start(model_name="test_model", cache_dir="test_cache")
+    assert isinstance(worker, ConcreteEmbeddingWorker)
+    assert isinstance(worker.model, ConcreteOnnxModel)
+
+
+def test_onnx_model_abstract_methods():
+    model = OnnxModel()
+    with pytest.raises(NotImplementedError):
+        model._get_worker_class()
+    with pytest.raises(NotImplementedError):
+        model._post_process_onnx_output(OnnxOutputContext(model_output=np.array([])))
+    with pytest.raises(NotImplementedError):
+        model.load_onnx_model()
+    with pytest.raises(NotImplementedError):
+        model.onnx_embed()
+
+
+def test_embedding_worker_abstract_methods():
+    class IncompleteWorker(EmbeddingWorker[Any]):
+        pass
+
+    with pytest.raises(NotImplementedError):
+        IncompleteWorker(model_name="test", cache_dir="test")
+
+    worker = ConcreteEmbeddingWorker(model_name="test", cache_dir="test")
+    with pytest.raises(NotImplementedError):
+        super(ConcreteEmbeddingWorker, worker).process([])
+
+
+def test_preprocess_onnx_input(model):
+    input_data = {"input": np.array([1, 2, 3])}
+    processed = model._preprocess_onnx_input(input_data)
+    assert processed == input_data
+
+
+def test_select_exposed_session_options():
+    kwargs = {"enable_cpu_mem_arena": True, "other_param": 123}
+    selected = ConcreteOnnxModel._select_exposed_session_options(kwargs)
+    assert selected == {"enable_cpu_mem_arena": True}
+
+
+def test_onnx_output_context_instantiation():
+    output = np.array([0.1, 0.2])
+    mask = np.array([1, 1], dtype=np.int64)
+    ids = np.array([10, 20], dtype=np.int64)
+    metadata = {"key": "value"}
+
+    context = OnnxOutputContext(
+        model_output=output, attention_mask=mask, input_ids=ids, metadata=metadata
+    )
+
+    assert np.array_equal(context.model_output, output)
+    assert context.attention_mask is not None
+    assert np.array_equal(context.attention_mask, mask)
+    assert context.input_ids is not None
+    assert np.array_equal(context.input_ids, ids)
+    assert context.metadata == metadata
+
+
+def test_onnx_output_context_defaults():
+    output = np.array([0.1, 0.2])
+    context = OnnxOutputContext(model_output=output)
+
+    assert np.array_equal(context.model_output, output)
+    assert context.attention_mask is None
+    assert context.input_ids is None
+    assert context.metadata is None
