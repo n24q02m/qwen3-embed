@@ -32,7 +32,10 @@ class TextCrossEncoder(TextCrossEncoderBase):
 
     @classmethod
     def _ensure_cache_populated(cls) -> None:
-        if vars(cls).get("_encoder_type_cache") is None or vars(cls).get("_encoder_description_cache") is None:
+        if (
+            vars(cls).get("_encoder_type_cache") is None
+            or vars(cls).get("_encoder_description_cache") is None
+        ):
             cls._encoder_type_cache = {}
             cls._encoder_description_cache = {}
             for encoder_type in reversed(cls.CROSS_ENCODER_REGISTRY):

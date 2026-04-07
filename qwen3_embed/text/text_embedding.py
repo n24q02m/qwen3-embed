@@ -32,7 +32,10 @@ class TextEmbedding(TextEmbeddingBase):
 
     @classmethod
     def _ensure_cache_populated(cls) -> None:
-        if vars(cls).get("_embedding_type_cache") is None or vars(cls).get("_embedding_description_cache") is None:
+        if (
+            vars(cls).get("_embedding_type_cache") is None
+            or vars(cls).get("_embedding_description_cache") is None
+        ):
             cls._embedding_type_cache = {}
             cls._embedding_description_cache = {}
             for embedding_type in reversed(cls.EMBEDDINGS_REGISTRY):
