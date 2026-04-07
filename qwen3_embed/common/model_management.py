@@ -28,6 +28,13 @@ T = TypeVar("T", bound=BaseModelDescription)
 
 class ModelManagement(Generic[T]):
     METADATA_FILE = "files_metadata.json"
+    _session: requests.Session | None = None
+
+    @classmethod
+    def _get_session(cls) -> requests.Session:
+        if cls._session is None:
+            cls._session = requests.Session()
+        return cls._session
 
     @classmethod
     def list_supported_models(cls) -> list[dict[str, Any]]:
@@ -145,7 +152,7 @@ class ModelManagement(Generic[T]):
         if os.path.exists(output_path):
             return output_path
         # SECURITY: Explicitly enforce TLS verification to prevent accidental or malicious bypass via environment variables (like REQUESTS_CA_BUNDLE).
-        response = requests.get(url, stream=True, timeout=10, verify=True)
+        response = cls._get_session().get(url, stream=True, timeout=10, verify=True)
 
         # Handle HTTP errors
         if response.status_code == 403:

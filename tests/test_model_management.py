@@ -137,29 +137,29 @@ class TestDownloadFileFromGcs:
 
     GCS_URL = "https://storage.googleapis.com"
 
-    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_requests_get_uses_verify_true(self, mock_get, tmp_path):
         """requests.get MUST be called with verify=True to prevent accidental bypass."""
         response = Mock()
         response.status_code = 200
         response.headers = {"content-length": "0"}
         response.iter_content.return_value = []
-        mock_get.return_value = response
+        mock_get.return_value.get.return_value = response
 
         output = tmp_path / "test.onnx"
         ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/test.onnx", str(output))
 
         # Assert that verify=True was passed in the call to requests.get
-        args, kwargs = mock_get.call_args
+        args, kwargs = mock_get.return_value.get.call_args
         assert kwargs.get("verify") is True
 
-    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_download_file_from_gcs_404_raises_error(self, mock_get, tmp_path):
         """Non-403 HTTP errors should be caught by raise_for_status."""
         response = Mock()
         response.status_code = 404
         response.raise_for_status.side_effect = requests.exceptions.HTTPError("404 Client Error")
-        mock_get.return_value = response
+        mock_get.return_value.get.return_value = response
 
         output = tmp_path / "missing.onnx"
         with pytest.raises(requests.exceptions.HTTPError, match="404 Client Error"):
@@ -203,23 +203,23 @@ class TestDownloadFileFromGcs:
         )
         assert result == str(existing)
 
-    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_403_raises_permission_error(self, mock_get, tmp_path):
         response = Mock()
         response.status_code = 403
-        mock_get.return_value = response
+        mock_get.return_value.get.return_value = response
 
         output = tmp_path / "new_model.onnx"
         with pytest.raises(PermissionError, match="Authentication Error"):
             ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/x.onnx", str(output))
 
-    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_missing_content_length_logs_warning(self, mock_get, tmp_path):
         response = Mock()
         response.status_code = 200
         response.headers = {"content-length": "0"}
         response.iter_content.return_value = [b"hello"]
-        mock_get.return_value = response
+        mock_get.return_value.get.return_value = response
 
         output = tmp_path / "out.onnx"
         with patch("qwen3_embed.common.model_management.logger.warning") as mock_warning:
@@ -230,14 +230,14 @@ class TestDownloadFileFromGcs:
             mock_warning.assert_called_once()
             assert "Content-length header is missing" in mock_warning.call_args[0][0]
 
-    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_downloads_file_with_content_length(self, mock_get, tmp_path):
         chunk = b"A" * 1024
         response = Mock()
         response.status_code = 200
         response.headers = {"content-length": str(len(chunk))}
         response.iter_content.return_value = [chunk]
-        mock_get.return_value = response
+        mock_get.return_value.get.return_value = response
 
         output = tmp_path / "model.onnx"
         result = ModelManagement.download_file_from_gcs(
@@ -246,27 +246,27 @@ class TestDownloadFileFromGcs:
         assert result == str(output)
         assert output.read_bytes() == chunk
 
-    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_skips_keepalive_empty_chunks(self, mock_get, tmp_path):
         """Empty chunks must be filtered out (keep-alive frames)."""
         response = Mock()
         response.status_code = 200
         response.headers = {"content-length": "5"}
         response.iter_content.return_value = [b"", b"hello", b""]
-        mock_get.return_value = response
+        mock_get.return_value.get.return_value = response
 
         output = tmp_path / "out.onnx"
         ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/out.onnx", str(output))
         assert output.read_bytes() == b"hello"
 
-    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_show_progress_false_when_no_content_length(self, mock_get, tmp_path):
         """Progress bar disabled when content-length is missing."""
         response = Mock()
         response.status_code = 200
         response.headers = {}
         response.iter_content.return_value = [b"data"]
-        mock_get.return_value = response
+        mock_get.return_value.get.return_value = response
 
         output = tmp_path / "out.onnx"
         # Should not raise even with show_progress=True but no content-length
@@ -275,7 +275,7 @@ class TestDownloadFileFromGcs:
         )
         assert output.exists()
 
-    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_hash_mismatch_raises_value_error(self, mock_get, tmp_path):
         """MD5 mismatch between header and downloaded content raises ValueError."""
         chunk = b"actual content"
@@ -290,14 +290,14 @@ class TestDownloadFileFromGcs:
             "x-goog-hash": f"md5={wrong_md5}",
         }
         response.iter_content.return_value = [chunk]
-        mock_get.return_value = response
+        mock_get.return_value.get.return_value = response
 
         output = tmp_path / "model.onnx"
         with pytest.raises(ValueError, match="File integrity check failed"):
             ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/model.onnx", str(output))
         assert not output.exists()
 
-    @patch("qwen3_embed.common.model_management.requests.get")
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_hash_match_succeeds(self, mock_get, tmp_path):
         """Matching MD5 in x-goog-hash header allows download to complete."""
         chunk = b"verified content"
@@ -312,7 +312,7 @@ class TestDownloadFileFromGcs:
             "x-goog-hash": f"crc32c=abc123, md5={correct_md5}",
         }
         response.iter_content.return_value = [chunk]
-        mock_get.return_value = response
+        mock_get.return_value.get.return_value = response
 
         output = tmp_path / "model.onnx"
         result = ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/model.onnx", str(output))
