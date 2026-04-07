@@ -50,9 +50,27 @@ class TextEmbedding(TextEmbeddingBase):
         model_file: str = "onnx/model.onnx",
         description: str = "",
         license: str = "",
-        size_in_gb: float = 0.0,
+        size_in_GB: float = 0.0,
         additional_files: list[str] | None = None,
     ) -> None:
+        """Adds a custom model to the supported models registry.
+
+        Args:
+            model (str): The name of the model.
+            pooling (PoolingType): The pooling type to use for the model.
+            normalization (bool): Whether to normalize the embeddings.
+            sources (ModelSource): The sources (HuggingFace, URL) for the model files.
+            dim (int): The dimension of the embeddings.
+            model_file (str, optional): The path to the ONNX model file. Defaults to "onnx/model.onnx".
+            description (str, optional): A description of the model. Defaults to "".
+            license (str, optional): The license of the model. Defaults to "".
+            size_in_GB (float, optional): The size of the model in GB. Defaults to 0.0.
+            additional_files (list[str] | None, optional): Additional files to download for the model.
+                Defaults to None.
+
+        Raises:
+            ValueError: If the model is already registered.
+        """
         registered_models = cls._list_supported_models()
         # ⚡ Bolt: Cache lowercase model name outside loop
         model_lower = model.lower()
@@ -71,7 +89,7 @@ class TextEmbedding(TextEmbeddingBase):
                 model_file=model_file,
                 description=description,
                 license=license,
-                size_in_GB=size_in_gb,
+                size_in_GB=size_in_GB,
                 additional_files=additional_files or [],
             ),
             pooling=pooling,
