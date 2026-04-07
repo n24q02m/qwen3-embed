@@ -2,16 +2,18 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 
-from qwen3_embed.common.onnx_model import OnnxModel, OnnxOutputContext
+from qwen3_embed.common.onnx_model import EmbeddingWorker, OnnxModel, OnnxOutputContext
 from qwen3_embed.common.types import Device
 
 
 # Concrete implementation for testing
 class ConcreteOnnxModel(OnnxModel[Any]):
+    @classmethod
     def _get_worker_class(cls):
-        return MagicMock()
+        return ConcreteEmbeddingWorker
 
     def _post_process_onnx_output(self, output: OnnxOutputContext, **kwargs: Any):
         return []
@@ -21,6 +23,14 @@ class ConcreteOnnxModel(OnnxModel[Any]):
 
     def onnx_embed(self, *args: Any, **kwargs: Any) -> OnnxOutputContext:
         return OnnxOutputContext(model_output=MagicMock())
+
+
+class ConcreteEmbeddingWorker(EmbeddingWorker[Any]):
+    def init_embedding(self, model_name: str, cache_dir: str, **kwargs: Any) -> OnnxModel[Any]:
+        return ConcreteOnnxModel()
+
+    def process(self, items):
+        return items
 
 
 @pytest.fixture
@@ -237,3 +247,38 @@ def test_add_extra_session_options():
         match="invalid_option is unknown or not exposed \\(exposed options: \\('enable_cpu_mem_arena',\\)\\)",
     ):
         ConcreteOnnxModel.add_extra_session_options(session_options, {"invalid_option": True})
+
+
+def test_preprocess_onnx_input(model: ConcreteOnnxModel):
+    """Test default _preprocess_onnx_input returns input unchanged."""
+    onnx_input = {"input_ids": np.array([[1, 2, 3]])}
+    processed = model._preprocess_onnx_input(onnx_input)
+    assert processed is onnx_input
+
+
+def test_select_exposed_session_options():
+    """Test _select_exposed_session_options filters correctly."""
+    model_kwargs = {
+        "enable_cpu_mem_arena": True,
+        "some_other_option": "value",
+    }
+    selected = ConcreteOnnxModel._select_exposed_session_options(model_kwargs)
+    assert selected == {"enable_cpu_mem_arena": True}
+
+
+def test_embedding_worker_init():
+    """Test EmbeddingWorker initialization."""
+    worker = ConcreteEmbeddingWorker(model_name="test_model", cache_dir="test_cache")
+    assert isinstance(worker.model, ConcreteOnnxModel)
+
+
+def test_embedding_worker_start():
+    """Test EmbeddingWorker.start class method."""
+    worker = ConcreteEmbeddingWorker.start(model_name="test_model", cache_dir="test_cache")
+    assert isinstance(worker, ConcreteEmbeddingWorker)
+    assert isinstance(worker.model, ConcreteOnnxModel)
+
+
+def test_get_worker_class():
+    """Test _get_worker_class returns correct worker class."""
+    assert ConcreteOnnxModel._get_worker_class() == ConcreteEmbeddingWorker
