@@ -124,7 +124,7 @@ class OnnxModel(Generic[T]):
             self.add_extra_session_options(so, extra_session_options)
         return so
 
-    def _load_onnx_model(
+    def _load_onnx_model(  # noqa: PLR0913
         self,
         model_dir: Path,
         model_file: str,

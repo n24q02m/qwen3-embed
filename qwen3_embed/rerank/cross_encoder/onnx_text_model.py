@@ -26,7 +26,7 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
     def _get_worker_class(cls) -> type["TextRerankerWorker"]:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def _load_onnx_model(
+    def _load_onnx_model(  # noqa: PLR0913
         self,
         model_dir: Path,
         model_file: str,

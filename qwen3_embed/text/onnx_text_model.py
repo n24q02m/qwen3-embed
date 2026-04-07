@@ -47,7 +47,7 @@ class OnnxTextModel(OnnxModel[T]):
         """
         return onnx_input
 
-    def _load_onnx_model(
+    def _load_onnx_model(  # noqa: PLR0913
         self,
         model_dir: Path,
         model_file: str,
