@@ -137,8 +137,9 @@ class TestDownloadFileFromGcs:
 
     GCS_URL = "https://storage.googleapis.com"
 
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_requests_get_uses_verify_true(self, mock_get, tmp_path):
+    @patch.object(ModelManagement, "_get_session")
+    def test_requests_get_uses_verify_true(self, mock_get_session, tmp_path):
+        mock_get = mock_get_session.return_value.get
         """requests.get MUST be called with verify=True to prevent accidental bypass."""
         response = Mock()
         response.status_code = 200
@@ -153,8 +154,9 @@ class TestDownloadFileFromGcs:
         args, kwargs = mock_get.call_args
         assert kwargs.get("verify") is True
 
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_download_file_from_gcs_404_raises_error(self, mock_get, tmp_path):
+    @patch.object(ModelManagement, "_get_session")
+    def test_download_file_from_gcs_404_raises_error(self, mock_get_session, tmp_path):
+        mock_get = mock_get_session.return_value.get
         """Non-403 HTTP errors should be caught by raise_for_status."""
         response = Mock()
         response.status_code = 404
@@ -203,8 +205,9 @@ class TestDownloadFileFromGcs:
         )
         assert result == str(existing)
 
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_403_raises_permission_error(self, mock_get, tmp_path):
+    @patch.object(ModelManagement, "_get_session")
+    def test_403_raises_permission_error(self, mock_get_session, tmp_path):
+        mock_get = mock_get_session.return_value.get
         response = Mock()
         response.status_code = 403
         mock_get.return_value = response
@@ -213,8 +216,9 @@ class TestDownloadFileFromGcs:
         with pytest.raises(PermissionError, match="Authentication Error"):
             ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/x.onnx", str(output))
 
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_missing_content_length_logs_warning(self, mock_get, tmp_path):
+    @patch.object(ModelManagement, "_get_session")
+    def test_missing_content_length_logs_warning(self, mock_get_session, tmp_path):
+        mock_get = mock_get_session.return_value.get
         response = Mock()
         response.status_code = 200
         response.headers = {"content-length": "0"}
@@ -230,8 +234,9 @@ class TestDownloadFileFromGcs:
             mock_warning.assert_called_once()
             assert "Content-length header is missing" in mock_warning.call_args[0][0]
 
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_downloads_file_with_content_length(self, mock_get, tmp_path):
+    @patch.object(ModelManagement, "_get_session")
+    def test_downloads_file_with_content_length(self, mock_get_session, tmp_path):
+        mock_get = mock_get_session.return_value.get
         chunk = b"A" * 1024
         response = Mock()
         response.status_code = 200
@@ -246,8 +251,9 @@ class TestDownloadFileFromGcs:
         assert result == str(output)
         assert output.read_bytes() == chunk
 
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_skips_keepalive_empty_chunks(self, mock_get, tmp_path):
+    @patch.object(ModelManagement, "_get_session")
+    def test_skips_keepalive_empty_chunks(self, mock_get_session, tmp_path):
+        mock_get = mock_get_session.return_value.get
         """Empty chunks must be filtered out (keep-alive frames)."""
         response = Mock()
         response.status_code = 200
@@ -259,8 +265,9 @@ class TestDownloadFileFromGcs:
         ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/out.onnx", str(output))
         assert output.read_bytes() == b"hello"
 
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_show_progress_false_when_no_content_length(self, mock_get, tmp_path):
+    @patch.object(ModelManagement, "_get_session")
+    def test_show_progress_false_when_no_content_length(self, mock_get_session, tmp_path):
+        mock_get = mock_get_session.return_value.get
         """Progress bar disabled when content-length is missing."""
         response = Mock()
         response.status_code = 200
@@ -275,8 +282,9 @@ class TestDownloadFileFromGcs:
         )
         assert output.exists()
 
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_hash_mismatch_raises_value_error(self, mock_get, tmp_path):
+    @patch.object(ModelManagement, "_get_session")
+    def test_hash_mismatch_raises_value_error(self, mock_get_session, tmp_path):
+        mock_get = mock_get_session.return_value.get
         """MD5 mismatch between header and downloaded content raises ValueError."""
         chunk = b"actual content"
         wrong_md5 = base64.b64encode(
@@ -297,8 +305,9 @@ class TestDownloadFileFromGcs:
             ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/model.onnx", str(output))
         assert not output.exists()
 
-    @patch("qwen3_embed.common.model_management.requests.get")
-    def test_hash_match_succeeds(self, mock_get, tmp_path):
+    @patch.object(ModelManagement, "_get_session")
+    def test_hash_match_succeeds(self, mock_get_session, tmp_path):
+        mock_get = mock_get_session.return_value.get
         """Matching MD5 in x-goog-hash header allows download to complete."""
         chunk = b"verified content"
         correct_md5 = base64.b64encode(
