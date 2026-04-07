@@ -84,12 +84,19 @@ def _worker(
         f"Reader worker: {worker_id} PID: {os.getpid()} Device: {kwargs.get('device_id', 'CPU')}"
     )
     try:
-        worker = worker_class.start(**kwargs)
-        for processed_item in worker.process(_get_items_from_queue(input_queue)):
-            output_queue.put(processed_item)
-    except Exception as e:  # pylint: disable=broad-except
-        logging.exception(e)
-        output_queue.put(QueueSignals.error)
+        try:
+            worker = worker_class.start(**kwargs)
+        except Exception:  # pylint: disable=broad-except
+            logging.exception(f"Worker {worker_id} initialization failed")
+            output_queue.put(QueueSignals.error)
+            return
+
+        try:
+            for processed_item in worker.process(_get_items_from_queue(input_queue)):
+                output_queue.put(processed_item)
+        except Exception:  # pylint: disable=broad-except
+            logging.exception(f"Worker {worker_id} processing failed")
+            output_queue.put(QueueSignals.error)
     finally:
         _cleanup_worker(input_queue, output_queue, num_active_workers, worker_id)
 
