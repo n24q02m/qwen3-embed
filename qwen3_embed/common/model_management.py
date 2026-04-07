@@ -27,6 +27,7 @@ T = TypeVar("T", bound=BaseModelDescription)
 
 
 class ModelManagement(Generic[T]):
+    _model_description_cache: dict[str, T] | None = None
     METADATA_FILE = "files_metadata.json"
 
     @classmethod
@@ -81,12 +82,20 @@ class ModelManagement(Generic[T]):
         Returns:
             T: The model description.
         """
+        if vars(cls).get("_model_description_cache") is None:
+            cls._model_description_cache = {
+                model.model.lower(): model for model in reversed(cls._list_supported_models())
+            }
+
         model_name_lower = model_name.lower()
-        for model in cls._list_supported_models():
-            if model_name_lower == model.model.lower():
-                return model
+        if model_name_lower in cls._model_description_cache:
+            return cls._model_description_cache[model_name_lower]
 
         raise ValueError(f"Model {model_name} is not supported in {cls.__name__}.")
+
+    @classmethod
+    def _clear_model_cache(cls) -> None:
+        cls._model_description_cache = None
 
     @staticmethod
     def _get_expected_md5(headers: Any) -> str | None:

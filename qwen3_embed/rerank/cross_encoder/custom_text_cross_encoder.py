@@ -15,3 +15,4 @@ class CustomTextCrossEncoder(OnnxTextCrossEncoder):
         model_description: BaseModelDescription,
     ) -> None:
         cls.SUPPORTED_MODELS.append(model_description)
+        cls._clear_model_cache()

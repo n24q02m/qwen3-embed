@@ -16,12 +16,30 @@ from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEn
 
 
 class TextCrossEncoder(TextCrossEncoderBase):
+    _encoder_type_cache: dict[str, type[TextCrossEncoderBase]] | None = None
+    _encoder_description_cache: dict[str, BaseModelDescription] | None = None
     CROSS_ENCODER_REGISTRY: list[type[TextCrossEncoderBase]] = [
         Qwen3CrossEncoder,
         Qwen3CrossEncoderGGUF,
         OnnxTextCrossEncoder,
         CustomTextCrossEncoder,
     ]
+
+    @classmethod
+    def _clear_registry_cache(cls) -> None:
+        cls._encoder_type_cache = None
+        cls._encoder_description_cache = None
+
+    @classmethod
+    def _ensure_cache_populated(cls) -> None:
+        if vars(cls).get("_encoder_type_cache") is None or vars(cls).get("_encoder_description_cache") is None:
+            cls._encoder_type_cache = {}
+            cls._encoder_description_cache = {}
+            for encoder_type in reversed(cls.CROSS_ENCODER_REGISTRY):
+                for model in encoder_type._list_supported_models():
+                    model_lower = model.model.lower()
+                    cls._encoder_type_cache[model_lower] = encoder_type
+                    cls._encoder_description_cache[model_lower] = model
 
     @classmethod
     def list_supported_models(cls) -> list[dict[str, Any]]:
@@ -68,21 +86,22 @@ class TextCrossEncoder(TextCrossEncoderBase):
     ):
         super().__init__(model_name, cache_dir, threads, **kwargs)
 
+        cls = self.__class__
+        cls._ensure_cache_populated()
         model_name_lower = model_name.lower()
-        for CROSS_ENCODER_TYPE in self.CROSS_ENCODER_REGISTRY:
-            supported_models = CROSS_ENCODER_TYPE._list_supported_models()
-            if any(model_name_lower == model.model.lower() for model in supported_models):
-                self.model = CROSS_ENCODER_TYPE(
-                    model_name=model_name,
-                    cache_dir=cache_dir,
-                    threads=threads,
-                    providers=providers,
-                    cuda=cuda,
-                    device_ids=device_ids,
-                    lazy_load=lazy_load,
-                    **kwargs,
-                )
-                return
+        if model_name_lower in cls._encoder_type_cache:
+            CROSS_ENCODER_TYPE = cls._encoder_type_cache[model_name_lower]
+            self.model = CROSS_ENCODER_TYPE(
+                model_name=model_name,
+                cache_dir=cache_dir,
+                threads=threads,
+                providers=providers,
+                cuda=cuda,
+                device_ids=device_ids,
+                lazy_load=lazy_load,
+                **kwargs,
+            )
+            return
 
         raise ValueError(
             f"Model {model_name} is not supported in TextCrossEncoder."
@@ -148,15 +167,15 @@ class TextCrossEncoder(TextCrossEncoderBase):
         size_in_gb: float = 0.0,
         additional_files: list[str] | None = None,
     ) -> None:
-        registered_models = cls._list_supported_models()
+        cls._ensure_cache_populated()
         model_lower = model.lower()
-        for registered_model in registered_models:
-            if model_lower == registered_model.model.lower():
-                raise ValueError(
-                    f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
-                    f"please use another model name"
-                )
+        if model_lower in cls._encoder_description_cache:
+            raise ValueError(
+                f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
+                f"please use another model name"
+            )
 
+        cls._clear_registry_cache()
         CustomTextCrossEncoder.add_model(
             BaseModelDescription(
                 model=model,
