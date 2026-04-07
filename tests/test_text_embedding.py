@@ -23,3 +23,24 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+
+def test_get_embedding_size_success():
+    """Verify that get_embedding_size returns the correct size for a known model."""
+    model_name = "n24q02m/Qwen3-Embedding-0.6B-ONNX"
+    size = TextEmbedding.get_embedding_size(model_name)
+    assert size == 1024
+
+
+def test_get_embedding_size_case_insensitive():
+    """Verify that get_embedding_size is case-insensitive."""
+    model_name = "n24q02m/Qwen3-Embedding-0.6B-ONNX"
+    size1 = TextEmbedding.get_embedding_size(model_name)
+    size2 = TextEmbedding.get_embedding_size(model_name.upper())
+    assert size1 == size2
+
+
+def test_get_embedding_size_failure():
+    """Verify that get_embedding_size raises ValueError for unknown models."""
+    with pytest.raises(ValueError, match="Embedding size for model unknown-model was None"):
+        TextEmbedding.get_embedding_size("unknown-model")
