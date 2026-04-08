@@ -170,7 +170,15 @@ class TextEmbedding(TextEmbeddingBase):
         Returns:
             List of embeddings, one per document
         """
-        yield from self.model.embed(documents, batch_size, parallel, **kwargs)
+        from qwen3_embed.common.utils import check_input_length, iter_checked_texts
+
+        if isinstance(documents, str):
+            check_input_length(documents)
+            docs: str | Iterable[str] = documents
+        else:
+            docs = iter_checked_texts(documents)
+
+        yield from self.model.embed(docs, batch_size, parallel, **kwargs)
 
     def query_embed(self, query: str | Iterable[str], **kwargs: Any) -> Iterable[NumpyArray]:
         """
@@ -182,8 +190,16 @@ class TextEmbedding(TextEmbeddingBase):
         Returns:
             Iterable[NumpyArray]: The embeddings.
         """
+        from qwen3_embed.common.utils import check_input_length, iter_checked_texts
+
+        if isinstance(query, str):
+            check_input_length(query)
+            q: str | Iterable[str] = query
+        else:
+            q = iter_checked_texts(query)
+
         # This is model-specific, so that different models can have specialized implementations
-        yield from self.model.query_embed(query, **kwargs)
+        yield from self.model.query_embed(q, **kwargs)
 
     def passage_embed(self, texts: Iterable[str], **kwargs: Any) -> Iterable[NumpyArray]:
         """
@@ -197,7 +213,9 @@ class TextEmbedding(TextEmbeddingBase):
             Iterable[SparseEmbedding]: The sparse embeddings.
         """
         # This is model-specific, so that different models can have specialized implementations
-        yield from self.model.passage_embed(texts, **kwargs)
+        from qwen3_embed.common.utils import iter_checked_texts
+
+        yield from self.model.passage_embed(iter_checked_texts(texts), **kwargs)
 
     def token_count(
         self, texts: str | Iterable[str], batch_size: int = 1024, **kwargs: Any

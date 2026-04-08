@@ -102,7 +102,12 @@ class TextCrossEncoder(TextCrossEncoderBase):
         Returns:
             Iterable of scores for each document
         """
-        yield from self.model.rerank(query, documents, batch_size=batch_size, **kwargs)
+        from qwen3_embed.common.utils import check_input_length, iter_checked_texts
+
+        check_input_length(query)
+        docs = iter_checked_texts(documents)
+
+        yield from self.model.rerank(query, docs, batch_size=batch_size, **kwargs)
 
     def rerank_pairs(
         self,
@@ -133,8 +138,16 @@ class TextCrossEncoder(TextCrossEncoderBase):
             >>> print(list(map(lambda x: round(x, 2), scores)))
             [-1.24, -10.6]
         """
+        from qwen3_embed.common.utils import check_input_length
+
+        def _check_pairs(ps):
+            for q, d in ps:
+                check_input_length(q)
+                check_input_length(d)
+                yield q, d
+
         yield from self.model.rerank_pairs(
-            pairs, batch_size=batch_size, parallel=parallel, **kwargs
+            _check_pairs(pairs), batch_size=batch_size, parallel=parallel, **kwargs
         )
 
     @classmethod
