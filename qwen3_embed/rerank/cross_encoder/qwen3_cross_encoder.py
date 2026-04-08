@@ -126,8 +126,10 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     @staticmethod
     def _sanitize_input(text: str) -> str:
         """Strip forbidden special tokens from user input."""
-        for token in FORBIDDEN_TOKENS:
-            text = text.replace(token, "")
+        # SECURITY: Prevent prompt injection bypass via iterative payload construction.
+        while any(token in text for token in FORBIDDEN_TOKENS):
+            for token in FORBIDDEN_TOKENS:
+                text = text.replace(token, "")
         return text
 
     @staticmethod
