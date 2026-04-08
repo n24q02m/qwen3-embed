@@ -1,6 +1,8 @@
 import pytest
-from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import Qwen3CrossEncoder
+
 from qwen3_embed.rerank.cross_encoder.gguf_cross_encoder import Qwen3CrossEncoderGGUF
+from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import Qwen3CrossEncoder
+
 
 @pytest.mark.parametrize("encoder_class", [Qwen3CrossEncoder, Qwen3CrossEncoderGGUF])
 def test_sanitize_input_removes_forbidden_tokens(encoder_class):
