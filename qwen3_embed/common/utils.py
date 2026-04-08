@@ -66,7 +66,7 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
     >>> list(iter_batch([1,2,3,4,5], 3))
     [[1, 2, 3], [4, 5]]
     """
-    if size < 0:
+    if size < 0 or size > sys.maxsize:
         raise ValueError(
             "Stop argument for islice() must be None or an integer: 0 <= x <= sys.maxsize."
         )
