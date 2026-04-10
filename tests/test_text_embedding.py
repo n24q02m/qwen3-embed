@@ -23,3 +23,9 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+
+def test_get_embedding_size_invalid_model_raises_error():
+    """Verify that get_embedding_size raises a ValueError when passed an invalid model name."""
+    with pytest.raises(ValueError, match="Embedding size for model .* was None"):
+        TextEmbedding.get_embedding_size(model_name="non-existent-model")
