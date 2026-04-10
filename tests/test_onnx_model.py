@@ -1,11 +1,13 @@
 import os
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 
-from qwen3_embed.common.onnx_model import OnnxModel, OnnxOutputContext
+from qwen3_embed.common.onnx_model import EmbeddingWorker, OnnxModel, OnnxOutputContext
 from qwen3_embed.common.types import Device
 
 # Production code builds the model path via ``Path(model_dir) / model_file``,
@@ -14,19 +16,19 @@ from qwen3_embed.common.types import Device
 EXPECTED_MODEL_PATH = os.path.join("dummy", "model.onnx")
 
 
-# Concrete implementation for testing
+# Concrete implementation for testing OnnxModel
 class ConcreteOnnxModel(OnnxModel[Any]):
-    def _get_worker_class(cls):
+    def _get_worker_class(cls) -> type["EmbeddingWorker[Any]"]:
         return MagicMock()
 
-    def _post_process_onnx_output(self, output: OnnxOutputContext, **kwargs: Any):
+    def _post_process_onnx_output(self, output: OnnxOutputContext, **kwargs: Any) -> Iterable[Any]:
         return []
 
-    def load_onnx_model(self):
+    def load_onnx_model(self) -> None:
         pass
 
     def onnx_embed(self, *args: Any, **kwargs: Any) -> OnnxOutputContext:
-        return OnnxOutputContext(model_output=MagicMock())
+        return OnnxOutputContext(model_output=np.zeros((1, 4)))
 
 
 @pytest.fixture
@@ -243,3 +245,84 @@ def test_add_extra_session_options():
         match="invalid_option is unknown or not exposed \\(exposed options: \\('enable_cpu_mem_arena',\\)\\)",
     ):
         ConcreteOnnxModel.add_extra_session_options(session_options, {"invalid_option": True})
+
+
+def test_preprocess_onnx_input(model: ConcreteOnnxModel):
+    """Test _preprocess_onnx_input returns unchanged input by default."""
+    data = {"input_ids": np.array([[1, 2, 3]])}
+    assert model._preprocess_onnx_input(data) is data
+
+
+def test_select_exposed_session_options():
+    """Test _select_exposed_session_options filters correctly."""
+    kwargs = {
+        "enable_cpu_mem_arena": True,
+        "other_param": "value",
+    }
+    result = ConcreteOnnxModel._select_exposed_session_options(kwargs)
+    assert result == {"enable_cpu_mem_arena": True}
+
+
+def test_abstract_methods_raise():
+    """Test that abstract methods in OnnxModel raise NotImplementedError."""
+
+    class AbstractModel(OnnxModel[Any]):
+        pass
+
+    model = AbstractModel()
+
+    with pytest.raises(NotImplementedError):
+        AbstractModel._get_worker_class()
+
+    with pytest.raises(NotImplementedError):
+        model._post_process_onnx_output(OnnxOutputContext(model_output=np.zeros((1, 4))))
+
+    with pytest.raises(NotImplementedError):
+        model.load_onnx_model()
+
+    with pytest.raises(NotImplementedError):
+        model.onnx_embed()
+
+
+# ===========================================================================
+# EmbeddingWorker Tests
+# ===========================================================================
+
+
+# Concrete implementation for testing EmbeddingWorker
+class ConcreteWorker(EmbeddingWorker[Any]):
+    def init_embedding(self, model_name: str, cache_dir: str, **kwargs: Any) -> OnnxModel[Any]:
+        return ConcreteOnnxModel()
+
+    def process(self, items: Iterable[tuple[int, Any]]) -> Iterable[tuple[int, Any]]:
+        yield from items
+
+
+def test_worker_init():
+    """Test EmbeddingWorker initialization."""
+    worker = ConcreteWorker(model_name="test_model", cache_dir="/tmp/cache")
+    assert isinstance(worker.model, ConcreteOnnxModel)
+
+
+def test_worker_start():
+    """Test EmbeddingWorker.start class method."""
+    worker = ConcreteWorker.start(model_name="test_model", cache_dir="/tmp/cache")
+    assert isinstance(worker, ConcreteWorker)
+    assert isinstance(worker.model, ConcreteOnnxModel)
+
+
+def test_worker_abstract_methods_raise():
+    """Test that abstract methods in EmbeddingWorker raise NotImplementedError."""
+
+    class AbstractWorker(EmbeddingWorker[Any]):
+        pass
+
+    # We can't even init it because init_embedding is abstract and called in __init__
+    with pytest.raises(NotImplementedError):
+        AbstractWorker(model_name="test", cache_dir="/tmp")
+
+    # Mock init_embedding to test process
+    with patch.object(AbstractWorker, "init_embedding", return_value=MagicMock()):
+        worker = AbstractWorker(model_name="test", cache_dir="/tmp")
+        with pytest.raises(NotImplementedError):
+            list(worker.process([]))
