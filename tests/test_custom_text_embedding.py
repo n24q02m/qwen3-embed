@@ -1,4 +1,4 @@
-"""Tests for CustomTextEmbedding — covers custom_text_embedding.py."""
+"""Tests for CustomTextEmbedding - covers custom_text_embedding.py."""
 
 from pathlib import Path
 from typing import Any
@@ -118,7 +118,7 @@ class TestPostprocessingConfig:
 
 
 # ===========================================================================
-# CustomTextEmbedding.add_model — classmethod (lines 95-103)
+# CustomTextEmbedding.add_model - classmethod (lines 95-103)
 # ===========================================================================
 
 
@@ -210,7 +210,7 @@ class TestCustomTextEmbeddingInit:
 class TestPool:
     def setup_method(self) -> None:
         """Use a minimal registered instance; avoid real ONNX."""
-        # We test _pool directly — we can instantiate with mocks.
+        # We test _pool directly - we can instantiate with mocks.
         pass
 
     def _make_instance(self, pooling: PoolingType, tmp_path: Path) -> CustomTextEmbedding:
@@ -240,7 +240,7 @@ class TestPool:
         emb = self._make_instance(PoolingType.LAST_TOKEN, tmp_path)
         # batch=1, seq=4, dim=8; real tokens at positions 0,1,2 (last=2)
         embeddings = np.arange(32, dtype=np.float32).reshape(1, 4, 8)
-        # right-padding: [1,1,1,0] — last real token is index 2
+        # right-padding: [1,1,1,0] - last real token is index 2
         mask = np.array([[1, 1, 1, 0]], dtype=np.int64)
         result = emb._pool(embeddings, attention_mask=mask)
         assert result.shape == (1, 8)
@@ -298,7 +298,7 @@ class TestPostProcessOnnxOutput:
         emb = _build(tmp_path, pooling=PoolingType.CLS, normalization=True)
         ctx = self._output(2, 5, 4)
         result = np.asarray(emb._post_process_onnx_output(ctx))
-        # shape should be (2, 4) — CLS token from each row, normalized
+        # shape should be (2, 4) - CLS token from each row, normalized
         assert result.shape == (2, 4)
         # Each row should be normalized to unit length
         norms = np.linalg.norm(result, axis=1)

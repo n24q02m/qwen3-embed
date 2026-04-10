@@ -329,7 +329,7 @@ def test_semi_ordered_map_error_in_else_branch():
 
     With queue_size=1 and FailingWorker failing on 0:
     - push item 0, pushed=1
-    - iteration 1: pushed-read=1 >= 1 → else branch, get() returns QueueSignals.error
+    - iteration 1: pushed-read=1 >= 1 -> else branch, get() returns QueueSignals.error
     - raises RuntimeError
     """
     with patch.object(pp_module, "max_internal_batch_size", 1):

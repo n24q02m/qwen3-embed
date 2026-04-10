@@ -1,7 +1,7 @@
 """Export optimized Qwen3 Reranker ONNX model with 2-dim yes/no output.
 
 Instead of outputting full vocab logits (batch, seq_len, 151669), the optimized
-model outputs only (batch, 2) — [no_logit, yes_logit] at the last token position.
+model outputs only (batch, 2) - [no_logit, yes_logit] at the last token position.
 
 This reduces runtime memory from ~12GB to <1GB.
 

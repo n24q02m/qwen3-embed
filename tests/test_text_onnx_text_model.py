@@ -1,4 +1,4 @@
-"""Tests for OnnxTextModel and OnnxTextEmbedding — covers onnx_text_model.py and onnx_embedding.py."""
+"""Tests for OnnxTextModel and OnnxTextEmbedding - covers onnx_text_model.py and onnx_embedding.py."""
 
 from collections.abc import Iterable
 from pathlib import Path
@@ -77,7 +77,7 @@ def registered_test_model():
 
 
 class ConcreteOnnxTextModel(OnnxTextModel[NumpyArray]):
-    """Minimal concrete subclass — does not load any real models."""
+    """Minimal concrete subclass - does not load any real models."""
 
     @classmethod
     def _get_worker_class(cls) -> type["TextEmbeddingWorker[NumpyArray]"]:
@@ -107,12 +107,12 @@ class _StubWorker(TextEmbeddingWorker[NumpyArray]):
 
 
 # ===========================================================================
-# OnnxTextModel — base class tests  (covers onnx_text_model.py)
+# OnnxTextModel - base class tests  (covers onnx_text_model.py)
 # ===========================================================================
 
 
 class TestOnnxTextModelNotImplemented:
-    """Lines 23, 35, 72 — abstract methods raise NotImplementedError."""
+    """Lines 23, 35, 72 - abstract methods raise NotImplementedError."""
 
     def test_get_worker_class_raises(self) -> None:
         class _Stub(OnnxTextModel):
@@ -139,7 +139,7 @@ class TestOnnxTextModelNotImplemented:
 
 
 class TestOnnxTextModelInit:
-    """Lines 38-40 — __init__ initialises tokenizer and special_token_to_id."""
+    """Lines 38-40 - __init__ initialises tokenizer and special_token_to_id."""
 
     def test_initial_state(self) -> None:
         m = ConcreteOnnxTextModel()
@@ -149,7 +149,7 @@ class TestOnnxTextModelInit:
 
 
 class TestOnnxTextModelPreprocessInput:
-    """Line 48 — _preprocess_onnx_input returns input unchanged."""
+    """Line 48 - _preprocess_onnx_input returns input unchanged."""
 
     def test_returns_identity(self) -> None:
         m = ConcreteOnnxTextModel()
@@ -158,7 +158,7 @@ class TestOnnxTextModelPreprocessInput:
 
 
 class TestOnnxTextModelTokenize:
-    """Lines 75-76 — tokenize calls encode_batch."""
+    """Lines 75-76 - tokenize calls encode_batch."""
 
     def test_delegates_to_tokenizer(self) -> None:
         m = ConcreteOnnxTextModel()
@@ -174,7 +174,7 @@ class TestOnnxTextModelTokenize:
 
 
 class TestOnnxTextModelOnnxEmbed:
-    """Lines 83-107 — onnx_embed constructs ONNX inputs and returns OnnxOutputContext."""
+    """Lines 83-107 - onnx_embed constructs ONNX inputs and returns OnnxOutputContext."""
 
     def setup_method(self) -> None:
         self.m = ConcreteOnnxTextModel()
@@ -257,7 +257,7 @@ class TestOnnxTextModelOnnxEmbed:
 
 
 class TestOnnxTextModelLoadOnnxModel:
-    """Lines 60-69 — _load_onnx_model calls super then load_tokenizer."""
+    """Lines 60-69 - _load_onnx_model calls super then load_tokenizer."""
 
     def test_wires_tokenizer_after_super(self, tmp_path: Path) -> None:
         m = ConcreteOnnxTextModel()
@@ -287,7 +287,7 @@ class TestOnnxTextModelLoadOnnxModel:
 
 
 class TestOnnxTextModelTokenCount:
-    """Lines 168-178 — _token_count with lazy loading and various input forms."""
+    """Lines 168-178 - _token_count with lazy loading and various input forms."""
 
     def test_loads_model_if_not_loaded(self) -> None:
         m = ConcreteOnnxTextModel()
@@ -330,7 +330,7 @@ class TestOnnxTextModelTokenCount:
 
 
 class TestOnnxTextModelEmbedDocuments:
-    """Lines 124-165 — _embed_documents in single-process and parallel modes."""
+    """Lines 124-165 - _embed_documents in single-process and parallel modes."""
 
     def _loaded(self, n_docs: int = 1) -> ConcreteOnnxTextModel:
         m = ConcreteOnnxTextModel()
@@ -435,7 +435,7 @@ class TestOnnxTextModelEmbedDocuments:
 
 
 class TestTextEmbeddingWorkerProcess:
-    """Lines 183-185 — TextEmbeddingWorker.process yields (idx, OnnxOutputContext)."""
+    """Lines 183-185 - TextEmbeddingWorker.process yields (idx, OnnxOutputContext)."""
 
     def test_yields_indexed_outputs(self) -> None:
         worker = _StubWorker(model_name="t", cache_dir="/tmp")
@@ -448,12 +448,12 @@ class TestTextEmbeddingWorkerProcess:
 
 
 # ===========================================================================
-# OnnxTextEmbedding — covers onnx_embedding.py
+# OnnxTextEmbedding - covers onnx_embedding.py
 # ===========================================================================
 
 
 class TestOnnxTextEmbeddingInit:
-    """Lines 65-91 — OnnxTextEmbedding.__init__ behaviour."""
+    """Lines 65-91 - OnnxTextEmbedding.__init__ behaviour."""
 
     def test_lazy_load_skips_session(
         self, tmp_path: Path, registered_test_model: DenseModelDescription
@@ -536,14 +536,14 @@ class TestOnnxTextEmbeddingMethods:
         assert onnx_emb._get_worker_class() is OnnxTextEmbeddingWorker
 
     def test_post_process_2d_output(self, onnx_emb: OnnxTextEmbedding) -> None:
-        """Line 150, 153 — 2D embeddings are normalized row-wise."""
+        """Line 150, 153 - 2D embeddings are normalized row-wise."""
         output = OnnxOutputContext(model_output=np.ones((2, 4), dtype=np.float32))
         results = list(onnx_emb._post_process_onnx_output(output))
         assert len(results) == 2
         assert results[0].shape == (4,)
 
     def test_post_process_3d_output_takes_cls(self, onnx_emb: OnnxTextEmbedding) -> None:
-        """Line 148, 153 — 3D embeddings use CLS (first) token."""
+        """Line 148, 153 - 3D embeddings use CLS (first) token."""
         output = OnnxOutputContext(model_output=np.ones((2, 5, 4), dtype=np.float32))
         results = list(onnx_emb._post_process_onnx_output(output))
         assert len(results) == 2
@@ -570,7 +570,7 @@ class TestOnnxTextEmbeddingMethods:
     def test_load_onnx_model_delegates_to_load_onnx_model(
         self, tmp_path: Path, registered_test_model: DenseModelDescription
     ) -> None:
-        """Line 156 — load_onnx_model calls _load_onnx_model with correct args."""
+        """Line 156 - load_onnx_model calls _load_onnx_model with correct args."""
         with patch.object(OnnxTextEmbedding, "download_model", return_value=tmp_path):
             emb = OnnxTextEmbedding(model_name=_MODEL_NAME, lazy_load=True)
 
@@ -589,7 +589,7 @@ class TestOnnxTextEmbeddingMethods:
 
 
 class TestOnnxTextEmbeddingWorkerInit:
-    """Line 179 — OnnxTextEmbeddingWorker.init_embedding creates OnnxTextEmbedding."""
+    """Line 179 - OnnxTextEmbeddingWorker.init_embedding creates OnnxTextEmbedding."""
 
     def test_creates_onnx_text_embedding(
         self, tmp_path: Path, registered_test_model: DenseModelDescription

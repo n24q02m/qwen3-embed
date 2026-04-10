@@ -16,7 +16,7 @@ from qwen3_embed.common.types import NumpyArray
 
 T = TypeVar("T")
 
-# ⚡ Bolt: Security enhancement to prevent CPU/Memory exhaustion DoS
+# Lightning: Bolt: Security enhancement to prevent CPU/Memory exhaustion DoS
 MAX_INPUT_LENGTH = int(os.environ.get("QWEN3_EMBED_MAX_INPUT_LENGTH", 1000000))
 
 
@@ -48,7 +48,7 @@ def last_token_pool(input_array: NumpyArray, attention_mask: NDArray[np.int64]) 
     Returns:
         Pooled embeddings, shape (batch_size, hidden_dim).
     """
-    # ⚡ Bolt: Fast boolean reduction using .all() (~15% faster than .sum() == shape[0])
+    # Lightning: Bolt: Fast boolean reduction using .all() (~15% faster than .sum() == shape[0])
     left_padding = bool(attention_mask[:, -1].all())
     if left_padding:
         return input_array[:, -1]
@@ -70,10 +70,10 @@ def normalize(input_array: NumpyArray, p: int = 2, dim: int = 1, eps: float = 1e
 
 
 def mean_pooling(input_array: NumpyArray, attention_mask: NDArray[np.int64]) -> NumpyArray:
-    # ⚡ Bolt: Fast mean pooling using np.matmul (~5x faster than np.expand_dims and np.sum)
+    # Lightning: Bolt: Fast mean pooling using np.matmul (~5x faster than np.expand_dims and np.sum)
     mask_cast = attention_mask.astype(input_array.dtype)
     sum_embeddings = np.matmul(mask_cast[:, np.newaxis, :], input_array).squeeze(1)
-    # ⚡ Bolt: Fast reduction using array method
+    # Lightning: Bolt: Fast reduction using array method
     sum_mask = mask_cast.sum(axis=1, keepdims=True)
     pooled_embeddings = sum_embeddings / np.maximum(sum_mask, 1e-9)
     return pooled_embeddings
@@ -133,7 +133,7 @@ def get_all_punctuation() -> frozenset[str]:
     )
 
 
-# ⚡ Bolt: Compile regex once at the module level to avoid recompilation overhead in hot loops
+# Lightning: Bolt: Compile regex once at the module level to avoid recompilation overhead in hot loops
 _NON_ALPHANUMERIC_RE = re.compile(r"[^\w\s]", flags=re.UNICODE)
 
 

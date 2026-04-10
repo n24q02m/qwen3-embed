@@ -34,13 +34,13 @@ class TestLastTokenPool:
 
         result = last_token_pool(hidden_states, attention_mask)
 
-        # Sample 0: last non-pad = index 1 → [4, 5, 6]
+        # Sample 0: last non-pad = index 1 -> [4, 5, 6]
         np.testing.assert_array_equal(result[0], [4.0, 5.0, 6.0])
-        # Sample 1: last non-pad = index 2 → [13, 14, 15]
+        # Sample 1: last non-pad = index 2 -> [13, 14, 15]
         np.testing.assert_array_equal(result[1], [13.0, 14.0, 15.0])
 
     def test_left_padding(self) -> None:
-        """Left-padding: all samples' last token is valid → return [:, -1]."""
+        """Left-padding: all samples' last token is valid -> return [:, -1]."""
         hidden_states = np.array(
             [
                 [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
@@ -57,7 +57,7 @@ class TestLastTokenPool:
         np.testing.assert_array_equal(result[1], [13.0, 14.0, 15.0])
 
     def test_no_padding(self) -> None:
-        """No padding at all: all masks = 1 → last position."""
+        """No padding at all: all masks = 1 -> last position."""
         hidden_states = np.array([[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]], dtype=np.float32)
         attention_mask = np.array([[1, 1, 1]], dtype=np.int64)
 
@@ -304,7 +304,7 @@ class TestRemoveNonAlphanumeric:
 
     def test_unicode_characters(self) -> None:
         """Accents should be kept, emojis should be removed."""
-        assert remove_non_alphanumeric("café au lait! 😊") == "café au lait   "
+        assert remove_non_alphanumeric("caf\xe9 au lait! \U0001f60a") == "caf\xe9 au lait   "
 
     def test_empty_string(self) -> None:
         """Empty string remains empty."""
@@ -329,7 +329,7 @@ class TestRemoveNonAlphanumeric:
     def test_math_and_currency_symbols(self) -> None:
         """Math and currency symbols should be removed."""
         assert (
-            remove_non_alphanumeric("price: $100 + €50 = £150 ± ∞")
+            remove_non_alphanumeric("price: $100 + \u20ac50 = \xa3150 \xb1 \u221e")
             == "price   100    50    150    "
         )
 

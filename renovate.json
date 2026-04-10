@@ -61,7 +61,7 @@
       "pinDigests": true
     },
     {
-      "description": "Pin PSR to v10 — block Renovate downgrades",
+      "description": "Pin PSR to v10 - block Renovate downgrades",
       "matchPackagePatterns": [
         "^python-semantic-release/"
       ],

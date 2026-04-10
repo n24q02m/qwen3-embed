@@ -69,7 +69,7 @@ def _make_mock_session(
 ) -> MagicMock:
     """Return a mock onnxruntime.InferenceSession.
 
-    Default output shape: (n_pairs, n_labels) — scores[:, 0] is taken.
+    Default output shape: (n_pairs, n_labels) - scores[:, 0] is taken.
     """
     output = np.ones((n_pairs, n_labels), dtype=dtype)
     session = MagicMock()
@@ -91,7 +91,7 @@ def _make_mock_session(
 
 
 class ConcreteCrossEncoderModel(OnnxCrossEncoderModel):
-    """Minimal subclass — no real models, no real I/O."""
+    """Minimal subclass - no real models, no real I/O."""
 
     @classmethod
     def _get_worker_class(cls) -> type["_StubRerankerWorker"]:
@@ -159,7 +159,7 @@ def onnx_encoder(
 
 
 # ===========================================================================
-# OnnxCrossEncoderModel — base class (onnx_text_model.py)
+# OnnxCrossEncoderModel - base class (onnx_text_model.py)
 # ===========================================================================
 
 
@@ -270,7 +270,7 @@ class TestBuildOnnxInput:
 
 
 class TestOnnxEmbedPairs:
-    """onnx_embed_pairs runs the full tokenize → build → preprocess → run pipeline."""
+    """onnx_embed_pairs runs the full tokenize -> build -> preprocess -> run pipeline."""
 
     def test_returns_onnx_output_context(self, loaded_model: ConcreteCrossEncoderModel) -> None:
         pairs = [("q", "d1"), ("q", "d2")]
@@ -578,7 +578,7 @@ class TestLoadOnnxModel:
 
 
 # ===========================================================================
-# OnnxTextCrossEncoder — facade class (onnx_text_cross_encoder.py)
+# OnnxTextCrossEncoder - facade class (onnx_text_cross_encoder.py)
 # ===========================================================================
 
 
@@ -778,7 +778,7 @@ class TestTextCrossEncoderWorker:
 
 
 # ===========================================================================
-# Float16 → Float32 casting in onnx_embed_pairs
+# Float16 -> Float32 casting in onnx_embed_pairs
 # ===========================================================================
 
 
@@ -787,7 +787,7 @@ class TestFloat16Casting:
 
     def test_float16_output_cast_to_float32(self) -> None:
         m = ConcreteCrossEncoderModel()
-        # Create a float16 session output: (1, 2) — scores[:, 0]
+        # Create a float16 session output: (1, 2) - scores[:, 0]
         session = MagicMock()
         session.run.return_value = [np.ones((1, 2), dtype=np.float16)]
         session.get_inputs.return_value = []

@@ -95,7 +95,7 @@
 
 ## [0.2.0](https://github.com/n24q02m/qwen3-embed/compare/v0.1.0...v0.2.0) (2026-02-13)
 
-### ⚠ BREAKING CHANGES
+### \u26a0 BREAKING CHANGES
 
 * Package import changed from `from fastembed import ...` to `from qwen3_embed import ...`. The PyPI package name remains `qwen3-embed`.
 

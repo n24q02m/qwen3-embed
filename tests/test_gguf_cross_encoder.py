@@ -294,7 +294,7 @@ class TestScoreText:
     def test_score_text_yes_wins(self):
         """Test _score_text returns P(yes)>0.5 when yes logit > no logit."""
         model = _make_model()
-        # yes_logit=5.0, no_logit=1.0 → P(yes) >> 0.5
+        # yes_logit=5.0, no_logit=1.0 -> P(yes) >> 0.5
         score = model._score_text("some text")
 
         assert isinstance(score, float)

@@ -26,8 +26,8 @@ class TestLastTokenPool:
             dtype=np.int64,
         )
         result = last_token_pool(hidden, mask)
-        # Sample 0: last valid = index 1 → [3, 4]
-        # Sample 1: last valid = index 2 → [9, 10]
+        # Sample 0: last valid = index 1 -> [3, 4]
+        # Sample 1: last valid = index 2 -> [9, 10]
         np.testing.assert_array_equal(result, [[3, 4], [9, 10]])
 
     def test_left_padding(self):
@@ -47,7 +47,7 @@ class TestLastTokenPool:
             dtype=np.int64,
         )
         result = last_token_pool(hidden, mask)
-        # Left-padding: last column is all-1 → use hidden[:, -1]
+        # Left-padding: last column is all-1 -> use hidden[:, -1]
         np.testing.assert_array_equal(result, [[3, 4], [9, 10]])
 
     def test_single_token(self):

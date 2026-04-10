@@ -173,7 +173,7 @@ class OnnxTextModel(OnnxModel[T]):
         texts = [texts] if isinstance(texts, str) else texts
         for batch in iter_batch(texts, batch_size):
             for tokens in self.tokenizer.encode_batch(batch):
-                # ⚡ Bolt: Fast token counting using .count(1) (~30% faster than sum())
+                # Lightning: Bolt: Fast token counting using .count(1) (~30% faster than sum())
                 token_num += tokens.attention_mask.count(1)
 
         return token_num

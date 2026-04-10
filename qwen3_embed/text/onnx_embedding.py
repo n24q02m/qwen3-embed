@@ -8,7 +8,7 @@ from qwen3_embed.common.utils import define_cache_dir, normalize
 from qwen3_embed.text.onnx_text_model import OnnxTextModel, TextEmbeddingWorker
 from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
-# Base class model list kept empty — Qwen3 models are registered
+# Base class model list kept empty - Qwen3 models are registered
 # in qwen3_embedding.py. Custom models can be added at runtime
 # via CustomTextEmbedding.add_model().
 supported_onnx_models: list[DenseModelDescription] = []
