@@ -138,6 +138,7 @@ class TextEmbedding(TextEmbeddingBase):
         model_name_lower = model_name.lower()
         for description in descriptions:
             if description.model.lower() == model_name_lower:
+                assert description.dim is not None
                 embedding_size = description.dim
                 break
         if embedding_size is None:

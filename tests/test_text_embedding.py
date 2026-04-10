@@ -23,3 +23,23 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+def test_get_embedding_size():
+    """Verify that get_embedding_size returns the correct dimension for supported models."""
+    # Get a supported model from the list
+    supported_models = TextEmbedding.list_supported_models()
+    assert len(supported_models) > 0
+    model_info = supported_models[0]
+    model_name = model_info["model"]
+    expected_dim = model_info["dim"]
+
+    # Test exact match
+    assert TextEmbedding.get_embedding_size(model_name) == expected_dim
+
+    # Test case-insensitivity
+    assert TextEmbedding.get_embedding_size(model_name.lower()) == expected_dim
+    assert TextEmbedding.get_embedding_size(model_name.upper()) == expected_dim
+
+    # Test unknown model
+    with pytest.raises(ValueError, match="Embedding size for model unknown-model was None"):
+        TextEmbedding.get_embedding_size("unknown-model")
