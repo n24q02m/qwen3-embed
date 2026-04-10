@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, TypeAlias
 
@@ -6,7 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-class Device(str, Enum):
+class Device(StrEnum):
     CPU = "cpu"
     CUDA = "cuda"
     AUTO = "auto"

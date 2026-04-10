@@ -73,4 +73,8 @@ class TextEmbeddingBase(ModelManagement[DenseModelDescription]):
 
     def token_count(self, texts: str | Iterable[str], **kwargs: Any) -> int:
         """Returns the number of tokens in the texts."""
-        raise NotImplementedError("Subclasses must implement this method")
+        if self._embedding_size is None:
+            desc = self._get_model_description(self.model_name)
+            assert desc.dim is not None
+            self._embedding_size = desc.dim
+        return self._embedding_size

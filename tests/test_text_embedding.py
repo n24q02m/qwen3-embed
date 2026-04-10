@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from qwen3_embed.text.text_embedding import TextEmbedding
@@ -23,3 +25,30 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+
+def test_embedding_size_delegation():
+    """Verify that embedding_size property delegates to the underlying model."""
+    with patch("qwen3_embed.text.text_embedding.TextEmbedding.__init__", return_value=None):
+        te = TextEmbedding()
+        te.model = MagicMock()
+        te.model.embedding_size = 512
+        te._embedding_size = None
+
+        assert te.embedding_size == 512
+        te.model.embedding_size = 1024
+        # Verify caching: it should still be 512 because it was cached
+        assert te.embedding_size == 512
+
+
+def test_get_embedding_size():
+    """Verify that get_embedding_size class method returns correct size."""
+    # Use a known model from the registry
+    models = TextEmbedding.list_supported_models()
+    if models:
+        model_name = models[0]["model"]
+        expected_dim = models[0]["dim"]
+        assert TextEmbedding.get_embedding_size(model_name) == expected_dim
+
+    with pytest.raises(ValueError, match="Embedding size for model"):
+        TextEmbedding.get_embedding_size("non-existent-model")
