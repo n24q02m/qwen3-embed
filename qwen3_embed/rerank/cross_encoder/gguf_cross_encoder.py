@@ -16,7 +16,7 @@ import numpy as np
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
-from qwen3_embed.common.utils import define_cache_dir
+from qwen3_embed.common.utils import define_cache_dir, sanitize_input
 from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
 
 # ---------------------------------------------------------------------------
@@ -40,9 +40,6 @@ RERANK_TEMPLATE = (
     "<Query>: {query}\n<Document>: {document}<|im_end|>\n"
     "<|im_start|>assistant\n<think>\n\n</think>\n\n"
 )
-
-# Tokens that must be stripped from user input to prevent prompt injection
-FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
 
 # ---------------------------------------------------------------------------
 # Model registry
@@ -144,24 +141,15 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
     # Chat template formatting
     # ------------------------------------------------------------------
     @staticmethod
-    def _sanitize_input(text: str) -> str:
-        """Strip forbidden special tokens from user input."""
-        # SECURITY: Prevent prompt injection bypass via iterative payload construction.
-        while any(token in text for token in FORBIDDEN_TOKENS):
-            for token in FORBIDDEN_TOKENS:
-                text = text.replace(token, "")
-        return text
-
-    @staticmethod
     def _format_rerank_input(
         query: str,
         document: str,
         instruction: str = DEFAULT_INSTRUCTION,
     ) -> str:
         """Build the chat-template string for a single query-document pair."""
-        query = Qwen3CrossEncoderGGUF._sanitize_input(query)
-        document = Qwen3CrossEncoderGGUF._sanitize_input(document)
-        instruction = Qwen3CrossEncoderGGUF._sanitize_input(instruction)
+        query = sanitize_input(query)
+        document = sanitize_input(document)
+        instruction = sanitize_input(instruction)
         return RERANK_TEMPLATE.format(
             system=SYSTEM_PROMPT,
             instruction=instruction,

@@ -1,0 +1,3 @@
+## 2025-04-10 - Fast Iterative Input Sanitization
+**Learning:** Using `while any(token in text for token in FORBIDDEN_TOKENS):` coupled with iterative `str.replace` in a loop has high overhead because it triggers multiple complete scans of the input string, which can be a severe performance bottleneck for large text blocks common in LLM scenarios.
+**Action:** Centralized the logic using a pre-compiled regex `_FORBIDDEN_RE.subn("", text)` in a `while True` loop that checks the `count` returned. This allows C-level optimization for the search-and-replace, dropping redundant scans, while still mitigating prompt injection via nested payloads.
