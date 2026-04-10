@@ -102,3 +102,5 @@ class CustomTextEmbedding(OnnxTextEmbedding):
         cls.POSTPROCESSING_MAPPING[model_description.model] = PostprocessingConfig(
             pooling=pooling, normalization=normalization
         )
+        # Bolt: Clear cache when new model is added
+        cls._clear_model_cache()

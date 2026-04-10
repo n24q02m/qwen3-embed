@@ -15,3 +15,5 @@ class CustomTextCrossEncoder(OnnxTextCrossEncoder):
         model_description: BaseModelDescription,
     ) -> None:
         cls.SUPPORTED_MODELS.append(model_description)
+        # Bolt: Clear cache when new model is added
+        cls._clear_model_cache()

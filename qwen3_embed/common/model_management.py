@@ -28,11 +28,12 @@ T = TypeVar("T", bound=BaseModelDescription)
 
 class ModelManagement(Generic[T]):
     METADATA_FILE = "files_metadata.json"
+    _model_description_cache: dict[str, T] | None = None
     _session: requests.Session | None = None
 
     @classmethod
     def _get_session(cls) -> requests.Session:
-        # ⚡ Bolt: Use requests.Session for connection pooling (~30% faster for multiple files)
+        # Bolt: Use requests.Session for connection pooling (~30% faster for multiple files)
         # Reusing the TCP connection avoids the overhead of repeated TCP/TLS handshakes
         if cls._session is None:
             cls._session = requests.Session()
@@ -90,12 +91,28 @@ class ModelManagement(Generic[T]):
         Returns:
             T: The model description.
         """
+        # Bolt: Use a class-specific cache to avoid sharing caches between subclasses
+        # (e.g. TextEmbedding and TextCrossEncoder implementation classes).
+        # We use __dict__.get to avoid looking up the hierarchy.
+        cache = cls.__dict__.get("_model_description_cache")
+        if cache is None:
+            cache = {
+                model.model.lower(): model for model in cls._list_supported_models()
+            }
+            cls._model_description_cache = cache
+
         model_name_lower = model_name.lower()
-        for model in cls._list_supported_models():
-            if model_name_lower == model.model.lower():
-                return model
+        if model_name_lower in cache:
+            return cache[model_name_lower]
 
         raise ValueError(f"Model {model_name} is not supported in {cls.__name__}.")
+
+    @classmethod
+    def _clear_model_cache(cls) -> None:
+        """Clears the model description cache."""
+        # Bolt: Only clear if it's set on the specific class
+        if "_model_description_cache" in cls.__dict__:
+            cls._model_description_cache = None
 
     @staticmethod
     def _get_expected_md5(headers: Any) -> str | None:
