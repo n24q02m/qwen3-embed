@@ -210,7 +210,7 @@ class TextEmbedding(TextEmbeddingBase):
             **kwargs: Additional keyword argument to pass to the embed method.
 
         Yields:
-            Iterable[SparseEmbedding]: The sparse embeddings.
+            Iterable[NumpyArray]: The embeddings.
         """
         # This is model-specific, so that different models can have specialized implementations
         from qwen3_embed.common.utils import iter_checked_texts
