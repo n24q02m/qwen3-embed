@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import tarfile
+import threading
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -29,13 +30,16 @@ T = TypeVar("T", bound=BaseModelDescription)
 class ModelManagement(Generic[T]):
     METADATA_FILE = "files_metadata.json"
     _session: requests.Session | None = None
+    _lock = threading.Lock()
 
     @classmethod
     def _get_session(cls) -> requests.Session:
         # ⚡ Bolt: Use requests.Session for connection pooling (~30% faster for multiple files)
         # Reusing the TCP connection avoids the overhead of repeated TCP/TLS handshakes
         if cls._session is None:
-            cls._session = requests.Session()
+            with cls._lock:
+                if cls._session is None:
+                    cls._session = requests.Session()
         return cls._session
 
     @classmethod
@@ -155,33 +159,34 @@ class ModelManagement(Generic[T]):
         if os.path.exists(output_path):
             return output_path
         # SECURITY: Explicitly enforce TLS verification to prevent accidental or malicious bypass via environment variables (like REQUESTS_CA_BUNDLE).
-        response = cls._get_session().get(url, stream=True, timeout=10, verify=True)
+        with cls._get_session().get(url, stream=True, timeout=10, verify=True) as response:
+            # Handle HTTP errors
+            if response.status_code == 403:
+                raise PermissionError(
+                    "Authentication Error: You do not have permission to access this resource. "
+                    "Please check your credentials."
+                )
+            response.raise_for_status()
 
-        # Handle HTTP errors
-        if response.status_code == 403:
-            raise PermissionError(
-                "Authentication Error: You do not have permission to access this resource. "
-                "Please check your credentials."
-            )
-        response.raise_for_status()
+            expected_md5 = cls._get_expected_md5(response.headers)
 
-        expected_md5 = cls._get_expected_md5(response.headers)
+            total_size_in_bytes = int(response.headers.get("content-length", 0))
+            if total_size_in_bytes == 0:
+                logger.warning(
+                    f"Content-length header is missing or zero in the response from {url}."
+                )
 
-        total_size_in_bytes = int(response.headers.get("content-length", 0))
-        if total_size_in_bytes == 0:
-            logger.warning(f"Content-length header is missing or zero in the response from {url}.")
-
-        calculated_md5 = cls._download_and_hash_file(
-            response, output_path, total_size_in_bytes, show_progress
-        )
-
-        if expected_md5 and expected_md5 != calculated_md5:
-            os.remove(output_path)
-            raise ValueError(
-                f"File integrity check failed: expected MD5 {expected_md5}, got {calculated_md5}"
+            calculated_md5 = cls._download_and_hash_file(
+                response, output_path, total_size_in_bytes, show_progress
             )
 
-        return output_path
+            if expected_md5 and expected_md5 != calculated_md5:
+                os.remove(output_path)
+                raise ValueError(
+                    f"File integrity check failed: expected MD5 {expected_md5}, got {calculated_md5}"
+                )
+
+            return output_path
 
     @classmethod
     def _verify_files_from_metadata(
@@ -541,7 +546,7 @@ class ModelManagement(Generic[T]):
                 deprecated_tar_struct=deprecated_tar_struct,
                 local_files_only=local_files_only,
             )
-        except Exception:
+        except (OSError, ValueError, requests.RequestException, tarfile.TarError):
             if not local_files_only:
                 logger.error(f"Could not download model from url: {url_source}")
         return None

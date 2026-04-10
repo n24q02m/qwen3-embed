@@ -144,7 +144,8 @@ class TestDownloadFileFromGcs:
         mock_session = MagicMock()
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
-        response = Mock()
+        response = MagicMock()
+        response.__enter__.return_value = response
         response.status_code = 200
         response.headers = {"content-length": "0"}
         response.iter_content.return_value = []
@@ -164,7 +165,8 @@ class TestDownloadFileFromGcs:
         mock_session = MagicMock()
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
-        response = Mock()
+        response = MagicMock()
+        response.__enter__.return_value = response
         response.status_code = 404
         response.raise_for_status.side_effect = requests.exceptions.HTTPError("404 Client Error")
         mock_get.return_value = response
@@ -216,7 +218,8 @@ class TestDownloadFileFromGcs:
         mock_session = MagicMock()
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
-        response = Mock()
+        response = MagicMock()
+        response.__enter__.return_value = response
         response.status_code = 403
         mock_get.return_value = response
 
@@ -229,7 +232,8 @@ class TestDownloadFileFromGcs:
         mock_session = MagicMock()
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
-        response = Mock()
+        response = MagicMock()
+        response.__enter__.return_value = response
         response.status_code = 200
         response.headers = {"content-length": "0"}
         response.iter_content.return_value = [b"hello"]
@@ -250,7 +254,8 @@ class TestDownloadFileFromGcs:
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
         chunk = b"A" * 1024
-        response = Mock()
+        response = MagicMock()
+        response.__enter__.return_value = response
         response.status_code = 200
         response.headers = {"content-length": str(len(chunk))}
         response.iter_content.return_value = [chunk]
@@ -270,7 +275,8 @@ class TestDownloadFileFromGcs:
         mock_session = MagicMock()
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
-        response = Mock()
+        response = MagicMock()
+        response.__enter__.return_value = response
         response.status_code = 200
         response.headers = {"content-length": "5"}
         response.iter_content.return_value = [b"", b"hello", b""]
@@ -287,7 +293,8 @@ class TestDownloadFileFromGcs:
         mock_session = MagicMock()
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
-        response = Mock()
+        response = MagicMock()
+        response.__enter__.return_value = response
         response.status_code = 200
         response.headers = {}
         response.iter_content.return_value = [b"data"]
@@ -312,7 +319,8 @@ class TestDownloadFileFromGcs:
             hashlib.md5(b"different content", usedforsecurity=False).digest()
         ).decode()  # SECURITY: MD5 is used solely for non-cryptographic file integrity checking.
 
-        response = Mock()
+        response = MagicMock()
+        response.__enter__.return_value = response
         response.status_code = 200
         response.headers = {
             "content-length": str(len(chunk)),
@@ -338,7 +346,8 @@ class TestDownloadFileFromGcs:
             hashlib.md5(chunk, usedforsecurity=False).digest()
         ).decode()  # SECURITY: MD5 is used solely for non-cryptographic file integrity checking.
 
-        response = Mock()
+        response = MagicMock()
+        response.__enter__.return_value = response
         response.status_code = 200
         response.headers = {
             "content-length": str(len(chunk)),
@@ -1163,7 +1172,7 @@ class TestDownloadModel:
                 side_effect=OSError("network error"),
             ),
             patch.object(
-                ModelManagement, "retrieve_model_gcs", side_effect=Exception("gcs error")
+                ModelManagement, "retrieve_model_gcs", side_effect=OSError("gcs error")
             ),
             pytest.raises(ValueError, match="Could not load model"),
         ):
@@ -1181,7 +1190,7 @@ class TestDownloadModel:
                 "download_files_from_huggingface",
                 side_effect=OSError("fail"),
             ),
-            patch.object(ModelManagement, "retrieve_model_gcs", side_effect=Exception("fail")),
+            patch.object(ModelManagement, "retrieve_model_gcs", side_effect=OSError("fail")),
             pytest.raises(ValueError),
         ):
             ModelManagement.download_model(model, cache_dir=str(tmp_path), retries=2)
@@ -1197,12 +1206,12 @@ class TestDownloadModel:
             patch.object(
                 ModelManagement,
                 "download_files_from_huggingface",
-                side_effect=Exception("not cached"),
+                side_effect=OSError("not cached"),
             ),
             patch.object(
                 ModelManagement,
                 "retrieve_model_gcs",
-                side_effect=Exception("not cached"),
+                side_effect=OSError("not cached"),
             ),
             pytest.raises(ValueError, match="Could not load model"),
         ):
