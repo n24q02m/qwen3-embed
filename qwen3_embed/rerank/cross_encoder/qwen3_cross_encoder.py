@@ -159,8 +159,8 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         """Extract yes/no logits from causal LM output and compute scores.
 
         Supports two output shapes:
-        - Optimized: ``(batch, 2)`` — direct [no, yes] logits.
-        - Legacy: ``(batch, seq_len, vocab_size)`` — full causal LM output.
+        - Optimized: ``(batch, 2)``  direct [no, yes] logits.
+        - Legacy: ``(batch, seq_len, vocab_size)``  full causal LM output.
 
         Args:
             model_output: Raw model output.
@@ -179,7 +179,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
             )  # (batch, 2)
 
         # Numerically stable softmax
-        # ⚡ Bolt: Fast reduction using array methods (~10-20% faster than np.max/np.sum)
+        #  Bolt: Fast reduction using array methods (~10-20% faster than np.max/np.sum)
         max_logits = yes_no_logits.max(axis=1, keepdims=True)
         exp_logits = np.exp(yes_no_logits - max_logits)
         probs = exp_logits / exp_logits.sum(axis=1, keepdims=True)
@@ -212,7 +212,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         input_names = self.model_input_names or set()
         assert input_names is not None
 
-        # ⚡ Bolt: Use tokenizer.encode_batch(texts) for batched tokenization instead of a loop
+        #  Bolt: Use tokenizer.encode_batch(texts) for batched tokenization instead of a loop
         # The underlying Rust tokenizers library parallelizes processing for batches much faster.
         all_tokenized = self.tokenizer.encode_batch(texts)
 

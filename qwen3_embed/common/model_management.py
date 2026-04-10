@@ -32,7 +32,7 @@ class ModelManagement(Generic[T]):
 
     @classmethod
     def _get_session(cls) -> requests.Session:
-        # ⚡ Bolt: Use requests.Session for connection pooling (~30% faster for multiple files)
+        #  Bolt: Use requests.Session for connection pooling (~30% faster for multiple files)
         # Reusing the TCP connection avoids the overhead of repeated TCP/TLS handshakes
         if cls._session is None:
             cls._session = requests.Session()

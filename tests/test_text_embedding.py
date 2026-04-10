@@ -91,8 +91,6 @@ class TestTextEmbeddingDelegation:
         assert mock_text_embedding.embedding_size == 128
 
     def test_get_embedding_size_raises(self, mock_text_embedding):
-        with patch.object(TextEmbedding, "EMBEDDINGS_REGISTRY", [MockEmbeddingModel]):
-            with pytest.raises(
-                ValueError, match="Embedding size for model unknown-model was None"
-            ):
-                TextEmbedding.get_embedding_size("unknown-model")
+        with patch.object(TextEmbedding, "EMBEDDINGS_REGISTRY", [MockEmbeddingModel]), \
+                pytest.raises(ValueError, match="Embedding size for model unknown-model was None"):
+            TextEmbedding.get_embedding_size("unknown-model")
