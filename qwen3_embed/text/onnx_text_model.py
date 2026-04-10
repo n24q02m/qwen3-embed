@@ -47,7 +47,7 @@ class OnnxTextModel(OnnxModel[T]):
         """
         return onnx_input
 
-    def _load_onnx_model(
+    def _load_onnx_model(  # noqa: PLR0913
         self,
         model_dir: Path,
         model_file: str,
@@ -106,7 +106,7 @@ class OnnxTextModel(OnnxModel[T]):
             input_ids=onnx_input.get("input_ids", input_ids),
         )
 
-    def _embed_documents(
+    def _embed_documents(  # noqa: PLR0913
         self,
         model_name: str,
         cache_dir: str,

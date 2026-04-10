@@ -26,7 +26,7 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
     def _get_worker_class(cls) -> type["TextRerankerWorker"]:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def _load_onnx_model(
+    def _load_onnx_model(  # noqa: PLR0913
         self,
         model_dir: Path,
         model_file: str,
@@ -88,7 +88,7 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         for batch in iter_batch(documents, batch_size):
             yield from self._post_process_onnx_output(self.onnx_embed(query, batch, **kwargs))
 
-    def _rerank_pairs(
+    def _rerank_pairs(  # noqa: PLR0913
         self,
         model_name: str,
         cache_dir: str,
