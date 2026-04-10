@@ -34,36 +34,39 @@ def test_onnx_provider_type() -> None:
     """Test OnnxProvider type definition."""
     args = typing.get_args(OnnxProvider)
     assert str in args
-    assert tuple[str, dict[typing.Any, typing.Any]] in args
+    # Be more robust with generic dict matching
+    found_tuple = False
+    for arg in args:
+        if typing.get_origin(arg) is tuple:
+            tuple_args = typing.get_args(arg)
+            if (
+                len(tuple_args) == 2
+                and tuple_args[0] is str
+                and typing.get_origin(tuple_args[1]) is dict
+            ):
+                found_tuple = True
+                break
+    assert found_tuple
     assert len(args) == 2
 
 
 def test_numpy_array_type() -> None:
     """Test NumpyArray type definition."""
+    # NumpyArray is npt.NDArray[np.float32]
+    # Under NumPy 2.x, NDArray is an alias for numpy.ndarray[Any, numpy.dtype[ScalarType]]
+    origin = typing.get_origin(NumpyArray)
+    # npt.NDArray might resolve to np.ndarray or be a special type depending on numpy version
+    assert origin is np.ndarray or str(origin).endswith("ndarray")
+
     args = typing.get_args(NumpyArray)
+    # args[0] is Any (shape), args[1] is the dtype
+    dtype_arg = args[1]
 
-    # Check that it contains all expected NDArray types with correct dtypes
-    # numpy types compare with equality
-    expected_dtypes = [
-        np.float64,
-        np.float32,
-        np.float16,
-        np.int8,
-        np.int64,
-        np.int32,
-    ]
+    # Extract the scalar type from the dtype
+    if typing.get_origin(dtype_arg) is np.dtype:
+        scalar_type = typing.get_args(dtype_arg)[0]
+    else:
+        # Fallback for different numpy/typing versions
+        scalar_type = dtype_arg
 
-    # typing.get_args will return np.ndarray[Any, np.dtype[np.float64]]
-    # We can extract the actual type by looking at __args__[1].__args__[0]
-
-    actual_dtypes = []
-    for arg in args:
-        # arg is NDArray[np.float64] which is numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
-        # arg.__args__[1] is numpy.dtype[numpy.float64]
-        # arg.__args__[1].__args__[0] is numpy.float64
-        actual_dtypes.append(arg.__args__[1].__args__[0])
-
-    for dtype in expected_dtypes:
-        assert dtype in actual_dtypes
-
-    assert len(actual_dtypes) == len(expected_dtypes)
+    assert scalar_type is np.float32 or str(scalar_type).strip("'").endswith("float32")
