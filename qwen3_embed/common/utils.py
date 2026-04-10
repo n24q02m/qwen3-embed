@@ -139,3 +139,20 @@ _NON_ALPHANUMERIC_RE = re.compile(r"[^\w\s]", flags=re.UNICODE)
 
 def remove_non_alphanumeric(text: str) -> str:
     return _NON_ALPHANUMERIC_RE.sub(" ", text)
+
+
+# Tokens that must be stripped from user input to prevent prompt injection
+FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
+
+# ⚡ Bolt: Compile regex once to avoid recompilation overhead
+_FORBIDDEN_RE = re.compile("|".join(re.escape(t) for t in FORBIDDEN_TOKENS))
+
+
+def sanitize_input(text: str) -> str:
+    """Strip forbidden special tokens from user input iteratively."""
+    # SECURITY: Prevent prompt injection bypass via iterative payload construction.
+    while True:
+        text, count = _FORBIDDEN_RE.subn("", text)
+        if count == 0:
+            break
+    return text
