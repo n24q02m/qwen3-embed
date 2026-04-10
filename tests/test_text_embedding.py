@@ -1,5 +1,7 @@
 import pytest
 
+from qwen3_embed.common.model_description import ModelSource, PoolingType
+from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.text_embedding import TextEmbedding
 
 
@@ -23,3 +25,34 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+
+def test_add_custom_model():
+    """Verify that add_custom_model correctly adds a new model to the supported models."""
+    # Clear custom model registry to ensure a clean state
+    CustomTextEmbedding.SUPPORTED_MODELS.clear()
+    CustomTextEmbedding.POSTPROCESSING_MAPPING.clear()
+
+    model_name = "test/custom-model"
+    dim = 128
+    description = "A test custom model"
+
+    TextEmbedding.add_custom_model(
+        model=model_name,
+        pooling=PoolingType.MEAN,
+        normalization=True,
+        sources=ModelSource(hf="test/custom-model"),
+        dim=dim,
+        description=description,
+    )
+
+    models = TextEmbedding.list_supported_models()
+    custom_model = next((m for m in models if m["model"] == model_name), None)
+
+    assert custom_model is not None
+    assert custom_model["dim"] == dim
+    assert custom_model["description"] == description
+
+    # Clean up after test
+    CustomTextEmbedding.SUPPORTED_MODELS.clear()
+    CustomTextEmbedding.POSTPROCESSING_MAPPING.clear()
