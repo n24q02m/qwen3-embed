@@ -71,9 +71,13 @@ jobs:
         if: matrix.python-version == '3.13' && matrix.os == 'ubuntu-latest'
         run: uv run ty check
 
-      - name: Run tests with coverage
-        run: uv run pytest -m "not integration" --tb=short --cov=qwen3_embed
-          --cov-report=xml
+      - name: Run tests with coverage (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: uv run pytest -m "not integration" --tb=short --cov=qwen3_embed --cov-report=xml
+
+      - name: Run tests (Windows)
+        if: matrix.os == 'windows-latest'
+        run: uv run pytest -m "not integration" --tb=short
 
       - name: Upload coverage to Codecov
         if: github.event_name == 'push' && matrix.python-version == '3.13' && matrix.os == 'ubuntu-latest'
