@@ -180,7 +180,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
 
         # ⚡ Bolt: Fast binary softmax via sigmoid of difference (~10x faster)
         diff = yes_no_logits[:, 1] - yes_no_logits[:, 0]
-        with np.errstate(over="ignore"):
+        with np.errstate(over="ignore", invalid="ignore"):
             return 1 / (1 + np.exp(-diff))
 
     # ------------------------------------------------------------------
