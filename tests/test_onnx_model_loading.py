@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -6,6 +7,11 @@ import pytest
 
 from qwen3_embed.common.onnx_model import OnnxModel, OnnxOutputContext
 from qwen3_embed.common.types import Device
+
+# Production code builds the model path via ``Path(model_dir) / model_file``,
+# which renders with the platform-native separator (``\`` on Windows, ``/`` on
+# POSIX). Using ``os.path.join`` keeps the assertion accurate on every OS.
+EXPECTED_MODEL_PATH = os.path.join("dummy", "model.onnx")
 
 
 # Concrete implementation for testing
@@ -52,7 +58,7 @@ def test_load_defaults(model: ConcreteOnnxModel, mock_ort):
 
     # Should use CPUExecutionProvider
     mock_ort.InferenceSession.assert_called_with(
-        "dummy/model.onnx",
+        EXPECTED_MODEL_PATH,
         providers=["CPUExecutionProvider"],
         sess_options=mock_ort.SessionOptions.return_value,
     )
@@ -71,7 +77,7 @@ def test_load_cuda_explicit(model: ConcreteOnnxModel, mock_ort):
     model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=True)
 
     mock_ort.InferenceSession.assert_called_with(
-        "dummy/model.onnx",
+        EXPECTED_MODEL_PATH,
         providers=["CUDAExecutionProvider"],
         sess_options=mock_ort.SessionOptions.return_value,
     )
@@ -90,7 +96,7 @@ def test_load_cuda_auto_available(model: ConcreteOnnxModel, mock_ort):
     model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=Device.AUTO)
 
     mock_ort.InferenceSession.assert_called_with(
-        "dummy/model.onnx",
+        EXPECTED_MODEL_PATH,
         providers=["CUDAExecutionProvider"],
         sess_options=mock_ort.SessionOptions.return_value,
     )
@@ -104,7 +110,7 @@ def test_load_cuda_auto_unavailable(model: ConcreteOnnxModel, mock_ort):
 
     # Should fallback to CPU
     mock_ort.InferenceSession.assert_called_with(
-        "dummy/model.onnx",
+        EXPECTED_MODEL_PATH,
         providers=["CPUExecutionProvider"],
         sess_options=mock_ort.SessionOptions.return_value,
     )
@@ -125,7 +131,7 @@ def test_load_explicit_providers(model: ConcreteOnnxModel, mock_ort):
     )
 
     mock_ort.InferenceSession.assert_called_with(
-        "dummy/model.onnx",
+        EXPECTED_MODEL_PATH,
         providers=["CUDAExecutionProvider"],
         sess_options=mock_ort.SessionOptions.return_value,
     )
@@ -171,7 +177,7 @@ def test_load_dml_auto(model: ConcreteOnnxModel, mock_ort):
     model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, cuda=Device.AUTO)
 
     mock_ort.InferenceSession.assert_called_with(
-        "dummy/model.onnx",
+        EXPECTED_MODEL_PATH,
         providers=["DmlExecutionProvider"],
         sess_options=mock_ort.SessionOptions.return_value,
     )

@@ -4,6 +4,7 @@ import base64
 import hashlib
 import io
 import json
+import os
 import tarfile
 from pathlib import Path
 from typing import Any
@@ -923,8 +924,9 @@ class TestDownloadFilesFromHuggingFace:
         assert "model.onnx" in metadata
         assert metadata["model.onnx"] == {"size": 500, "blob_id": "aaa"}
 
-        assert "sub/config.json" in metadata
-        assert metadata["sub/config.json"] == {"size": 100, "blob_id": "bbb"}
+        sub_key = os.path.join("sub", "config.json")
+        assert sub_key in metadata
+        assert metadata[sub_key] == {"size": 100, "blob_id": "bbb"}
 
         assert "extra.txt" not in metadata
         assert ModelManagement.METADATA_FILE not in metadata

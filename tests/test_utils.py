@@ -363,10 +363,17 @@ class TestDefineCacheDir:
 
     @patch("qwen3_embed.common.utils.Path.mkdir")
     @patch("qwen3_embed.common.utils.Path.chmod")
-    @patch.dict(os.environ, {}, clear=True)
     def test_fallback_home_cache(self, mock_chmod, mock_mkdir):
-        res = define_cache_dir()
-        assert res == Path.home() / ".cache/qwen3_embed"
+        # Resolve the expected home dir BEFORE clearing the environment, since
+        # ``Path.home()`` on Windows depends on env vars (USERPROFILE etc.) that
+        # ``clear=True`` would wipe and cause a RuntimeError.
+        fake_home = Path.home()
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch("qwen3_embed.common.utils.Path.home", return_value=fake_home),
+        ):
+            res = define_cache_dir()
+        assert res == fake_home / ".cache/qwen3_embed"
         mock_mkdir.assert_called_once_with(mode=0o700, parents=True, exist_ok=True)
         mock_chmod.assert_called_once_with(0o700)
 
