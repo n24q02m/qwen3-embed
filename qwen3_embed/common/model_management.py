@@ -146,11 +146,9 @@ class ModelManagement(Generic[T]):
             str: The path to the downloaded file.
         """
 
-        if not url.startswith(
-            ("http://storage.googleapis.com/", "https://storage.googleapis.com/")
-        ):
+        if not url.startswith(("https://storage.googleapis.com/",)):
             raise ValueError(
-                f"Invalid URL: {url}. Only URLs from Google Cloud Storage are allowed."
+                f"Invalid URL: {url}. Only HTTPS URLs from Google Cloud Storage are allowed."
             )
         if os.path.exists(output_path):
             return output_path
