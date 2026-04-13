@@ -179,12 +179,12 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
             )  # (batch, 2)
 
         # Numerically stable softmax
-        # ⚡ Bolt: Fast reduction using array methods (~10-20% faster than np.max/np.sum)
-        max_logits = yes_no_logits.max(axis=1, keepdims=True)
-        exp_logits = np.exp(yes_no_logits - max_logits)
-        probs = exp_logits / exp_logits.sum(axis=1, keepdims=True)
+        # ⚡ Bolt: Fast reduction using difference between yes and no class
+        diff = yes_no_logits[:, 1] - yes_no_logits[:, 0]
+        with np.errstate(over="ignore"):
+            probs = 1 / (1 + np.exp(-diff))
 
-        return probs[:, 1]  # P(yes)
+        return probs  # P(yes)
 
     # ------------------------------------------------------------------
     # Override ONNX inference to use chat-template + CausalLM scoring
