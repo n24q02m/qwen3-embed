@@ -825,7 +825,7 @@ class TestDownloadFilesFromHuggingFace:
     @patch("qwen3_embed.common.model_management.list_repo_tree")
     @patch("qwen3_embed.common.model_management.model_info")
     @patch("qwen3_embed.common.model_management.snapshot_download")
-    def test_verify_files_oserror_returns_false(self, mock_snap, mock_info, mock_tree, tmp_path):
+    def test_verify_files_keyerror_returns_false(self, mock_snap, mock_info, mock_tree, tmp_path):
         """KeyError in metadata causes _verify_files_from_metadata to return False."""
         snapshot_dir = tmp_path / "models--org--repo"
         snapshot_dir.mkdir(parents=True)
@@ -1403,3 +1403,21 @@ class TestSaveFileMetadata:
         mock_logger.warning.assert_called_once_with(
             "Failed to save metadata file. Next load may take longer to verify."
         )
+
+
+class TestVerifyFilesFromMetadata:
+    """Tests for direct verification of the _verify_files_from_metadata method."""
+
+    def test_verify_files_oserror_returns_false(self, tmp_path):
+        """Verify that OSError in _verify_files_from_metadata is caught and returns False."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        metadata = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        # Mock Path.exists to raise OSError
+        with patch("pathlib.Path.exists", side_effect=OSError("Permission denied")):
+            result = ModelManagement._verify_files_from_metadata(
+                model_dir=model_dir, stored_metadata=metadata, repo_files=[]
+            )
+
+        assert result is False
