@@ -1107,7 +1107,7 @@ class TestDownloadModel:
             nonlocal call_count
             call_count += 1
             if kwargs.get("local_files_only"):
-                raise Exception("not in cache")
+                raise OSError("not in cache")
             return online_path
 
         with patch.object(
@@ -1164,9 +1164,7 @@ class TestDownloadModel:
                 "download_files_from_huggingface",
                 side_effect=OSError("network error"),
             ),
-            patch.object(
-                ModelManagement, "retrieve_model_gcs", side_effect=Exception("gcs error")
-            ),
+            patch.object(ModelManagement, "retrieve_model_gcs", side_effect=OSError("gcs error")),
             pytest.raises(ValueError, match="Could not load model"),
         ):
             ModelManagement.download_model(model, cache_dir=str(tmp_path), retries=2)
@@ -1183,7 +1181,7 @@ class TestDownloadModel:
                 "download_files_from_huggingface",
                 side_effect=OSError("fail"),
             ),
-            patch.object(ModelManagement, "retrieve_model_gcs", side_effect=Exception("fail")),
+            patch.object(ModelManagement, "retrieve_model_gcs", side_effect=OSError("fail")),
             pytest.raises(ValueError),
         ):
             ModelManagement.download_model(model, cache_dir=str(tmp_path), retries=2)
@@ -1199,12 +1197,12 @@ class TestDownloadModel:
             patch.object(
                 ModelManagement,
                 "download_files_from_huggingface",
-                side_effect=Exception("not cached"),
+                side_effect=OSError("not cached"),
             ),
             patch.object(
                 ModelManagement,
                 "retrieve_model_gcs",
-                side_effect=Exception("not cached"),
+                side_effect=OSError("not cached"),
             ),
             pytest.raises(ValueError, match="Could not load model"),
         ):
@@ -1218,7 +1216,7 @@ class TestDownloadModel:
 
         def hf_side_effect(*args, **kwargs):
             if kwargs.get("local_files_only"):
-                raise Exception("not cached")
+                raise OSError("not cached")
             raise RepositoryNotFoundError("not found", response=MagicMock())
 
         with (
@@ -1324,7 +1322,7 @@ class TestCheckHFCache:
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir()
 
-        mock_download.side_effect = Exception("Not found in cache")
+        mock_download.side_effect = OSError("Not found in cache")
         model_file = "model.onnx"
 
         result = ModelManagement._check_hf_cache(
