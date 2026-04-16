@@ -957,6 +957,74 @@ class TestDownloadFilesFromHuggingFace:
 # # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# TestDownloadFromHF
+# ---------------------------------------------------------------------------
+
+
+class TestDownloadFromHF:
+    """Tests for _download_from_hf method."""
+
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    @patch.object(ModelManagement, "download_files_from_huggingface")
+    def test_download_success(self, mock_hf, mock_enable, tmp_path):
+        """Verify successful download returns Path and enables progress bars."""
+        expected_path = tmp_path / "model_dir"
+        mock_hf.return_value = str(expected_path)
+
+        result = ModelManagement._download_from_hf(
+            hf_source="org/repo", cache_dir=str(tmp_path), extra_patterns=["*.onnx"]
+        )
+
+        assert result == expected_path
+        mock_enable.assert_called_once()
+
+    @pytest.mark.parametrize("exception_cls", [OSError, RepositoryNotFoundError, ValueError])
+    @patch("qwen3_embed.common.model_management.logger.error")
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    @patch.object(ModelManagement, "download_files_from_huggingface")
+    def test_download_exceptions_logging(
+        self, mock_hf, mock_enable, mock_logger, exception_cls, tmp_path
+    ):
+        """Verify exceptions are caught, logged, and return None when local_files_only is False."""
+        if exception_cls == RepositoryNotFoundError:
+            mock_hf.side_effect = RepositoryNotFoundError("Not found", response=MagicMock())
+        else:
+            mock_hf.side_effect = exception_cls("Error message")
+
+        result = ModelManagement._download_from_hf(
+            hf_source="org/repo",
+            cache_dir=str(tmp_path),
+            extra_patterns=["*.onnx"],
+            local_files_only=False,
+        )
+
+        assert result is None
+        mock_logger.assert_called_once()
+        assert "Could not download model from HuggingFace" in mock_logger.call_args[0][0]
+        mock_enable.assert_called_once()
+
+    @patch("qwen3_embed.common.model_management.logger.error")
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    @patch.object(ModelManagement, "download_files_from_huggingface")
+    def test_download_exception_no_logging_local_files_only(
+        self, mock_hf, mock_enable, mock_logger, tmp_path
+    ):
+        """Verify exceptions return None without logging when local_files_only is True."""
+        mock_hf.side_effect = OSError("Error message")
+
+        result = ModelManagement._download_from_hf(
+            hf_source="org/repo",
+            cache_dir=str(tmp_path),
+            extra_patterns=["*.onnx"],
+            local_files_only=True,
+        )
+
+        assert result is None
+        mock_logger.assert_not_called()
+        mock_enable.assert_called_once()
+
+
 class TestRetrieveModelGcs:
     """Tests for retrieve_model_gcs."""
 
