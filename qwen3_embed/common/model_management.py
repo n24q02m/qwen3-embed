@@ -351,6 +351,49 @@ class ModelManagement(Generic[T]):
         return result
 
     @classmethod
+    def _validate_tar_member(cls, member: tarfile.TarInfo, cache_dir: str) -> None:
+        """
+        Validates a tar member to prevent path traversal attacks.
+
+        Args:
+            member (tarfile.TarInfo): The tar member to validate.
+            cache_dir (str): The absolute path to the extraction directory.
+
+        Raises:
+            tarfile.TarError: If a path traversal attempt is detected.
+        """
+        if os.path.isabs(member.name) or member.name.startswith("/"):
+            raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
+
+        member_path = os.path.abspath(os.path.join(cache_dir, member.name))
+        if not member_path.startswith(cache_dir + os.sep) and member_path != cache_dir:
+            raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
+
+        # SECURITY: Validate symlink and hardlink targets to prevent
+        # arbitrary file writes outside the extraction directory.
+        if member.issym() or member.islnk():
+            if os.path.isabs(member.linkname) or member.linkname.startswith("/"):
+                raise tarfile.TarError(
+                    f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
+                )
+            if member.issym():
+                # Symlinks resolve relative to the directory containing the link
+                link_target_path = os.path.abspath(
+                    os.path.join(os.path.dirname(member_path), member.linkname)
+                )
+            else:
+                # Hardlinks (LNKTYPE) resolve relative to the extraction root
+                link_target_path = os.path.abspath(os.path.join(cache_dir, member.linkname))
+
+            if (
+                not link_target_path.startswith(cache_dir + os.sep)
+                and link_target_path != cache_dir
+            ):
+                raise tarfile.TarError(
+                    f"Attempted path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
+                )
+
+    @classmethod
     def decompress_to_cache(cls, targz_path: str, cache_dir: str) -> str:
         """
         Decompresses a .tar.gz file to a cache directory.
@@ -378,43 +421,7 @@ class ModelManagement(Generic[T]):
 
                 safe_members = []
                 for member in tar.getmembers():
-                    if os.path.isabs(member.name) or member.name.startswith("/"):
-                        raise tarfile.TarError(
-                            f"Attempted path traversal in tar file: {member.name}"
-                        )
-                    member_path = os.path.abspath(os.path.join(target_dir, member.name))
-                    if (
-                        not member_path.startswith(target_dir + os.sep)
-                        and member_path != target_dir
-                    ):
-                        raise tarfile.TarError(
-                            f"Attempted path traversal in tar file: {member.name}"
-                        )
-                    # SECURITY: Validate symlink and hardlink targets to prevent
-                    # arbitrary file writes outside the extraction directory.
-                    if member.issym() or member.islnk():
-                        if os.path.isabs(member.linkname) or member.linkname.startswith("/"):
-                            raise tarfile.TarError(
-                                f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
-                            )
-                        if member.issym():
-                            # Symlinks resolve relative to the directory containing the link
-                            link_target_path = os.path.abspath(
-                                os.path.join(os.path.dirname(member_path), member.linkname)
-                            )
-                        else:
-                            # Hardlinks (LNKTYPE) resolve relative to the extraction root
-                            link_target_path = os.path.abspath(
-                                os.path.join(target_dir, member.linkname)
-                            )
-                        if (
-                            not link_target_path.startswith(target_dir + os.sep)
-                            and link_target_path != target_dir
-                        ):
-                            raise tarfile.TarError(
-                                f"Attempted path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
-                            )
-
+                    cls._validate_tar_member(member, target_dir)
                     safe_members.append(member)
 
                 if hasattr(tarfile, "data_filter"):
