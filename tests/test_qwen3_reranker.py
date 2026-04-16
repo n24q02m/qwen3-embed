@@ -213,8 +213,12 @@ def mocked_qwen3_encoder():
         encoder = Qwen3CrossEncoder("n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo", lazy_load=True)
 
     encoder.model = MagicMock()
-    # Mocking output of the ONNX model to be (batch=1, 2) shape
-    encoder.model.run.return_value = [np.array([[-10.0, 10.0]], dtype=np.float32)]
+
+    def mock_run(output_names, onnx_input):
+        batch_size = onnx_input["input_ids"].shape[0]
+        return [np.array([[-10.0, 10.0]] * batch_size, dtype=np.float32)]
+
+    encoder.model.run.side_effect = mock_run
     encoder.model_input_names = {"input_ids", "attention_mask"}
 
     mock_tokenizer = MagicMock()
@@ -266,16 +270,16 @@ class TestQwen3CrossEncoderInference:
         mocked_qwen3_encoder.tokenizer.encode_batch.assert_called_once_with(["hello world"])
 
     def test_onnx_embed_texts_multiple(self, mocked_qwen3_encoder):
-        # We simulate tokenizer returning for a single text, because _onnx_embed_texts loops text by text
+        # We verify that _onnx_embed_texts uses batched inference
         ctx = mocked_qwen3_encoder._onnx_embed_texts(["text1", "text2"])
         assert ctx.model_output.shape == (2,)
-        assert mocked_qwen3_encoder.model.run.call_count == 2
+        assert mocked_qwen3_encoder.model.run.call_count == 1
         assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 1
 
     def test_onnx_embed_pairs_success(self, mocked_qwen3_encoder):
         ctx = mocked_qwen3_encoder.onnx_embed_pairs([("Query1", "Doc1"), ("Query2", "Doc2")])
         assert ctx.model_output.shape == (2,)
-        assert mocked_qwen3_encoder.model.run.call_count == 2
+        assert mocked_qwen3_encoder.model.run.call_count == 1
         assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 1
 
         # Verify chat template formatting
@@ -293,7 +297,7 @@ class TestQwen3CrossEncoderInference:
     def test_onnx_embed_success(self, mocked_qwen3_encoder):
         ctx = mocked_qwen3_encoder.onnx_embed("Query", ["Doc1", "Doc2"])
         assert ctx.model_output.shape == (2,)
-        assert mocked_qwen3_encoder.model.run.call_count == 2
+        assert mocked_qwen3_encoder.model.run.call_count == 1
         assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 1
 
         calls = mocked_qwen3_encoder.tokenizer.encode_batch.call_args_list
