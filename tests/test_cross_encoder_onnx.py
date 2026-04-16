@@ -439,7 +439,9 @@ class TestOnnxTextCrossEncoderRerank:
     def test_rerank_delegates_to_rerank_documents(
         self, onnx_encoder: OnnxTextCrossEncoder
     ) -> None:
-        with patch.object(onnx_encoder, "_rerank_documents", wraps=onnx_encoder._rerank_documents) as mock_rerank:
+        with patch.object(
+            onnx_encoder, "_rerank_documents", wraps=onnx_encoder._rerank_documents
+        ) as mock_rerank:
             list(onnx_encoder.rerank("query", ["doc"], batch_size=32))
             mock_rerank.assert_called_once()
 
