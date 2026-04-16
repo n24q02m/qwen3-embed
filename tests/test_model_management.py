@@ -1151,6 +1151,51 @@ class TestRetrieveModelGcs:
 
 
 # ---------------------------------------------------------------------------
+# TestDownloadFromGcs
+# ---------------------------------------------------------------------------
+
+
+class TestDownloadFromGcs:
+    """Tests for _download_from_gcs method."""
+
+    @patch("qwen3_embed.common.model_management.logger.error")
+    def test_download_from_gcs_returns_none_on_exception(self, mock_logger, tmp_path):
+        """If retrieve_model_gcs raises an exception, return None and log error."""
+        with patch.object(
+            ModelManagement, "retrieve_model_gcs", side_effect=Exception("GCS Error")
+        ):
+            result = ModelManagement._download_from_gcs(
+                model_name="test/model",
+                url_source="http://example.com/model.tar.gz",
+                cache_dir=str(tmp_path),
+                deprecated_tar_struct=False,
+                local_files_only=False,
+            )
+
+        assert result is None
+        mock_logger.assert_called_once_with(
+            "Could not download model from url: http://example.com/model.tar.gz"
+        )
+
+    @patch("qwen3_embed.common.model_management.logger.error")
+    def test_download_from_gcs_no_logger_on_local_files_only(self, mock_logger, tmp_path):
+        """If local_files_only is True, do not log error on exception."""
+        with patch.object(
+            ModelManagement, "retrieve_model_gcs", side_effect=Exception("GCS Error")
+        ):
+            result = ModelManagement._download_from_gcs(
+                model_name="test/model",
+                url_source="http://example.com/model.tar.gz",
+                cache_dir=str(tmp_path),
+                deprecated_tar_struct=False,
+                local_files_only=True,
+            )
+
+        assert result is None
+        mock_logger.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # TestDownloadModel
 # ---------------------------------------------------------------------------
 
