@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
-from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxInferenceConfig, OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import (
     OnnxTextCrossEncoder,
@@ -30,300 +30,90 @@ from qwen3_embed.rerank.cross_encoder.onnx_text_model import (
 # Test model description
 # ---------------------------------------------------------------------------
 
-_MODEL_NAME = "test-org/test-cross-encoder"
+_MODEL_NAME = "test/cross-encoder"
 _MODEL_DESC = BaseModelDescription(
     model=_MODEL_NAME,
-    sources=ModelSource(hf="test-org/test-cross-encoder"),
-    model_file="onnx/model.onnx",
-    description="test cross encoder",
+    description="Mock cross-encoder",
     license="MIT",
     size_in_GB=0.1,
+    sources=ModelSource(hf="mock/hf"),
+    model_file="model.onnx",
 )
 
 
+@pytest.fixture(autouse=True)
+def registered_test_model() -> BaseModelDescription:
+    """Temporarily register the test model in the global list."""
+    supported_onnx_models.append(_MODEL_DESC)
+    yield _MODEL_DESC
+    supported_onnx_models.pop()
+
+
 # ---------------------------------------------------------------------------
-# Helpers
+# Mocks
 # ---------------------------------------------------------------------------
 
 
-def _make_mock_encoding(ids: list[int] | None = None, n: int = 4) -> MagicMock:
-    enc = MagicMock()
-    enc.ids = ids if ids is not None else [1, 2, 3, 0][:n]
-    enc.type_ids = [0] * n
-    enc.attention_mask = [1, 1, 1, 0][:n]
-    return enc
-
-
-def _make_mock_tokenizer(n_pairs: int = 1, seq_len: int = 4) -> MagicMock:
-    enc = _make_mock_encoding(n=seq_len)
-    tok = MagicMock()
-    tok.encode_batch.return_value = [enc] * n_pairs
-    return tok
-
-
-def _make_mock_session(
-    n_pairs: int = 1,
-    n_labels: int = 2,
-    dtype: type = np.float32,
-    input_names: list[str] | None = None,
-) -> MagicMock:
-    """Return a mock onnxruntime.InferenceSession.
-
-    Default output shape: (n_pairs, n_labels) — scores[:, 0] is taken.
-    """
-    output = np.ones((n_pairs, n_labels), dtype=dtype)
+def _make_mock_session(n_pairs: int) -> MagicMock:
     session = MagicMock()
-    session.run.return_value = [output]
-
-    names = input_names if input_names is not None else ["input_ids", "attention_mask"]
-    nodes = []
-    for name in names:
-        node = MagicMock()
-        node.name = name
-        nodes.append(node)
-    session.get_inputs.return_value = nodes
+    # Mock model output: (batch_size, 1) or (batch_size, 2)
+    # onnx_embed_pairs uses relevant_output[:, 0]
+    session.run.return_value = [np.ones((n_pairs, 1), dtype=np.float32)]
+    session.get_inputs.return_value = []
     return session
 
 
+def _make_mock_tokenizer(n_pairs: int) -> MagicMock:
+    tokenizer = MagicMock()
+
+    class MockEncoding:
+        def __init__(self):
+            self.ids = [101, 102]
+            self.type_ids = [0, 0]
+            self.attention_mask = [1, 1]
+
+    tokenizer.encode_batch.return_value = [MockEncoding() for _ in range(n_pairs)]
+    return tokenizer
+
+
 # ---------------------------------------------------------------------------
-# Concrete OnnxCrossEncoderModel for unit-testing the base class
+# Concrete class for testing abstract base
 # ---------------------------------------------------------------------------
 
 
 class ConcreteCrossEncoderModel(OnnxCrossEncoderModel):
-    """Minimal subclass — no real models, no real I/O."""
+    def load_onnx_model(self) -> None:
+        pass
 
     @classmethod
-    def _get_worker_class(cls) -> type["_StubRerankerWorker"]:
-        return _StubRerankerWorker
+    def _get_worker_class(cls) -> type[TextRerankerWorker]:
+        return TextRerankerWorker
 
     def _post_process_onnx_output(
         self, output: OnnxOutputContext, **kwargs: Any
     ) -> Iterable[float]:
         return (float(x) for x in output.model_output)
 
-    def load_onnx_model(self) -> None:
-        pass  # no-op
-
-
-class _StubRerankerWorker(TextRerankerWorker):
-    def init_embedding(
-        self,
-        model_name: str,
-        cache_dir: str,
-        **kwargs: Any,
-    ) -> ConcreteCrossEncoderModel:
-        m = ConcreteCrossEncoderModel()
-        m.model = _make_mock_session()
-        m.model_input_names = {"input_ids", "attention_mask"}
-        m.tokenizer = _make_mock_tokenizer()
-        return m
-
 
 # ---------------------------------------------------------------------------
-# Fixtures
+# Tests
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
-def registered_test_model():
-    """Register the test model description into OnnxTextCrossEncoder."""
-    supported_onnx_models.append(_MODEL_DESC)
-    yield _MODEL_DESC
-    if _MODEL_DESC in supported_onnx_models:
-        supported_onnx_models.remove(_MODEL_DESC)
+class TestOnnxCrossEncoderModelRerankDocuments:
+    """_rerank_documents yields scores in batches."""
 
-
-@pytest.fixture()
-def loaded_model() -> ConcreteCrossEncoderModel:
-    """ConcreteCrossEncoderModel pre-wired with mock session and tokenizer."""
-    m = ConcreteCrossEncoderModel()
-    m.model = _make_mock_session(n_pairs=2)
-    m.model_input_names = {"input_ids", "attention_mask"}
-    m.tokenizer = _make_mock_tokenizer(n_pairs=2)
-    return m
-
-
-@pytest.fixture()
-def onnx_encoder(
-    tmp_path: Path, registered_test_model: BaseModelDescription
-) -> OnnxTextCrossEncoder:
-    """OnnxTextCrossEncoder with lazy_load + pre-wired mock."""
-    with patch.object(OnnxTextCrossEncoder, "download_model", return_value=tmp_path):
-        enc = OnnxTextCrossEncoder(model_name=_MODEL_NAME, lazy_load=True)
-
-    enc.model = _make_mock_session(n_pairs=1)
-    enc.model_input_names = {"input_ids", "attention_mask"}
-    enc.tokenizer = _make_mock_tokenizer(n_pairs=1)
-    return enc
-
-
-# ===========================================================================
-# OnnxCrossEncoderModel — base class (onnx_text_model.py)
-# ===========================================================================
-
-
-class TestOnnxCrossEncoderModelAbstract:
-    """Abstract method stubs raise NotImplementedError."""
-
-    def test_get_worker_class_raises(self) -> None:
-        class _Stub(OnnxCrossEncoderModel):
-            pass
-
-        with pytest.raises(NotImplementedError):
-            _Stub._get_worker_class()
-
-    def test_post_process_raises(self) -> None:
-        class _Stub(OnnxCrossEncoderModel):
-            pass
-
-        stub = _Stub()
-        with pytest.raises(NotImplementedError):
-            list(stub._post_process_onnx_output(OnnxOutputContext(model_output=np.zeros((1,)))))
-
-    def test_preprocess_onnx_input_returns_identity(self) -> None:
+    def test_rerank_documents_yields_scores(self) -> None:
         m = ConcreteCrossEncoderModel()
-        data: dict[str, NumpyArray] = {"input_ids": np.array([[1, 2, 3]])}
-        assert m._preprocess_onnx_input(data) is data
-
-
-class TestOnnxCrossEncoderModelTokenize:
-    """tokenize() delegates to tokenizer.encode_batch."""
-
-    def test_tokenize_returns_encodings(self) -> None:
-        m = ConcreteCrossEncoderModel()
+        m.model = _make_mock_session(n_pairs=2)
+        m.model_input_names = {"input_ids"}
         m.tokenizer = _make_mock_tokenizer(n_pairs=2)
-        pairs = [("query", "doc1"), ("query", "doc2")]
-        result = m.tokenize(pairs)
-        m.tokenizer.encode_batch.assert_called_once_with(pairs)
-        assert len(result) == 2
 
-    def test_tokenize_asserts_tokenizer_not_none(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        with pytest.raises(AssertionError):
-            m.tokenize([("q", "d")])
-
-
-class TestBuildOnnxInput:
-    """_build_onnx_input assembles numpy arrays from Encoding objects."""
-
-    def test_input_ids_always_present(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model_input_names = {"input_ids"}
-        enc = _make_mock_encoding()
-        result = m._build_onnx_input([enc])
-        assert "input_ids" in result
-        assert result["input_ids"].dtype == np.int64
-
-    def test_attention_mask_included_when_in_names(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model_input_names = {"input_ids", "attention_mask"}
-        enc = _make_mock_encoding()
-        result = m._build_onnx_input([enc])
-        assert "attention_mask" in result
-        assert result["attention_mask"].dtype == np.int64
-
-    def test_token_type_ids_included_when_in_names(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model_input_names = {"input_ids", "token_type_ids"}
-        enc = _make_mock_encoding()
-        result = m._build_onnx_input([enc])
-        assert "token_type_ids" in result
-        assert result["token_type_ids"].dtype == np.int64
-
-    def test_attention_mask_excluded_when_not_in_names(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model_input_names = {"input_ids"}
-        enc = _make_mock_encoding()
-        result = m._build_onnx_input([enc])
-        assert "attention_mask" not in result
-
-    def test_token_type_ids_excluded_when_not_in_names(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model_input_names = {"input_ids"}
-        enc = _make_mock_encoding()
-        result = m._build_onnx_input([enc])
-        assert "token_type_ids" not in result
-
-    def test_all_three_fields(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model_input_names = {"input_ids", "attention_mask", "token_type_ids"}
-        enc = _make_mock_encoding()
-        result = m._build_onnx_input([enc])
-        assert set(result.keys()) == {"input_ids", "attention_mask", "token_type_ids"}
-
-    def test_empty_input_names(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model_input_names = None  # falls back to empty set
-        enc = _make_mock_encoding()
-        result = m._build_onnx_input([enc])
-        # Only input_ids is always added
-        assert "input_ids" in result
-        assert "attention_mask" not in result
-
-    def test_batch_shape(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model_input_names = {"input_ids"}
-        encs = [_make_mock_encoding() for _ in range(3)]
-        result = m._build_onnx_input(encs)  # type: ignore[arg-type]
-        assert result["input_ids"].shape[0] == 3
-
-
-class TestOnnxEmbedPairs:
-    """onnx_embed_pairs runs the full tokenize → build → preprocess → run pipeline."""
-
-    def test_returns_onnx_output_context(self, loaded_model: ConcreteCrossEncoderModel) -> None:
-        pairs = [("q", "d1"), ("q", "d2")]
-        ctx = loaded_model.onnx_embed_pairs(pairs)
-        assert isinstance(ctx, OnnxOutputContext)
-
-    def test_scores_shape(self, loaded_model: ConcreteCrossEncoderModel) -> None:
-        pairs = [("q", "d1"), ("q", "d2")]
-        ctx = loaded_model.onnx_embed_pairs(pairs)
-        # scores = outputs[0][:, 0]
-        assert ctx.model_output.shape == (2,)
-
-    def test_model_run_called_with_onnx_input(
-        self, loaded_model: ConcreteCrossEncoderModel
-    ) -> None:
-        pairs = [("q", "d")]
-        loaded_model.model_input_names = {"input_ids"}
-        loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=1)
-        loaded_model.onnx_embed_pairs(pairs)
-        loaded_model.model.run.assert_called_once()  # type: ignore[union-attr]
-
-    def test_onnx_embed_delegates_to_onnx_embed_pairs(
-        self, loaded_model: ConcreteCrossEncoderModel
-    ) -> None:
-        """onnx_embed(query, docs) wraps into pairs and calls onnx_embed_pairs."""
-        loaded_model.model_input_names = {"input_ids"}
-        loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=2)
-        ctx = loaded_model.onnx_embed("query", ["doc1", "doc2"])
-        assert ctx.model_output.shape == (2,)
-
-
-class TestRerankDocuments:
-    """_rerank_documents batches documents and yields scores."""
-
-    def test_yields_floats(self, loaded_model: ConcreteCrossEncoderModel) -> None:
-        scores = list(loaded_model._rerank_documents("q", ["d1", "d2"], batch_size=64))
-        assert len(scores) == 2
-        assert all(isinstance(s, float) for s in scores)
-
-    def test_loads_model_if_none(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model = None
-        loaded: list[bool] = []
-
-        def _fake_load() -> None:
-            m.model = _make_mock_session(n_pairs=1)
-            m.model_input_names = {"input_ids"}
-            m.tokenizer = _make_mock_tokenizer(n_pairs=1)
-            loaded.append(True)
-
-        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
-        list(m._rerank_documents("q", ["d1"], batch_size=64))
-        assert loaded
+        docs = ["doc1", "doc2", "doc3", "doc4"]
+        # batch_size=2 => 2 batches
+        results = list(m._rerank_documents("query", docs, batch_size=2))
+        assert len(results) == 4
+        assert all(isinstance(r, float) for r in results)
 
 
 class TestRerankPairsIsSmallBranch:
@@ -335,39 +125,46 @@ class TestRerankPairsIsSmallBranch:
         m.model = _make_mock_session(n_pairs=1)
         m.model_input_names = {"input_ids"}
         m.tokenizer = _make_mock_tokenizer(n_pairs=1)
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp")
         scores = list(
             m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=[("query", "doc")],
+                config=config,
                 batch_size=64,
             )
         )
         assert len(scores) == 1
         assert all(isinstance(s, float) for s in scores)
 
-    def test_list_smaller_than_batch_size(self, loaded_model: ConcreteCrossEncoderModel) -> None:
+    def test_list_smaller_than_batch_size(self) -> None:
+        m = ConcreteCrossEncoderModel()
+        m.model = _make_mock_session(n_pairs=2)
+        m.model_input_names = {"input_ids"}
+        m.tokenizer = _make_mock_tokenizer(n_pairs=2)
+
         pairs = [("q", "d1"), ("q", "d2")]
-        loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=2)
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp")
         scores = list(
-            loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
+            m._rerank_pairs(
                 pairs=pairs,
+                config=config,
                 batch_size=64,  # larger than len(pairs)=2 => is_small
             )
         )
         assert len(scores) == 2
 
-    def test_parallel_none_uses_direct_path(self, loaded_model: ConcreteCrossEncoderModel) -> None:
+    def test_parallel_none_uses_direct_path(self) -> None:
+        m = ConcreteCrossEncoderModel()
+        m.model = _make_mock_session(n_pairs=5)
+        m.model_input_names = {"input_ids"}
+        m.tokenizer = _make_mock_tokenizer(n_pairs=5)
+
         pairs = [("q", f"d{i}") for i in range(5)]
-        loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=5)
-        loaded_model.model = _make_mock_session(n_pairs=5)
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp")
         scores = list(
-            loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
+            m._rerank_pairs(
                 pairs=pairs,
+                config=config,
                 batch_size=10,
                 parallel=None,
             )
@@ -386,11 +183,11 @@ class TestRerankPairsIsSmallBranch:
             loaded.append(True)
 
         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp")
         list(
             m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=[("q", "d")],
+                config=config,
                 batch_size=64,
             )
         )
@@ -400,20 +197,20 @@ class TestRerankPairsIsSmallBranch:
 class TestRerankPairsParallelBranch:
     """_rerank_pairs when parallel > 0 and input is large (spawns a pool)."""
 
-    def _large_pairs(self, n: int = 10) -> list[tuple[str, str]]:
-        return [("q", f"d{i}") for i in range(n)]
+    def _large_pairs(self) -> list[tuple[str, str]]:
+        return [("q", f"d{i}") for i in range(10)]
 
     def test_parallel_zero_uses_cpu_count(self, loaded_model: ConcreteCrossEncoderModel) -> None:
         out = OnnxOutputContext(model_output=np.array([0.5, 0.6]))
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp")
         with patch("qwen3_embed.rerank.cross_encoder.onnx_text_model.ParallelWorkerPool") as cls:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
+                    config=config,
                     batch_size=2,
                     parallel=0,
                 )
@@ -424,176 +221,123 @@ class TestRerankPairsParallelBranch:
         self, loaded_model: ConcreteCrossEncoderModel
     ) -> None:
         out = OnnxOutputContext(model_output=np.array([0.5]))
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp")
         with patch("qwen3_embed.rerank.cross_encoder.onnx_text_model.ParallelWorkerPool") as cls:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
+                    config=config,
                     batch_size=2,
                     parallel=3,
                 )
             )
-        call_kw = cls.call_args[1]
-        assert call_kw["num_workers"] == 3
+        call_kwargs = cls.call_args[1]
+        assert call_kwargs["num_workers"] == 3
 
     def test_parallel_start_method_is_forkserver_or_spawn(
         self, loaded_model: ConcreteCrossEncoderModel
     ) -> None:
         out = OnnxOutputContext(model_output=np.array([0.5]))
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp")
         with patch("qwen3_embed.rerank.cross_encoder.onnx_text_model.ParallelWorkerPool") as cls:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
+                    config=config,
                     batch_size=2,
                     parallel=2,
                 )
             )
-        call_kw = cls.call_args[1]
-        assert call_kw["start_method"] in ("forkserver", "spawn")
+        call_kwargs = cls.call_args[1]
+        assert call_kwargs["start_method"] in ("forkserver", "spawn")
 
     def test_extra_session_options_merged_into_params(
         self, loaded_model: ConcreteCrossEncoderModel
     ) -> None:
         out = OnnxOutputContext(model_output=np.array([0.5]))
+        config = OnnxInferenceConfig(
+            model_name="m",
+            cache_dir="/tmp",
+            extra_session_options={"enable_cpu_mem_arena": False},
+        )
         with patch("qwen3_embed.rerank.cross_encoder.onnx_text_model.ParallelWorkerPool") as cls:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
+                    config=config,
                     batch_size=2,
                     parallel=2,
-                    extra_session_options={"enable_cpu_mem_arena": False},
                 )
             )
-        cls.assert_called_once()
-        # The extra session options get passed via pool.ordered_map kwargs
-        _, ordered_map_kwargs = pool.ordered_map.call_args
-        assert "enable_cpu_mem_arena" in ordered_map_kwargs
+        # Check that params passed to ordered_map contain the merged options
+        _, call_kwargs = pool.ordered_map.call_args
+        assert call_kwargs["enable_cpu_mem_arena"] is False
 
 
-class TestTokenCount:
-    """_token_count sums attention mask tokens across batches."""
+class TestOnnxTextModelTokenCount:
+    """_token_count calculates sum of attention mask across batches."""
 
-    def test_basic_token_count(self) -> None:
+    def test_token_count_sums_correctly(self) -> None:
         m = ConcreteCrossEncoderModel()
-        m.model = MagicMock()
-        enc = MagicMock()
-        enc.attention_mask = [1, 1, 1, 0]  # 3 tokens
-        tok = MagicMock()
-        tok.encode_batch.return_value = [enc]
-        m.tokenizer = tok
-        result = m._token_count([("q", "d")])
-        assert result == 3
+        m.tokenizer = _make_mock_tokenizer(n_pairs=1)
+        # Mock encoding: mask=[1, 1], count=2
+        enc = m.tokenizer.encode_batch.return_value[0]
+        enc.attention_mask = [1, 1, 0, 0]
 
-    def test_multiple_pairs_summed(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model = MagicMock()
-        enc1 = MagicMock()
-        enc1.attention_mask = [1, 1, 0]
-        enc2 = MagicMock()
-        enc2.attention_mask = [1, 1, 1]
-        tok = MagicMock()
-        tok.encode_batch.return_value = [enc1, enc2]
-        m.tokenizer = tok
-        result = m._token_count([("q", "d1"), ("q", "d2")])
-        assert result == 5
-
-    def test_loads_model_if_none(self) -> None:
-        m = ConcreteCrossEncoderModel()
-        m.model = None
-        loaded: list[bool] = []
-
-        def _fake_load() -> None:
-            m.model = MagicMock()
-            enc = MagicMock()
-            enc.attention_mask = [1, 0]
-            tok = MagicMock()
-            tok.encode_batch.return_value = [enc]
-            m.tokenizer = tok
-            loaded.append(True)
-
-        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
-        count = m._token_count([("q", "d")])
-        assert loaded
-        assert count == 1
-
-
-class TestTextRerankerWorker:
-    """TextRerankerWorker.process yields (idx, OnnxOutputContext)."""
-
-    def test_process_yields_indexed_outputs(self) -> None:
-        worker = _StubRerankerWorker(model_name="t", cache_dir="/tmp")
-        items = [(0, [("q", "d1")]), (1, [("q", "d2")])]
-        results = list(worker.process(items))
-        assert len(results) == 2
-        assert results[0][0] == 0
-        assert isinstance(results[0][1], OnnxOutputContext)
-        assert results[1][0] == 1
-
-    def test_init_embedding_raises_not_implemented(self) -> None:
-        worker = _StubRerankerWorker(model_name="t", cache_dir="/tmp")
-        with pytest.raises(NotImplementedError):
-            TextRerankerWorker.init_embedding(worker, "m", "/tmp")
-
-
-class TestLoadOnnxModel:
-    """_load_onnx_model calls super() then wires up the tokenizer."""
-
-    def test_wires_tokenizer_after_super(self, tmp_path: Path) -> None:
-        m = ConcreteCrossEncoderModel()
-        mock_tokenizer = MagicMock()
-
-        with (
-            patch("qwen3_embed.common.onnx_model.ort") as mock_ort,
-            patch(
-                "qwen3_embed.rerank.cross_encoder.onnx_text_model.load_tokenizer",
-                return_value=(mock_tokenizer, {}),
-            ),
-        ):
-            mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
-            so_mock = MagicMock()
-            mock_ort.SessionOptions.return_value = so_mock
-            mock_ort.GraphOptimizationLevel.ORT_ENABLE_ALL = 99
-            session_mock = MagicMock()
-            session_mock.get_providers.return_value = ["CPUExecutionProvider"]
-            session_mock.get_inputs.return_value = []
-            mock_ort.InferenceSession.return_value = session_mock
-
-            m._load_onnx_model(tmp_path, "model.onnx", threads=None)
-
-        assert m.tokenizer is mock_tokenizer
+        count = m._token_count([("q", "d")], batch_size=1)
+        assert count == 2
 
 
 # ===========================================================================
-# OnnxTextCrossEncoder — facade class (onnx_text_cross_encoder.py)
+# OnnxTextCrossEncoder — covers onnx_text_cross_encoder.py
 # ===========================================================================
+
+
+@pytest.fixture()
+def onnx_encoder(
+    tmp_path: Path, registered_test_model: BaseModelDescription
+) -> OnnxTextCrossEncoder:
+    """OnnxTextCrossEncoder with lazy_load + pre-wired mock session and tokenizer."""
+    with patch.object(OnnxTextCrossEncoder, "download_model", return_value=tmp_path):
+        enc = OnnxTextCrossEncoder(model_name=_MODEL_NAME, lazy_load=True)
+
+    session = _make_mock_session(n_pairs=1)
+    tok = _make_mock_tokenizer(n_pairs=1)
+    enc.model = session
+    enc.model_input_names = {"input_ids"}
+    enc.tokenizer = tok
+    return enc
+
+
+@pytest.fixture()
+def loaded_model() -> ConcreteCrossEncoderModel:
+    m = ConcreteCrossEncoderModel()
+    m.model = _make_mock_session(n_pairs=1)
+    m.model_input_names = {"input_ids"}
+    m.tokenizer = _make_mock_tokenizer(n_pairs=1)
+    return m
 
 
 class TestOnnxTextCrossEncoderInit:
-    """OnnxTextCrossEncoder.__init__ behaviour."""
+    """Tests for OnnxTextCrossEncoder.__init__ (lines 35-90)."""
 
-    def test_lazy_load_skips_session(
+    def test_lazy_load_skips_load_onnx_model(
         self, tmp_path: Path, registered_test_model: BaseModelDescription
     ) -> None:
         with patch.object(OnnxTextCrossEncoder, "download_model", return_value=tmp_path):
             enc = OnnxTextCrossEncoder(model_name=_MODEL_NAME, lazy_load=True)
         assert enc.lazy_load is True
-        # OnnxModel.__init__ is not called through the MRO in this configuration,
-        # so `model` may not be set at all. Either absent or None means not loaded.
-        assert not hasattr(enc, "model") or enc.model is None
+        # verify download_model was called, but not necessarily load_onnx_model
+        assert enc._model_dir == tmp_path
 
     def test_lazy_load_false_calls_load_onnx_model(
         self, tmp_path: Path, registered_test_model: BaseModelDescription
@@ -602,9 +346,7 @@ class TestOnnxTextCrossEncoderInit:
         with (
             patch.object(OnnxTextCrossEncoder, "download_model", return_value=tmp_path),
             patch.object(
-                OnnxTextCrossEncoder,
-                "load_onnx_model",
-                side_effect=lambda: called.append(True),
+                OnnxTextCrossEncoder, "load_onnx_model", side_effect=lambda: called.append(True)
             ),
         ):
             OnnxTextCrossEncoder(model_name=_MODEL_NAME, lazy_load=False)

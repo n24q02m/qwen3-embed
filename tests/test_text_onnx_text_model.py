@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
-from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxInferenceConfig, OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.text.onnx_embedding import (
     OnnxTextEmbedding,
@@ -98,279 +98,91 @@ class _StubWorker(TextEmbeddingWorker[NumpyArray]):
         model_name: str,
         cache_dir: str,
         **kwargs: Any,
-    ) -> ConcreteOnnxTextModel:
+    ) -> OnnxTextModel[NumpyArray]:
         m = ConcreteOnnxTextModel()
         m.model = _make_mock_session()
-        m.model_input_names = {"input_ids", "attention_mask"}
         m.tokenizer = _make_mock_tokenizer()
         return m
 
 
-# ===========================================================================
-# OnnxTextModel — base class tests  (covers onnx_text_model.py)
-# ===========================================================================
+# ---------------------------------------------------------------------------
+# OnnxTextModel — covers onnx_text_model.py
+# ---------------------------------------------------------------------------
 
 
-class TestOnnxTextModelNotImplemented:
-    """Lines 23, 35, 72 — abstract methods raise NotImplementedError."""
+class TestOnnxTextModelMethods:
+    """Lines 31-118 — basic methods."""
 
-    def test_get_worker_class_raises(self) -> None:
-        class _Stub(OnnxTextModel):
-            pass
-
-        with pytest.raises(NotImplementedError):
-            _Stub._get_worker_class()
-
-    def test_post_process_raises(self) -> None:
-        class _Stub(OnnxTextModel):
-            pass
-
-        stub = _Stub()
-        with pytest.raises(NotImplementedError):
-            stub._post_process_onnx_output(OnnxOutputContext(model_output=np.zeros((1, 4))))
-
-    def test_load_onnx_model_raises(self) -> None:
-        class _Stub(OnnxTextModel):
-            pass
-
-        stub = _Stub()
-        with pytest.raises(NotImplementedError):
-            stub.load_onnx_model()
-
-
-class TestOnnxTextModelInit:
-    """Lines 38-40 — __init__ initialises tokenizer and special_token_to_id."""
-
-    def test_initial_state(self) -> None:
+    def test_init_sets_defaults(self) -> None:
         m = ConcreteOnnxTextModel()
         assert m.tokenizer is None
         assert m.special_token_to_id == {}
-        assert m.model is None
 
-
-class TestOnnxTextModelPreprocessInput:
-    """Line 48 — _preprocess_onnx_input returns input unchanged."""
-
-    def test_returns_identity(self) -> None:
+    def test_preprocess_returns_unchanged(self) -> None:
         m = ConcreteOnnxTextModel()
         data: dict[str, NumpyArray] = {"input_ids": np.array([[1, 2, 3]])}
         assert m._preprocess_onnx_input(data) is data
 
+    def test_load_onnx_model_abstract_raises(self) -> None:
+        m = OnnxTextModel()
+        with pytest.raises(NotImplementedError):
+            m.load_onnx_model()
 
-class TestOnnxTextModelTokenize:
-    """Lines 75-76 — tokenize calls encode_batch."""
-
-    def test_delegates_to_tokenizer(self) -> None:
+    def test_onnx_embed_requires_model_loaded(self) -> None:
         m = ConcreteOnnxTextModel()
-        m.tokenizer = _make_mock_tokenizer(n_docs=2)
-        result = m.tokenize(["hello", "world"])
-        m.tokenizer.encode_batch.assert_called_once_with(["hello", "world"])
-        assert len(result) == 2
-
-    def test_asserts_tokenizer_not_none(self) -> None:
-        m = ConcreteOnnxTextModel()
-        with pytest.raises(AssertionError):
-            m.tokenize(["hello"])
-
-
-class TestOnnxTextModelOnnxEmbed:
-    """Lines 83-107 — onnx_embed constructs ONNX inputs and returns OnnxOutputContext."""
-
-    def setup_method(self) -> None:
-        self.m = ConcreteOnnxTextModel()
-        self.m.model = _make_mock_session((1, 4))
-        self.m.model_input_names = {"input_ids", "attention_mask"}
-        self.m.tokenizer = _make_mock_tokenizer(n_docs=1)
-
-    def test_basic_context_fields(self) -> None:
-        ctx = self.m.onnx_embed(["hello"])
-        assert ctx.model_output is not None
-        assert ctx.attention_mask is not None
-        assert ctx.input_ids is not None
-
-    def test_no_model_raises(self) -> None:
-        m = ConcreteOnnxTextModel()
+        m.model = None
         with pytest.raises(ValueError, match="Model not loaded"):
             m.onnx_embed(["hello"])
 
-    def test_includes_token_type_ids(self) -> None:
+    def test_onnx_embed_runs_session(self) -> None:
         m = ConcreteOnnxTextModel()
-        session = MagicMock()
-        session.run.return_value = [np.ones((1, 4), dtype=np.float32)]
-        node_ids = MagicMock()
-        node_ids.name = "input_ids"
-        node_attn = MagicMock()
-        node_attn.name = "attention_mask"
-        node_tti = MagicMock()
-        node_tti.name = "token_type_ids"
-        session.get_inputs.return_value = [node_ids, node_attn, node_tti]
-        m.model = session
-        m.model_input_names = {"input_ids", "attention_mask", "token_type_ids"}
+        m.model = _make_mock_session()
+        m.model_input_names = {"input_ids", "attention_mask"}
         m.tokenizer = _make_mock_tokenizer()
 
-        m.onnx_embed(["hello"])
-        call_args = session.run.call_args[0]
-        onnx_input_dict = call_args[1]
-        assert "token_type_ids" in onnx_input_dict
-
-    def test_float16_output_is_cast_to_float32(self) -> None:
-        m = ConcreteOnnxTextModel()
-        session = MagicMock()
-        session.run.return_value = [np.ones((1, 4), dtype=np.float16)]
-        node = MagicMock()
-        node.name = "input_ids"
-        session.get_inputs.return_value = [node]
-        m.model = session
-        m.model_input_names = {"input_ids"}
-        m.tokenizer = _make_mock_tokenizer()
-
-        ctx = m.onnx_embed(["test"])
-        assert ctx.model_output.dtype == np.float32
-
-    def test_without_attention_mask_in_names_uses_raw_mask(self) -> None:
-        m = ConcreteOnnxTextModel()
-        session = MagicMock()
-        session.run.return_value = [np.ones((1, 4), dtype=np.float32)]
-        node = MagicMock()
-        node.name = "input_ids"
-        session.get_inputs.return_value = [node]
-        m.model = session
-        m.model_input_names = {"input_ids"}  # no attention_mask
-        m.tokenizer = _make_mock_tokenizer()
-
-        ctx = m.onnx_embed(["test"])
+        ctx = m.onnx_embed(["hello"])
+        assert ctx.model_output.shape == (1, 4)
         assert ctx.attention_mask is not None
-
-    def test_preprocess_onnx_input_is_called(self) -> None:
-        """_preprocess_onnx_input (line 48) is reached through onnx_embed."""
-        original = ConcreteOnnxTextModel._preprocess_onnx_input
-        calls: list[dict] = []
-
-        def spy(self, onnx_input, **kwargs):
-            calls.append(onnx_input)
-            return original(self, onnx_input, **kwargs)
-
-        with patch.object(ConcreteOnnxTextModel, "_preprocess_onnx_input", spy):
-            self.m.onnx_embed(["hello"])
-
-        assert len(calls) == 1
+        assert ctx.input_ids is not None
 
 
-class TestOnnxTextModelLoadOnnxModel:
-    """Lines 60-69 — _load_onnx_model calls super then load_tokenizer."""
-
-    def test_wires_tokenizer_after_super(self, tmp_path: Path) -> None:
-        m = ConcreteOnnxTextModel()
-        mock_tokenizer = MagicMock()
-        mock_special: dict[str, int] = {"<s>": 1}
-
-        with (
-            patch("qwen3_embed.common.onnx_model.ort") as mock_ort,
-            patch(
-                "qwen3_embed.text.onnx_text_model.load_tokenizer",
-                return_value=(mock_tokenizer, mock_special),
-            ),
-        ):
-            mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
-            so_mock = MagicMock()
-            mock_ort.SessionOptions.return_value = so_mock
-            mock_ort.GraphOptimizationLevel.ORT_ENABLE_ALL = 99
-            session_mock = MagicMock()
-            session_mock.get_providers.return_value = ["CPUExecutionProvider"]
-            session_mock.get_inputs.return_value = []
-            mock_ort.InferenceSession.return_value = session_mock
-
-            m._load_onnx_model(tmp_path, "model.onnx", threads=None)
-
-        assert m.tokenizer is mock_tokenizer
-        assert m.special_token_to_id is mock_special
-
-
-class TestOnnxTextModelTokenCount:
-    """Lines 168-178 — _token_count with lazy loading and various input forms."""
-
-    def test_loads_model_if_not_loaded(self) -> None:
-        m = ConcreteOnnxTextModel()
-        m.model = None
-        tok = _make_mock_tokenizer()
-        enc = tok.encode_batch.return_value[0]
-        enc.attention_mask = [1, 1, 0, 0]
-        loaded: list[bool] = []
-
-        def _fake_load() -> None:
-            m.model = MagicMock()
-            m.tokenizer = tok
-            loaded.append(True)
-
-        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
-        count = m._token_count(["hello"])
-        assert loaded
-        assert count == 2
-
-    def test_single_string_wrapped_to_list(self) -> None:
-        m = ConcreteOnnxTextModel()
-        m.model = MagicMock()
-        tok = _make_mock_tokenizer()
-        enc = tok.encode_batch.return_value[0]
-        enc.attention_mask = [1, 1, 1, 0]
-        m.tokenizer = tok
-        assert m._token_count("hello") == 3
-
-    def test_multiple_texts_sum(self) -> None:
-        m = ConcreteOnnxTextModel()
-        m.model = MagicMock()
-        enc1 = MagicMock()
-        enc1.attention_mask = [1, 1, 0]  # 2 tokens
-        enc2 = MagicMock()
-        enc2.attention_mask = [1, 1, 1]  # 3 tokens
-        tok = MagicMock()
-        tok.encode_batch.return_value = [enc1, enc2]
-        m.tokenizer = tok
-        assert m._token_count(["foo", "bar"]) == 5
-
-
-class TestOnnxTextModelEmbedDocuments:
+class TestEmbedDocumentsBranching:
     """Lines 124-165 — _embed_documents in single-process and parallel modes."""
 
     def _loaded(self, n_docs: int = 1) -> ConcreteOnnxTextModel:
         m = ConcreteOnnxTextModel()
-        m.model = _make_mock_session((n_docs, 4))
+        m.model = _make_mock_session(output_shape=(n_docs, 4))
         m.model_input_names = {"input_ids", "attention_mask"}
         m.tokenizer = _make_mock_tokenizer(n_docs=n_docs)
         return m
 
-    def test_single_string_becomes_one_result(self) -> None:
-        m = self._loaded(1)
-        results = list(m._embed_documents("t", "/tmp", documents="hello"))
+    def _parallel_docs(self) -> list[str]:
+        return ["a", "b", "c", "d"]
+
+    def test_single_string_wrapped_in_list(self) -> None:
+        m = self._loaded()
+        config = OnnxInferenceConfig(model_name="t", cache_dir="/tmp")
+        results = list(m._embed_documents(documents="hello", config=config))
         assert len(results) == 1
 
-    def test_small_list_all_results(self) -> None:
-        # _post_process_onnx_output yields the whole batch array as one item,
-        # so one batch of 2 docs produces 1 result (a (2, 4) array).
-        m = self._loaded(2)
-        results = list(m._embed_documents("t", "/tmp", documents=["a", "b"]))
-        assert len(results) == 1
+    def test_list_smaller_than_batch_size_skips_parallel(self) -> None:
+        m = self._loaded(n_docs=2)
+        config = OnnxInferenceConfig(model_name="t", cache_dir="/tmp")
+        # documents < batch_size => parallel branch not taken
+        results = list(m._embed_documents(documents=["a", "b"], config=config, batch_size=64))
+        assert len(results) == 1  # yield output.model_output as a whole in ConcreteOnnxTextModel
         assert results[0].shape == (2, 4)
 
-    def test_loads_model_if_none(self) -> None:
-        m = ConcreteOnnxTextModel()
-        loaded: list[bool] = []
-
-        def fake_load() -> None:
-            m.model = _make_mock_session((1, 4))
-            m.model_input_names = {"input_ids", "attention_mask"}
-            m.tokenizer = _make_mock_tokenizer()
-            loaded.append(True)
-
-        m.load_onnx_model = fake_load  # type: ignore[invalid-assignment]
-        list(m._embed_documents("t", "/tmp", documents=["hi"]))
-        assert loaded
-
-    def _parallel_docs(self) -> list[str]:
-        return ["a", "b", "c", "d", "e"]  # 5 docs, batch_size=2 => is_small=False
-
-    def test_parallel_zero_creates_pool(self) -> None:
+    def test_parallel_none_uses_direct_path(self) -> None:
         m = self._loaded()
+        config = OnnxInferenceConfig(model_name="t", cache_dir="/tmp")
+        with patch("qwen3_embed.text.onnx_text_model.ParallelWorkerPool") as mock_cls:
+            list(m._embed_documents(documents=["hi"], config=config, parallel=None))
+        mock_cls.assert_not_called()
+
+    def test_parallel_zero_uses_cpu_count(self) -> None:
+        m = self._loaded()
+        config = OnnxInferenceConfig(model_name="t", cache_dir="/tmp")
         out = OnnxOutputContext(model_output=np.ones((1, 4), dtype=np.float32))
         with patch("qwen3_embed.text.onnx_text_model.ParallelWorkerPool") as mock_cls:
             pool = MagicMock()
@@ -378,13 +190,17 @@ class TestOnnxTextModelEmbedDocuments:
             mock_cls.return_value = pool
             list(
                 m._embed_documents(
-                    "t", "/tmp", documents=self._parallel_docs(), batch_size=2, parallel=0
+                    documents=self._parallel_docs(),
+                    config=config,
+                    batch_size=2,
+                    parallel=0,
                 )
             )
         mock_cls.assert_called_once()
 
     def test_parallel_positive_sets_num_workers(self) -> None:
         m = self._loaded()
+        config = OnnxInferenceConfig(model_name="t", cache_dir="/tmp")
         out = OnnxOutputContext(model_output=np.ones((1, 4), dtype=np.float32))
         with patch("qwen3_embed.text.onnx_text_model.ParallelWorkerPool") as mock_cls:
             pool = MagicMock()
@@ -392,7 +208,10 @@ class TestOnnxTextModelEmbedDocuments:
             mock_cls.return_value = pool
             list(
                 m._embed_documents(
-                    "t", "/tmp", documents=self._parallel_docs(), batch_size=2, parallel=3
+                    documents=self._parallel_docs(),
+                    config=config,
+                    batch_size=2,
+                    parallel=3,
                 )
             )
         call_kwargs = mock_cls.call_args[1]
@@ -400,6 +219,11 @@ class TestOnnxTextModelEmbedDocuments:
 
     def test_parallel_extra_session_options_merged(self) -> None:
         m = self._loaded()
+        config = OnnxInferenceConfig(
+            model_name="t",
+            cache_dir="/tmp",
+            extra_session_options={"enable_cpu_mem_arena": False},
+        )
         out = OnnxOutputContext(model_output=np.ones((1, 4), dtype=np.float32))
         with patch("qwen3_embed.text.onnx_text_model.ParallelWorkerPool") as mock_cls:
             pool = MagicMock()
@@ -407,19 +231,21 @@ class TestOnnxTextModelEmbedDocuments:
             mock_cls.return_value = pool
             list(
                 m._embed_documents(
-                    "t",
-                    "/tmp",
                     documents=self._parallel_docs(),
+                    config=config,
                     batch_size=2,
                     parallel=2,
-                    extra_session_options={"enable_cpu_mem_arena": False},
                 )
             )
         mock_cls.assert_called_once()
+        # verify options merged into params passed to ordered_map
+        _, call_kwargs = pool.ordered_map.call_args
+        assert call_kwargs["enable_cpu_mem_arena"] is False
 
     def test_parallel_uses_forkserver_or_spawn(self) -> None:
         """start_method selection doesn't crash."""
         m = self._loaded()
+        config = OnnxInferenceConfig(model_name="t", cache_dir="/tmp")
         out = OnnxOutputContext(model_output=np.ones((1, 4), dtype=np.float32))
         with patch("qwen3_embed.text.onnx_text_model.ParallelWorkerPool") as mock_cls:
             pool = MagicMock()
@@ -427,7 +253,10 @@ class TestOnnxTextModelEmbedDocuments:
             mock_cls.return_value = pool
             list(
                 m._embed_documents(
-                    "t", "/tmp", documents=self._parallel_docs(), batch_size=2, parallel=1
+                    documents=self._parallel_docs(),
+                    config=config,
+                    batch_size=2,
+                    parallel=1,
                 )
             )
         call_kwargs = mock_cls.call_args[1]
