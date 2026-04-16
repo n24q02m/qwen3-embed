@@ -392,6 +392,7 @@ class TestOnnxTextEmbeddingMethods:
 
     def test_token_count_sums_mask(self, onnx_emb: OnnxTextEmbedding) -> None:
         """Line 169."""
+        assert onnx_emb.tokenizer is not None
         enc = onnx_emb.tokenizer.encode_batch.return_value[0]  # type: ignore[unresolved-attribute]
         enc.attention_mask = [1, 1, 0, 0]
         assert onnx_emb.token_count("hello") == 2

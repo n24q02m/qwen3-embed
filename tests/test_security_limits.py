@@ -17,7 +17,7 @@ def test_check_input_length():
 def test_iter_checked_texts():
     texts = ["a" * 10, "b" * 100, "c" * 5]
     assert list(qwen3_embed.common.utils.iter_checked_texts(texts)) == texts
-    iterator = qwen3_embed.common.utils.iter_checked_texts(["a" * 10, "b" * 101])
+    iterator = iter(qwen3_embed.common.utils.iter_checked_texts(["a" * 10, "b" * 101]))
     assert next(iterator) == "a" * 10
     with pytest.raises(ValueError):
         next(iterator)

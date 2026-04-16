@@ -439,9 +439,9 @@ class TestOnnxTextCrossEncoderRerank:
     def test_rerank_delegates_to_rerank_documents(
         self, onnx_encoder: OnnxTextCrossEncoder
     ) -> None:
-        with patch.object(onnx_encoder, "_rerank_documents", wraps=onnx_encoder._rerank_documents):
+        with patch.object(onnx_encoder, "_rerank_documents", wraps=onnx_encoder._rerank_documents) as mock_rerank:
             list(onnx_encoder.rerank("query", ["doc"], batch_size=32))
-            onnx_encoder._rerank_documents.assert_called_once()  # type: ignore[attr-defined]
+            mock_rerank.assert_called_once()
 
 
 class TestOnnxTextCrossEncoderRerankPairs:
@@ -489,6 +489,7 @@ class TestOnnxTextCrossEncoderTokenCount:
     def test_token_count_delegates(self, onnx_encoder: OnnxTextCrossEncoder) -> None:
         enc = MagicMock()
         enc.attention_mask = [1, 1, 0, 0]
+        assert onnx_encoder.tokenizer is not None
         onnx_encoder.tokenizer.encode_batch.return_value = [enc]  # type: ignore[unresolved-attribute]
         result = onnx_encoder.token_count([("q", "d")])
         assert result == 2
