@@ -139,6 +139,28 @@ class TestDownloadFileFromGcs:
     GCS_URL = "https://storage.googleapis.com"
 
     @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
+    def test_download_file_from_gcs_uses_large_chunk_size(self, mock_get_session, tmp_path):
+        """Verify that iter_content is called with the optimized chunk_size."""
+        mock_session = MagicMock()
+        mock_get_session.return_value = mock_session
+
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": "4",
+            "x-goog-hash": "md5="
+            + base64.b64encode(hashlib.md5(b"data", usedforsecurity=False).digest()).decode(),
+        }
+        response.iter_content.return_value = [b"data"]
+        mock_session.get.return_value = response
+
+        output = tmp_path / "test.file"
+        ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/test.file", str(output))
+
+        # Check if iter_content was called with chunk_size=1MB (1048576)
+        response.iter_content.assert_called_with(chunk_size=1024 * 1024)
+
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_requests_get_uses_verify_true(self, mock_get_session, tmp_path):
         """requests.get MUST be called with verify=True to prevent accidental bypass."""
 

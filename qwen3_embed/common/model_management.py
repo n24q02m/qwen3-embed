@@ -136,7 +136,7 @@ class ModelManagement(Generic[T]):
             ) as progress_bar,
             open(output_path, "wb") as file,
         ):
-            for chunk in response.iter_content(chunk_size=1024):
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
                 if chunk:  # Filter out keep-alive new chunks
                     progress_bar.update(len(chunk))
                     file.write(chunk)
