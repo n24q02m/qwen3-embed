@@ -38,15 +38,20 @@ def model():
 
 @pytest.fixture
 def mock_ort():
-    with patch("qwen3_embed.common.onnx_model.ort") as mock:
+    with (
+        patch("qwen3_embed.common.onnx_model.ort") as mock,
+        patch("qwen3_embed.common.onnx_model.load_tokenizer", return_value=(MagicMock(), {})),
+    ):
         # Default behavior: CPU provider available, no CUDA
         mock.get_available_providers.return_value = ["CPUExecutionProvider"]
         mock.SessionOptions.return_value = MagicMock()
         mock.GraphOptimizationLevel.ORT_ENABLE_ALL = 99
+        mock.ExecutionMode.ORT_PARALLEL = 1
 
         # Default session mock
         session_mock = MagicMock()
         session_mock.get_providers.return_value = ["CPUExecutionProvider"]
+        session_mock.get_inputs.return_value = []
         mock.InferenceSession.return_value = session_mock
 
         yield mock
@@ -194,6 +199,16 @@ def test_load_threads(model: ConcreteOnnxModel, mock_ort):
     so = mock_ort.SessionOptions.return_value
     assert so.intra_op_num_threads == 4
     assert so.inter_op_num_threads == 4
+
+
+def test_load_parallel_execution(model: ConcreteOnnxModel, mock_ort):
+    """Test parallel execution configuration."""
+    mock_ort.get_available_providers.return_value = ["CPUExecutionProvider"]
+
+    model._load_onnx_model(Path("dummy"), "model.onnx", threads=None, parallel_execution=True)
+
+    so = mock_ort.SessionOptions.return_value
+    assert so.execution_mode == mock_ort.ExecutionMode.ORT_PARALLEL
 
 
 def test_load_extra_session_options(model: ConcreteOnnxModel, mock_ort):
