@@ -63,7 +63,7 @@ def _make_mock_session(output_shape: tuple[int, ...] = (1, 4), dtype=np.float32)
 
 
 @pytest.fixture()
-def registered_test_model():
+def registered_test_model() -> Iterable[DenseModelDescription]:
     """Add the test model to OnnxTextEmbedding.supported_onnx_models."""
     supported_onnx_models.append(_MODEL_DESC)
     yield _MODEL_DESC

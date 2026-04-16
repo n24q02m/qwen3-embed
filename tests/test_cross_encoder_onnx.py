@@ -42,7 +42,7 @@ _MODEL_DESC = BaseModelDescription(
 
 
 @pytest.fixture(autouse=True)
-def registered_test_model() -> BaseModelDescription:
+def registered_test_model() -> Iterable[BaseModelDescription]:
     """Temporarily register the test model in the global list."""
     supported_onnx_models.append(_MODEL_DESC)
     yield _MODEL_DESC
