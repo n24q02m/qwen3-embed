@@ -77,6 +77,12 @@ class ModelManagement(Generic[T]):
         raise NotImplementedError()
 
     @classmethod
+    def _clear_model_cache(cls) -> None:
+        """Clears the model description cache to allow dynamic model registration."""
+        if "_model_description_cache" in cls.__dict__:
+            delattr(cls, "_model_description_cache")
+
+    @classmethod
     def _get_model_description(cls, model_name: str) -> T:
         """
         Gets the model description from the model_name.
@@ -90,10 +96,15 @@ class ModelManagement(Generic[T]):
         Returns:
             T: The model description.
         """
+        cache = cls.__dict__.get("_model_description_cache")
+        if cache is None:
+            cache = {model.model.lower(): model for model in cls._list_supported_models()}
+            cls._model_description_cache = cache
+
         model_name_lower = model_name.lower()
-        for model in cls._list_supported_models():
-            if model_name_lower == model.model.lower():
-                return model
+        model = cache.get(model_name_lower)
+        if model is not None:
+            return model
 
         raise ValueError(f"Model {model_name} is not supported in {cls.__name__}.")
 

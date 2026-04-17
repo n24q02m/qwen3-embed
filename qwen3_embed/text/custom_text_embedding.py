@@ -98,6 +98,7 @@ class CustomTextEmbedding(OnnxTextEmbedding):
         pooling: PoolingType,
         normalization: bool,
     ) -> None:
+        cls._clear_model_cache()
         cls.SUPPORTED_MODELS.append(model_description)
         cls.POSTPROCESSING_MAPPING[model_description.model] = PostprocessingConfig(
             pooling=pooling, normalization=normalization
