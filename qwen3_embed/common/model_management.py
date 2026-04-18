@@ -260,58 +260,10 @@ class ModelManagement(Generic[T]):
             logger.warning("Failed to save metadata file. Next load may take longer to verify.")
 
     @classmethod
-    def download_files_from_huggingface(
-        cls,
-        hf_source_repo: str,
-        cache_dir: str,
-        extra_patterns: list[str],
-        local_files_only: bool = False,
-        **kwargs: Any,
-    ) -> str:
-        """
-        Downloads a model from HuggingFace Hub.
-        Args:
-            hf_source_repo (str): Name of the model on HuggingFace Hub, e.g. "qdrant/all-MiniLM-L6-v2-onnx".
-            cache_dir (Optional[str]): The path to the cache directory.
-            extra_patterns (list[str]): extra patterns to allow in the snapshot download, typically
-                includes the required model files.
-            local_files_only (bool, optional): Whether to only use local files. Defaults to False.
-        Returns:
-            Path: The path to the model directory.
-        """
-
-        allow_patterns = [
-            "config.json",
-            "tokenizer.json",
-            "tokenizer_config.json",
-            "special_tokens_map.json",
-            "preprocessor_config.json",
-        ]
-
-        allow_patterns.extend(extra_patterns)
-
-        snapshot_dir = Path(cache_dir) / f"models--{hf_source_repo.replace('/', '--')}"
-        metadata_file = snapshot_dir / cls.METADATA_FILE
-
-        if local_files_only:
-            disable_progress_bars()
-            if metadata_file.exists():
-                metadata = json.loads(metadata_file.read_text())
-                verified = cls._verify_files_from_metadata(snapshot_dir, metadata, repo_files=[])
-                if not verified:
-                    logger.warning(
-                        "Local file sizes do not match the metadata."
-                    )  # do not raise, still make an attempt to load the model
-            result = snapshot_download(  # nosec B615
-                repo_id=hf_source_repo,
-                allow_patterns=allow_patterns,
-                cache_dir=cache_dir,
-                local_files_only=local_files_only,
-                **kwargs,
-            )
-            return result
-
+    def _fetch_repo_files(cls, hf_source_repo: str) -> tuple[str, list[RepoFile]]:
         repo_revision = model_info(hf_source_repo).sha
+        if repo_revision is None:
+            raise ValueError(f"Could not determine revision sha for repo '{hf_source_repo}'")
         repo_tree = list(list_repo_tree(hf_source_repo, revision=repo_revision, repo_type="model"))
 
         allowed_extensions = {".json", ".onnx", ".gguf", ".txt"}
@@ -324,12 +276,81 @@ class ModelManagement(Generic[T]):
             if repo_tree
             else []
         )
+        return repo_revision, repo_files
 
-        verified_metadata = False
-
+    @classmethod
+    def _verify_local_metadata(
+        cls, snapshot_dir: Path, metadata_file: Path, repo_files: list[RepoFile]
+    ) -> bool:
         if snapshot_dir.exists() and metadata_file.exists():
-            metadata = json.loads(metadata_file.read_text())
-            verified_metadata = cls._verify_files_from_metadata(snapshot_dir, metadata, repo_files)
+            try:
+                metadata = json.loads(metadata_file.read_text())
+                return cls._verify_files_from_metadata(snapshot_dir, metadata, repo_files)
+            except (OSError, json.JSONDecodeError) as e:
+                logger.warning(f"Failed to read or parse metadata file: {e}")
+        return False
+
+    @classmethod
+    def _finalize_hf_download(cls, snapshot_dir: Path, repo_files: list[RepoFile]) -> None:
+        metadata = cls._collect_file_metadata(snapshot_dir, repo_files)
+        download_successful = cls._verify_files_from_metadata(
+            snapshot_dir, metadata, repo_files=[]
+        )
+        if not download_successful:
+            raise ValueError(
+                "Files have been corrupted during downloading process. "
+                "Please check your internet connection and try again."
+            )
+        cls._save_file_metadata(snapshot_dir, metadata)
+
+    @classmethod
+    def download_files_from_huggingface(
+        cls,
+        hf_source_repo: str,
+        cache_dir: str,
+        extra_patterns: list[str],
+        local_files_only: bool = False,
+        **kwargs: Any,
+    ) -> str:
+        """
+        Downloads a model from HuggingFace Hub.
+
+        Args:
+            hf_source_repo (str): Name of the model on HuggingFace Hub, e.g. "qdrant/all-MiniLM-L6-v2-onnx".
+            cache_dir (Optional[str]): The path to the cache directory.
+            extra_patterns (list[str]): extra patterns to allow in the snapshot download, typically
+                includes the required model files.
+            local_files_only (bool, optional): Whether to only use local files. Defaults to False.
+
+        Returns:
+            Path: The path to the model directory.
+        """
+
+        allow_patterns = [
+            "config.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "special_tokens_map.json",
+            "preprocessor_config.json",
+        ]
+        allow_patterns.extend(extra_patterns)
+
+        snapshot_dir = Path(cache_dir) / f"models--{hf_source_repo.replace('/', '--')}"
+        metadata_file = snapshot_dir / cls.METADATA_FILE
+
+        if local_files_only:
+            disable_progress_bars()
+            cls._verify_local_metadata(snapshot_dir, metadata_file, repo_files=[])
+            return snapshot_download(  # nosec B615
+                repo_id=hf_source_repo,
+                allow_patterns=allow_patterns,
+                cache_dir=cache_dir,
+                local_files_only=local_files_only,
+                **kwargs,
+            )
+
+        repo_revision, repo_files = cls._fetch_repo_files(hf_source_repo)
+        verified_metadata = cls._verify_local_metadata(snapshot_dir, metadata_file, repo_files)
 
         if verified_metadata:
             disable_progress_bars()
@@ -343,21 +364,8 @@ class ModelManagement(Generic[T]):
             **kwargs,
         )
 
-        if (
-            not verified_metadata
-        ):  # metadata is not up-to-date, update it and check whether the files have been
-            # downloaded correctly
-            metadata = cls._collect_file_metadata(snapshot_dir, repo_files)
-
-            download_successful = cls._verify_files_from_metadata(
-                snapshot_dir, metadata, repo_files=[]
-            )
-            if not download_successful:
-                raise ValueError(
-                    "Files have been corrupted during downloading process. "
-                    "Please check your internet connection and try again."
-                )
-            cls._save_file_metadata(snapshot_dir, metadata)
+        if not verified_metadata:
+            cls._finalize_hf_download(snapshot_dir, repo_files)
 
         return result
 
