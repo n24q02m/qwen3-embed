@@ -267,7 +267,7 @@ class TestOnnxTextModelLoadOnnxModel:
         with (
             patch("qwen3_embed.common.onnx_model.ort") as mock_ort,
             patch(
-                "qwen3_embed.text.onnx_text_model.load_tokenizer",
+                "qwen3_embed.common.onnx_model.load_tokenizer",
                 return_value=(mock_tokenizer, mock_special),
             ),
         ):

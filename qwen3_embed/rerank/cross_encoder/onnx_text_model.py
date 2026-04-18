@@ -1,7 +1,6 @@
 import os
 from collections.abc import Iterable, Sequence
 from multiprocessing import get_all_start_methods
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -13,7 +12,6 @@ from qwen3_embed.common.onnx_model import (
     OnnxOutputContext,
     OnnxProvider,
 )
-from qwen3_embed.common.preprocessor_utils import load_tokenizer
 from qwen3_embed.common.types import Device, NumpyArray
 from qwen3_embed.common.utils import iter_batch
 from qwen3_embed.parallel_processor import ParallelWorkerPool
@@ -25,28 +23,6 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
     @classmethod
     def _get_worker_class(cls) -> type["TextRerankerWorker"]:
         raise NotImplementedError("Subclasses must implement this method")
-
-    def _load_onnx_model(
-        self,
-        model_dir: Path,
-        model_file: str,
-        threads: int | None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_id: int | None = None,
-        extra_session_options: dict[str, Any] | None = None,
-    ) -> None:
-        super()._load_onnx_model(
-            model_dir=model_dir,
-            model_file=model_file,
-            threads=threads,
-            providers=providers,
-            cuda=cuda,
-            device_id=device_id,
-            extra_session_options=extra_session_options,
-        )
-        self.tokenizer, _ = load_tokenizer(model_dir=model_dir)
-        assert self.tokenizer is not None
 
     def tokenize(self, pairs: list[tuple[str, str]], **_: Any) -> list[Encoding]:
         assert self.tokenizer is not None
