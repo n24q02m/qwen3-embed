@@ -64,3 +64,63 @@ class TestCustomModelRegistration:
                 sources=ModelSource(hf="test/duplicate"),
                 dim=256,
             )
+
+    def test_duplicate_model_case_insensitive_raises(self):
+        """Verify that duplicate checks are case-insensitive."""
+        TextEmbedding.add_custom_model(
+            model="test/Case-Insensitive",
+            pooling=PoolingType.CLS,
+            normalization=True,
+            sources=ModelSource(hf="test/Case-Insensitive"),
+            dim=256,
+        )
+        with pytest.raises(ValueError, match="already registered"):
+            TextEmbedding.add_custom_model(
+                model="test/case-insensitive",
+                pooling=PoolingType.CLS,
+                normalization=True,
+                sources=ModelSource(hf="test/case-insensitive"),
+                dim=256,
+            )
+
+    def test_conflict_with_builtin_model_raises(self):
+        """Verify that registration fails if it conflicts with a built-in model."""
+        builtin_model = "n24q02m/Qwen3-Embedding-0.6B-ONNX"
+        with pytest.raises(ValueError, match="already registered"):
+            TextEmbedding.add_custom_model(
+                model=builtin_model,
+                pooling=PoolingType.CLS,
+                normalization=True,
+                sources=ModelSource(hf="dummy/builtin-conflict"),
+                dim=256,
+            )
+
+    def test_register_model_with_full_metadata(self):
+        """Verify that all optional metadata parameters are correctly registered."""
+        model_name = "test/full-metadata"
+        sources = ModelSource(hf="test/full-metadata")
+        additional_files = ["config.json", "vocab.txt"]
+        TextEmbedding.add_custom_model(
+            model=model_name,
+            pooling=PoolingType.MEAN,
+            normalization=False,
+            sources=sources,
+            dim=128,
+            model_file="custom_model.onnx",
+            description="A test model with full metadata",
+            license="MIT",
+            size_in_gb=1.5,
+            additional_files=additional_files,
+        )
+
+        models = TextEmbedding.list_supported_models()
+        target_model = next(m for m in models if m["model"] == model_name)
+
+        assert target_model["model"] == model_name
+        assert target_model["sources"]["hf"] == "test/full-metadata"
+        assert target_model["dim"] == 128
+        assert target_model["model_file"] == "custom_model.onnx"
+        assert target_model["description"] == "A test model with full metadata"
+        assert target_model["license"] == "MIT"
+        assert target_model["size_in_GB"] == 1.5
+        assert target_model["additional_files"] == additional_files
