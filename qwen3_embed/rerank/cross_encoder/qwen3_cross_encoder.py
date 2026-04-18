@@ -202,40 +202,39 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         return self._onnx_embed_texts(texts, **kwargs)
 
     def _onnx_embed_texts(self, texts: list[str], **kwargs: Any) -> OnnxOutputContext:
-        """Tokenise and run model one text at a time (static batch=1 ONNX graph),
-        then concatenate the yes/no scores."""
+        """Tokenise and run model using batched inference (dynamic batch ONNX graph)."""
         if self.model is None:
             raise ValueError("Model not loaded. Please call load_onnx_model() first.")
         assert self.tokenizer is not None, "Tokenizer not loaded. Call load_onnx_model() first."
 
-        all_scores: list[NumpyArray] = []
         input_names = self.model_input_names or set()
         assert input_names is not None
 
-        # ⚡ Bolt: Use tokenizer.encode_batch(texts) for batched tokenization instead of a loop
+        # ⚡ Bolt: Use tokenizer.encode_batch(texts) for batched tokenization
         # The underlying Rust tokenizers library parallelizes processing for batches much faster.
         all_tokenized = self.tokenizer.encode_batch(texts)
 
-        for tokenized in all_tokenized:
-            onnx_input: dict[str, NumpyArray] = {
-                "input_ids": np.array([tokenized.ids], dtype=np.int64),
-            }
-            if "attention_mask" in input_names:
-                onnx_input["attention_mask"] = np.array([tokenized.attention_mask], dtype=np.int64)
-            if "token_type_ids" in input_names:
-                onnx_input["token_type_ids"] = np.zeros_like(
-                    onnx_input["input_ids"], dtype=np.int64
-                )
+        onnx_input: dict[str, NumpyArray] = {
+            "input_ids": np.array([t.ids for t in all_tokenized], dtype=np.int64),
+        }
+        if "attention_mask" in input_names:
+            onnx_input["attention_mask"] = np.array(
+                [t.attention_mask for t in all_tokenized], dtype=np.int64
+            )
+        if "token_type_ids" in input_names:
+            onnx_input["token_type_ids"] = np.zeros_like(onnx_input["input_ids"], dtype=np.int64)
 
-            onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
-            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
-            model_output = outputs[0]
-            if getattr(model_output, "dtype", None) == np.float16:
-                model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
-            scores = self._compute_yes_no_scores(model_output)  # type: ignore[invalid-argument-type]
-            all_scores.append(scores)
+        onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
+        outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
+        model_output = outputs[0]
 
-        return OnnxOutputContext(model_output=np.concatenate(all_scores))  # type: ignore[invalid-argument-type]
+        if getattr(model_output, "dtype", None) == np.float16:
+            model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
+
+        # _compute_yes_no_scores handles batching and returns (batch_size,) array
+        scores = self._compute_yes_no_scores(model_output)  # type: ignore[invalid-argument-type]
+
+        return OnnxOutputContext(model_output=scores)
 
     # ------------------------------------------------------------------
     # Worker
