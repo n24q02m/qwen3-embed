@@ -177,9 +177,16 @@ class ModelManagement(Generic[T]):
         if os.path.exists(output_path):
             return output_path
         # SECURITY: Explicitly enforce TLS verification to prevent accidental or malicious bypass via environment variables (like REQUESTS_CA_BUNDLE).
-        response = cls._get_session().get(url, stream=True, timeout=10, verify=True)
+        # SECURITY: Disable redirects to prevent Server-Side Request Forgery (SSRF) via open redirects in GCS.
+        response = cls._get_session().get(
+            url, stream=True, timeout=10, verify=True, allow_redirects=False
+        )
 
         # Handle HTTP errors
+        if response.status_code in (301, 302, 303, 307, 308):
+            raise ValueError(
+                f"Invalid URL: {url}. Redirects are not allowed for security reasons."
+            )
         if response.status_code == 403:
             raise PermissionError(
                 "Authentication Error: You do not have permission to access this resource. "
