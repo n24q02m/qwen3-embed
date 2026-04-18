@@ -432,8 +432,8 @@ class TestInputValidation:
         texts = ["abc", "abcdef", "valid"]
         iterator = iter_checked_texts(texts)
 
-        assert next(iterator) == "abc"
+        assert next(iter(iterator)) == "abc"
         with pytest.raises(
             ValueError, match="Input string exceeds maximum allowed length of 5 characters"
         ):
-            next(iterator)
+            next(iter(iterator))

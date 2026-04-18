@@ -370,22 +370,22 @@ class TestRerank:
     def test_rerank_uses_default_instruction(self):
         """Test rerank uses DEFAULT_INSTRUCTION when no instruction kwarg provided."""
         model = _make_model()
-        model._score_text = MagicMock(return_value=0.9)  # type: ignore[method-assign]
+        model._score_text = MagicMock(return_value=0.9)  # type: ignore
 
         list(model.rerank("q", ["doc"]))
 
-        call_arg = model._score_text.call_args[0][0]  # type: ignore[unresolved-attribute]
+        call_arg = getattr(model._score_text, 'call_args')[0][0]  # type: ignore[unresolved-attribute]
         assert DEFAULT_INSTRUCTION in call_arg
 
     def test_rerank_custom_instruction(self):
         """Test rerank passes custom instruction to _format_rerank_input."""
         model = _make_model()
-        model._score_text = MagicMock(return_value=0.9)  # type: ignore[method-assign]
+        model._score_text = MagicMock(return_value=0.9)  # type: ignore
         custom_instruction = "Custom scoring instruction."
 
         list(model.rerank("q", ["doc"], instruction=custom_instruction))
 
-        call_arg = model._score_text.call_args[0][0]  # type: ignore[unresolved-attribute]
+        call_arg = getattr(model._score_text, 'call_args')[0][0]  # type: ignore[unresolved-attribute]
         assert custom_instruction in call_arg
 
     def test_rerank_score_range(self):
@@ -422,22 +422,22 @@ class TestRerankPairs:
     def test_rerank_pairs_uses_default_instruction(self):
         """Test rerank_pairs uses DEFAULT_INSTRUCTION by default."""
         model = _make_model()
-        model._score_text = MagicMock(return_value=0.7)  # type: ignore[method-assign]
+        model._score_text = MagicMock(return_value=0.7)  # type: ignore
 
         list(model.rerank_pairs([("q", "d")]))
 
-        call_arg = model._score_text.call_args[0][0]  # type: ignore[unresolved-attribute]
+        call_arg = getattr(model._score_text, 'call_args')[0][0]  # type: ignore[unresolved-attribute]
         assert DEFAULT_INSTRUCTION in call_arg
 
     def test_rerank_pairs_custom_instruction(self):
         """Test rerank_pairs passes custom instruction."""
         model = _make_model()
-        model._score_text = MagicMock(return_value=0.7)  # type: ignore[method-assign]
+        model._score_text = MagicMock(return_value=0.7)  # type: ignore
         custom_instruction = "Rate this pair."
 
         list(model.rerank_pairs([("q", "d")], instruction=custom_instruction))
 
-        call_arg = model._score_text.call_args[0][0]  # type: ignore[unresolved-attribute]
+        call_arg = getattr(model._score_text, 'call_args')[0][0]  # type: ignore[unresolved-attribute]
         assert custom_instruction in call_arg
 
     def test_rerank_pairs_score_range(self):
@@ -458,11 +458,11 @@ class TestRerankPairs:
     def test_rerank_pairs_formats_input_correctly(self):
         """Test rerank_pairs formats each pair as a proper chat-template string."""
         model = _make_model()
-        model._score_text = MagicMock(return_value=0.5)  # type: ignore[method-assign]
+        model._score_text = MagicMock(return_value=0.5)  # type: ignore
 
         list(model.rerank_pairs([("test query", "test document")]))
 
-        call_arg = model._score_text.call_args[0][0]  # type: ignore[unresolved-attribute]
+        call_arg = getattr(model._score_text, 'call_args')[0][0]  # type: ignore[unresolved-attribute]
         assert "test query" in call_arg
         assert "test document" in call_arg
         assert SYSTEM_PROMPT in call_arg
