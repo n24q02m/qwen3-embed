@@ -8,8 +8,10 @@ import numpy as np
 import pytest
 
 from qwen3_embed.common.utils import (
+    check_input_length,
     define_cache_dir,
     iter_batch,
+    iter_checked_texts,
     last_token_pool,
     mean_pooling,
     normalize,
@@ -384,3 +386,54 @@ class TestDefineCacheDir:
         assert res == Path("/custom/arg/path")
         mock_mkdir.assert_called_once_with(mode=0o700, parents=True, exist_ok=True)
         mock_chmod.assert_called_once_with(0o700)
+
+
+class TestInputValidation:
+    """Tests for input length validation utilities."""
+
+    def test_check_input_length_valid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Should not raise error when within limits."""
+        import qwen3_embed.common.utils
+
+        monkeypatch.setattr(qwen3_embed.common.utils, "MAX_INPUT_LENGTH", 5)
+
+        # Exact limit
+        check_input_length("abcde")
+        # Below limit
+        check_input_length("abcd")
+
+    def test_check_input_length_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Should raise ValueError when limit is exceeded."""
+        import qwen3_embed.common.utils
+
+        monkeypatch.setattr(qwen3_embed.common.utils, "MAX_INPUT_LENGTH", 5)
+
+        with pytest.raises(
+            ValueError, match="Input string exceeds maximum allowed length of 5 characters"
+        ):
+            check_input_length("abcdef")
+
+    def test_iter_checked_texts_valid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Generator should yield all texts if they are within limits."""
+        import qwen3_embed.common.utils
+
+        monkeypatch.setattr(qwen3_embed.common.utils, "MAX_INPUT_LENGTH", 5)
+
+        texts = ["abc", "de", "fghij"]
+        result = list(iter_checked_texts(texts))
+        assert result == texts
+
+    def test_iter_checked_texts_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Generator should yield valid texts before raising ValueError on invalid one."""
+        import qwen3_embed.common.utils
+
+        monkeypatch.setattr(qwen3_embed.common.utils, "MAX_INPUT_LENGTH", 5)
+
+        texts = ["abc", "abcdef", "valid"]
+        iterator = iter_checked_texts(texts)
+
+        assert next(iterator) == "abc"
+        with pytest.raises(
+            ValueError, match="Input string exceeds maximum allowed length of 5 characters"
+        ):
+            next(iterator)
