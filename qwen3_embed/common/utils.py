@@ -102,7 +102,7 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
     if isinstance(iterable, list):
         for i in range(0, len(iterable), size):
             # ⚡ Bolt: Fast path for lists by avoiding redundant list() cast (~40% faster)
-            yield iterable[i : i + size]
+            yield iterable[i : i + size]  # type: ignore[misc, return-value]
         return
     if isinstance(iterable, tuple):
         for i in range(0, len(iterable), size):
