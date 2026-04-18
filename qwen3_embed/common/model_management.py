@@ -83,6 +83,17 @@ class ModelManagement(Generic[T]):
             delattr(cls, "_model_description_cache")
 
     @classmethod
+    def _check_model_exists(cls, model: str) -> None:
+        registered_models = cls._list_supported_models()
+        model_lower = model.lower()
+        for registered_model in registered_models:
+            if model_lower == registered_model.model.lower():
+                raise ValueError(
+                    f"Model {model} is already registered in {cls.__name__}, if you still want to add this model, "
+                    f"please use another model name"
+                )
+
+    @classmethod
     def _get_model_description(cls, model_name: str) -> T:
         """
         Gets the model description from the model_name.
