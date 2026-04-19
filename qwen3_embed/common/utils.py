@@ -99,7 +99,11 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
         return
 
     # Fast path for indexable sequences to avoid iterator overhead (~2x faster)
-    if isinstance(iterable, (list, tuple)):
+    if isinstance(iterable, list):
+        for i in range(0, len(iterable), size):
+            yield iterable[i : i + size]
+        return
+    elif isinstance(iterable, tuple):
         for i in range(0, len(iterable), size):
             yield list(iterable[i : i + size])
         return
