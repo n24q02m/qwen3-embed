@@ -126,6 +126,6 @@ def test_embedding_size_property(mocked_text_embedding):
         assert te.embedding_size == 123
         assert te._embedding_size == 123
 
-        TextEmbedding.get_embedding_size.reset_mock()
+        TextEmbedding.get_embedding_size.reset_mock()  # type: ignore[unresolved-attribute]  # type: ignore
         assert te.embedding_size == 123
-        TextEmbedding.get_embedding_size.assert_not_called()
+        TextEmbedding.get_embedding_size.assert_not_called()  # type: ignore[unresolved-attribute]  # type: ignore

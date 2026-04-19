@@ -114,7 +114,7 @@ class TestPostprocessingConfig:
     def test_immutable(self) -> None:
         cfg = PostprocessingConfig(pooling=PoolingType.MEAN, normalization=False)
         with pytest.raises((AttributeError, TypeError)):
-            cfg.pooling = PoolingType.CLS  # type: ignore[misc]
+            cfg.pooling = PoolingType.CLS  # type: ignore[misc]  # type: ignore
 
 
 # ===========================================================================

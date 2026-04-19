@@ -74,9 +74,9 @@ class OnnxTextModel(OnnxModel[T]):
         model_output = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
         result = model_output[0]
         if getattr(result, "dtype", None) == np.float16:
-            result = result.astype(np.float32)  # type: ignore[unresolved-attribute]
+            result = result.astype(np.float32)  # type: ignore[unresolved-attribute]  # type: ignore
         return OnnxOutputContext(
-            model_output=result,  # type: ignore[invalid-argument-type]
+            model_output=result,  # type: ignore[invalid-argument-type]  # type: ignore
             attention_mask=onnx_input.get("attention_mask", attention_mask),
             input_ids=onnx_input.get("input_ids", input_ids),
         )

@@ -374,7 +374,7 @@ class TestGGUFEmbeddingQueryEmbed:
         ):
             model = Qwen3TextEmbeddingGGUF()
             # Mock the embed method since query_embed calls it
-            model.embed = MagicMock()  # type: ignore[invalid-assignment]
+            model.embed = MagicMock()  # type: ignore[invalid-assignment]  # type: ignore
             return model
 
     def test_query_embed_single_string_default_task(self, model):

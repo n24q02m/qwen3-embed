@@ -265,7 +265,7 @@ class TestBuildOnnxInput:
         m = ConcreteCrossEncoderModel()
         m.model_input_names = {"input_ids"}
         encs = [_make_mock_encoding() for _ in range(3)]
-        result = m._build_onnx_input(encs)  # type: ignore[arg-type]
+        result = m._build_onnx_input(encs)  # type: ignore[arg-type]  # type: ignore
         assert result["input_ids"].shape[0] == 3
 
 
@@ -290,7 +290,7 @@ class TestOnnxEmbedPairs:
         loaded_model.model_input_names = {"input_ids"}
         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=1)
         loaded_model.onnx_embed_pairs(pairs)
-        loaded_model.model.run.assert_called_once()  # type: ignore[union-attr]
+        loaded_model.model.run.assert_called_once()  # type: ignore[union-attr]  # type: ignore
 
     def test_onnx_embed_delegates_to_onnx_embed_pairs(
         self, loaded_model: ConcreteCrossEncoderModel
@@ -321,7 +321,7 @@ class TestRerankDocuments:
             m.tokenizer = _make_mock_tokenizer(n_pairs=1)
             loaded.append(True)
 
-        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
+        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]  # type: ignore
         list(m._rerank_documents("q", ["d1"], batch_size=64))
         assert loaded
 
@@ -385,7 +385,7 @@ class TestRerankPairsIsSmallBranch:
             m.tokenizer = _make_mock_tokenizer(n_pairs=1)
             loaded.append(True)
 
-        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
+        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]  # type: ignore
         list(
             m._rerank_pairs(
                 model_name="m",
@@ -525,7 +525,7 @@ class TestTokenCount:
             m.tokenizer = tok
             loaded.append(True)
 
-        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
+        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]  # type: ignore
         count = m._token_count([("q", "d")])
         assert loaded
         assert count == 1
@@ -699,7 +699,7 @@ class TestOnnxTextCrossEncoderRerank:
     ) -> None:
         with patch.object(onnx_encoder, "_rerank_documents", wraps=onnx_encoder._rerank_documents):
             list(onnx_encoder.rerank("query", ["doc"], batch_size=32))
-            onnx_encoder._rerank_documents.assert_called_once()  # type: ignore[attr-defined]
+            onnx_encoder._rerank_documents.assert_called_once()  # type: ignore[attr-defined]  # type: ignore
 
 
 class TestOnnxTextCrossEncoderRerankPairs:
@@ -747,7 +747,7 @@ class TestOnnxTextCrossEncoderTokenCount:
     def test_token_count_delegates(self, onnx_encoder: OnnxTextCrossEncoder) -> None:
         enc = MagicMock()
         enc.attention_mask = [1, 1, 0, 0]
-        onnx_encoder.tokenizer.encode_batch.return_value = [enc]  # type: ignore[unresolved-attribute]
+        onnx_encoder.tokenizer.encode_batch.return_value = [enc]  # type: ignore[unresolved-attribute]  # type: ignore
         result = onnx_encoder.token_count([("q", "d")])
         assert result == 2
 
@@ -820,7 +820,7 @@ class TestPreprocessOnnxInput:
             calls.append(onnx_input)
             return original(onnx_input, **kwargs)
 
-        loaded_model._preprocess_onnx_input = spy  # type: ignore[method-assign]
+        loaded_model._preprocess_onnx_input = spy  # type: ignore[method-assign]  # type: ignore
         loaded_model.onnx_embed_pairs([("q", "d1"), ("q", "d2")])
         assert len(calls) == 1
 
