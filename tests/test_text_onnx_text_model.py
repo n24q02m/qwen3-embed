@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -302,7 +302,7 @@ class TestOnnxTextModelTokenCount:
             m.tokenizer = tok
             loaded.append(True)
 
-        m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
+        object.__setattr__(m, "load_onnx_model", _fake_load)
         count = m._token_count(["hello"])
         assert loaded
         assert count == 2
@@ -362,7 +362,7 @@ class TestOnnxTextModelEmbedDocuments:
             m.tokenizer = _make_mock_tokenizer()
             loaded.append(True)
 
-        m.load_onnx_model = fake_load  # type: ignore[invalid-assignment]
+        object.__setattr__(m, "load_onnx_model", fake_load)
         list(m._embed_documents("t", "/tmp", documents=["hi"]))
         assert loaded
 
@@ -563,7 +563,7 @@ class TestOnnxTextEmbeddingMethods:
 
     def test_token_count_sums_mask(self, onnx_emb: OnnxTextEmbedding) -> None:
         """Line 169."""
-        enc = onnx_emb.tokenizer.encode_batch.return_value[0]  # type: ignore[unresolved-attribute]
+        enc = cast("MagicMock", onnx_emb.tokenizer).encode_batch.return_value[0]
         enc.attention_mask = [1, 1, 0, 0]
         assert onnx_emb.token_count("hello") == 2
 

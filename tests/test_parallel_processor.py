@@ -483,8 +483,8 @@ def test_process_stream_timeout_raises_empty():
         # So we mock output_queue.get to raise Empty.
         pool.output_queue.get.side_effect = Empty()
 
-        pool.join_or_terminate = MagicMock()
-        pool.check_worker_health = MagicMock()
+        object.__setattr__(pool, "join_or_terminate", MagicMock())
+        object.__setattr__(pool, "check_worker_health", MagicMock())
 
         # Processing [1, 2] will cause 2 iterations. First iteration will pass if get_nowait raises Empty
         # (handled gracefully). Second iteration will trigger the else branch and raise the mock Empty.
@@ -501,15 +501,15 @@ def test_semi_ordered_map_emergency_shutdown_cancels_join_thread():
     pool = ParallelWorkerPool(num_workers=1, worker=SquareWorker)
 
     # Mock necessary methods to avoid actual processing
-    pool.start = MagicMock()
+    object.__setattr__(pool, "start", MagicMock())
 
     # We want emergency_shutdown to be True when we hit the finally block
     def mock_process_stream(*args, **kwargs):
         pool.emergency_shutdown = True
         yield from []
 
-    pool._process_stream = mock_process_stream
-    pool.join = MagicMock()
+    object.__setattr__(pool, "_process_stream", mock_process_stream)
+    object.__setattr__(pool, "join", MagicMock())
 
     # Setup mock queues before calling
     mock_input_queue = MagicMock()

@@ -1,7 +1,7 @@
 import os
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -19,7 +19,7 @@ EXPECTED_MODEL_PATH = os.path.join("dummy", "model.onnx")
 # Concrete implementation for testing OnnxModel
 class ConcreteOnnxModel(OnnxModel[Any]):
     def _get_worker_class(cls) -> type["EmbeddingWorker[Any]"]:
-        return MagicMock()
+        return cast("type[EmbeddingWorker[Any]]", MagicMock())
 
     def _post_process_onnx_output(self, output: OnnxOutputContext, **kwargs: Any) -> Iterable[Any]:
         return []

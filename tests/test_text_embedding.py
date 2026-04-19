@@ -122,10 +122,12 @@ def test_embedding_size_property(mocked_text_embedding):
     """Verify the embedding_size property caches and returns the correct value."""
     te = mocked_text_embedding
 
-    with patch.object(TextEmbedding, "get_embedding_size", return_value=123):
+    with patch.object(
+        TextEmbedding, "get_embedding_size", return_value=123
+    ) as mock_get_embedding_size:
         assert te.embedding_size == 123
         assert te._embedding_size == 123
 
-        TextEmbedding.get_embedding_size.reset_mock()
+        mock_get_embedding_size.reset_mock()
         assert te.embedding_size == 123
-        TextEmbedding.get_embedding_size.assert_not_called()
+        mock_get_embedding_size.assert_not_called()

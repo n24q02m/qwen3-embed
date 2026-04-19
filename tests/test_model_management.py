@@ -1162,7 +1162,7 @@ class TestDownloadFromGcs:
     def test_download_from_gcs_returns_none_on_exception(self, mock_logger, tmp_path):
         """If retrieve_model_gcs raises an exception, return None and log error."""
         with patch.object(
-            ModelManagement, "retrieve_model_gcs", side_effect=Exception("GCS Error")
+            ModelManagement, "retrieve_model_gcs", side_effect=ValueError("GCS Error")
         ):
             result = ModelManagement._download_from_gcs(
                 model_name="test/model",
@@ -1181,7 +1181,7 @@ class TestDownloadFromGcs:
     def test_download_from_gcs_no_logger_on_local_files_only(self, mock_logger, tmp_path):
         """If local_files_only is True, do not log error on exception."""
         with patch.object(
-            ModelManagement, "retrieve_model_gcs", side_effect=Exception("GCS Error")
+            ModelManagement, "retrieve_model_gcs", side_effect=ValueError("GCS Error")
         ):
             result = ModelManagement._download_from_gcs(
                 model_name="test/model",
