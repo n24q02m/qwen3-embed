@@ -158,15 +158,21 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     # Yes/No logit scoring
     # ------------------------------------------------------------------
     @staticmethod
-    def _compute_yes_no_scores(model_output: NumpyArray) -> NumpyArray:
+    def _compute_yes_no_scores(
+        model_output: NumpyArray,
+        attention_mask: NumpyArray | None = None,
+    ) -> NumpyArray:
         """Extract yes/no logits from causal LM output and compute scores.
 
         Supports two output shapes:
-        - Optimized: ``(batch, 2)`` — direct [no, yes] logits.
+        - Optimized: ``(batch, 2)`` — direct [no, yes] logits (YesNo variant).
         - Legacy: ``(batch, seq_len, vocab_size)`` — full causal LM output.
 
         Args:
             model_output: Raw model output.
+            attention_mask: Optional (batch, seq_len) mask. Required for full-vocab
+                model when the batch contains different-length sequences, so that
+                the last CONTENT token (not a trailing pad token) is scored per row.
 
         Returns:
             Relevance scores (P(yes)), shape ``(batch,)``.
@@ -175,8 +181,22 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
             # Optimized model: output is already (batch, 2) with [no, yes]
             yes_no_logits = model_output
         else:
-            # Legacy full-vocab model: (batch, seq_len, vocab_size)
-            last_logits: NumpyArray = model_output[:, -1, :]  # (batch, vocab_size)
+            # Full-vocab model: (batch, seq_len, vocab_size). Pick the last non-pad
+            # position per row. Fallback to position -1 only if mask is not provided
+            # (back-compat — single-row callers).
+            if attention_mask is not None:
+                batch_size = model_output.shape[0]
+                seq_len = attention_mask.shape[1]
+                # Handle both right-pad (pads trail) and left-pad (pads lead).
+                left_padding = bool(attention_mask[:, -1].all())
+                if left_padding:
+                    last_logits = model_output[:, -1, :]
+                else:
+                    last_idx = seq_len - 1 - np.argmax(attention_mask[:, ::-1], axis=1)
+                    last_logits = model_output[np.arange(batch_size), last_idx]
+            else:
+                last_logits = model_output[:, -1, :]
+
             yes_no_logits = np.stack(
                 [last_logits[:, TOKEN_NO_ID], last_logits[:, TOKEN_YES_ID]], axis=1
             )  # (batch, 2)
@@ -210,9 +230,38 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         input_names = self.model_input_names or set()
         assert input_names is not None
 
-        # ⚡ Bolt: Use tokenizer.encode_batch(texts) for batched tokenization
-        # The underlying Rust tokenizers library parallelizes processing for batches much faster.
-        all_tokenized = self.tokenizer.encode_batch(texts)
+        # Causal-LM reranker: the yes/no token lives at the LAST content position of every
+        # row. With the default right-padding, shorter rows push their last-content position
+        # away from the tensor's right edge, and INT8 dynamic quantization computes a single
+        # whole-tensor activation scale across the batch — mixed content+padding activations
+        # shift that scale and distort per-row logits at position seq_len-1. Left-padding
+        # collapses all last-content positions onto the right edge (position -1 for every
+        # row), which both simplifies pooling and keeps the quantizer's per-tensor scale
+        # dominated by real content rather than pad tokens.
+        #
+        # The tokenizer is a shared object across encoders in the process, so we flip the
+        # padding direction for the duration of this batch and restore it afterwards to
+        # avoid leaking the setting into the embedding path (which assumes right-padding).
+        padding = self.tokenizer.padding
+        original_direction: str | None = None
+        if padding is not None and padding.get("direction") != "left":
+            original_direction = padding.get("direction", "right")
+            self.tokenizer.enable_padding(
+                pad_id=padding.get("pad_id", 0),
+                pad_token=padding.get("pad_token", ""),
+                direction="left",
+            )
+
+        try:
+            # ⚡ Bolt: tokenizer.encode_batch(texts) parallelises via the Rust tokenizers lib.
+            all_tokenized = self.tokenizer.encode_batch(texts)
+        finally:
+            if original_direction is not None and padding is not None:
+                self.tokenizer.enable_padding(
+                    pad_id=padding.get("pad_id", 0),
+                    pad_token=padding.get("pad_token", ""),
+                    direction=original_direction,
+                )
 
         onnx_input: dict[str, NumpyArray] = {
             "input_ids": np.array([t.ids for t in all_tokenized], dtype=np.int64),
@@ -231,8 +280,10 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         if getattr(model_output, "dtype", None) == np.float16:
             model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
 
-        # _compute_yes_no_scores handles batching and returns (batch_size,) array
-        scores = self._compute_yes_no_scores(model_output)  # type: ignore[invalid-argument-type]
+        # _compute_yes_no_scores uses attention_mask to pick the last non-pad position
+        # per sequence (full-vocab model only; YesNo variant already collapses seq dim).
+        attention_mask = onnx_input.get("attention_mask")
+        scores = self._compute_yes_no_scores(model_output, attention_mask)  # type: ignore[invalid-argument-type]
 
         return OnnxOutputContext(model_output=scores)
 
