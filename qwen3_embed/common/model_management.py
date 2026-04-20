@@ -177,7 +177,14 @@ class ModelManagement(Generic[T]):
         if os.path.exists(output_path):
             return output_path
         # SECURITY: Explicitly enforce TLS verification to prevent accidental or malicious bypass via environment variables (like REQUESTS_CA_BUNDLE).
-        response = cls._get_session().get(url, stream=True, timeout=10, verify=True)
+        response = cls._get_session().get(
+            url, stream=True, timeout=10, verify=True, allow_redirects=False
+        )
+
+        if response.status_code in (301, 302, 303, 307, 308):
+            raise ValueError(
+                f"SSRF Prevention: Redirects are not allowed. Status code: {response.status_code}"
+            )
 
         # Handle HTTP errors
         if response.status_code == 403:

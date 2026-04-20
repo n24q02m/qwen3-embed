@@ -18,8 +18,8 @@ EXPECTED_MODEL_PATH = os.path.join("dummy", "model.onnx")
 
 # Concrete implementation for testing OnnxModel
 class ConcreteOnnxModel(OnnxModel[Any]):
-    def _get_worker_class(cls) -> type["EmbeddingWorker[Any]"]:
-        return MagicMock()
+    def _get_worker_class(cls) -> Any:
+        return MagicMock()  # type: ignore[return-value]
 
     def _post_process_onnx_output(self, output: OnnxOutputContext, **kwargs: Any) -> Iterable[Any]:
         return []

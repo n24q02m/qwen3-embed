@@ -215,6 +215,23 @@ class TestDownloadFileFromGcs:
             with pytest.raises(ValueError, match="Invalid URL"):
                 ModelManagement.download_file_from_gcs(payload, str(output))
 
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
+    def test_ssrf_redirects_rejected(self, mock_get_session, tmp_path):
+        """SSRF payloads attempting to bypass via open redirects must be rejected."""
+        mock_session = MagicMock()
+        mock_get = mock_session.get
+        mock_get_session.return_value = mock_session
+        response = Mock()
+        response.status_code = 302
+        mock_get.return_value = response
+
+        output = tmp_path / "model.onnx"
+        with pytest.raises(ValueError, match="SSRF Prevention: Redirects are not allowed."):
+            ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/test.onnx", str(output))
+
+        args, kwargs = mock_get.call_args
+        assert kwargs.get("allow_redirects") is False
+
     def test_invalid_hostname_raises_value_error(self, tmp_path):
         """Non-GCS hostnames must be rejected."""
         output = tmp_path / "model.onnx"
@@ -1162,7 +1179,7 @@ class TestDownloadFromGcs:
     def test_download_from_gcs_returns_none_on_exception(self, mock_logger, tmp_path):
         """If retrieve_model_gcs raises an exception, return None and log error."""
         with patch.object(
-            ModelManagement, "retrieve_model_gcs", side_effect=Exception("GCS Error")
+            ModelManagement, "retrieve_model_gcs", side_effect=ValueError("GCS Error")
         ):
             result = ModelManagement._download_from_gcs(
                 model_name="test/model",
@@ -1181,7 +1198,7 @@ class TestDownloadFromGcs:
     def test_download_from_gcs_no_logger_on_local_files_only(self, mock_logger, tmp_path):
         """If local_files_only is True, do not log error on exception."""
         with patch.object(
-            ModelManagement, "retrieve_model_gcs", side_effect=Exception("GCS Error")
+            ModelManagement, "retrieve_model_gcs", side_effect=ValueError("GCS Error")
         ):
             result = ModelManagement._download_from_gcs(
                 model_name="test/model",
