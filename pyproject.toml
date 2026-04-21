@@ -43,7 +43,7 @@ dev = [
     "pytest-xdist>=3.8.0",
     "syrupy>=5.1.0",
     "ruff>=0.15.11",
-    "ty>=0.0.31",
+    "ty>=0.0.32",
 ]
 
 [build-system]
