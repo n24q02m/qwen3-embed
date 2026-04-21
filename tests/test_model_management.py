@@ -138,6 +138,13 @@ class TestDownloadFileFromGcs:
 
     GCS_URL = "https://storage.googleapis.com"
 
+    def test_download_file_from_gcs_invalid_url(self, tmp_path):
+        """Verify that an invalid URL or HTTP URL raises a ValueError."""
+        with pytest.raises(ValueError, match="Only URLs from Google Cloud Storage are allowed"):
+            ModelManagement.download_file_from_gcs(
+                "http://storage.googleapis.com/test", str(tmp_path / "out")
+            )
+
     @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_download_file_from_gcs_uses_large_chunk_size(self, mock_get_session, tmp_path):
         """Verify that iter_content is called with the optimized chunk_size."""
