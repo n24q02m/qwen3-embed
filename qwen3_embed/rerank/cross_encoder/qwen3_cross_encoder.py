@@ -206,7 +206,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         diff = yes_no_logits[:, 0] - yes_no_logits[:, 1]
         with np.errstate(over="ignore"):
             np.exp(diff, out=diff)
-            diff += 1.0
+            diff = diff + 1.0
             np.reciprocal(diff, out=diff)
             return diff  # P(yes)
 
