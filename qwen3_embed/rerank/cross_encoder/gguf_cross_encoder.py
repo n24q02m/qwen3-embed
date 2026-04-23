@@ -191,9 +191,10 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         no_logit = last_logits[TOKEN_NO_ID]
 
         # Fast sigmoid calculation on logit difference (~1.7x faster)
-        diff = float(yes_logit) - float(no_logit)
+        # ⚡ Bolt: avoid unary minus overhead by reversing the difference
+        diff = float(no_logit) - float(yes_logit)
         with np.errstate(over="ignore"):
-            return 1.0 / (1.0 + np.exp(-diff))
+            return 1.0 / (1.0 + np.exp(diff))
 
     # ------------------------------------------------------------------
     # rerank / rerank_pairs
