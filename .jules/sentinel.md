@@ -1,0 +1,4 @@
+## 2023-10-24 - [Atomic File Writes for Cache Integrity]
+**Vulnerability:** The application was vulnerable to using incomplete or corrupted files. The `ModelManagement.download_file_from_gcs` function was writing directly to the final `output_path`. If a download was interrupted, the partially written file was left in place and on subsequent runs `os.path.exists` falsely identified the file as completely downloaded, leading to parsing failures or undefined behavior during processing.
+**Learning:** Writing directly to a target cache destination without temporary files can cause TOCTOU (Time Of Check to Time Of Use) or state corruption.
+**Prevention:** Implement atomic file writes when downloading resources or building local caches. Write to a temporary file (e.g., `output_path + ".tmp"`) first, then use `os.replace` to atomically move it into the destination path only after full transfer and verification are complete.

@@ -198,16 +198,18 @@ class ModelManagement(Generic[T]):
         if total_size_in_bytes == 0:
             logger.warning(f"Content-length header is missing or zero in the response from {url}.")
 
+        temp_output_path = f"{output_path}.tmp"
         calculated_md5 = cls._download_and_hash_file(
-            response, output_path, total_size_in_bytes, show_progress
+            response, temp_output_path, total_size_in_bytes, show_progress
         )
 
         if expected_md5 and expected_md5 != calculated_md5:
-            os.remove(output_path)
+            os.remove(temp_output_path)
             raise ValueError(
                 f"File integrity check failed: expected MD5 {expected_md5}, got {calculated_md5}"
             )
 
+        os.replace(temp_output_path, output_path)
         return output_path
 
     @classmethod
