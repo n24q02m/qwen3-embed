@@ -91,4 +91,4 @@ PSR v10 (workflow_dispatch) -> PyPI. Khong co Docker (la library, khong phai ser
 - YesNo reranker variant: ~10x it RAM (~598MB vs ~12GB).
 - Model cache: HuggingFace Hub cache directory.
 - Pre-commit: ruff lint + format, pytest unit only.
-- Infisical project: `d4e5eb5b-c70c-4eaa-8ab3-0df27b879af6`
+- Secrets: skret SSM namespace `/qwen3-embed/prod` (region `ap-southeast-1`)
