@@ -21,6 +21,7 @@ class TestModelManagementExtra:
             session = ModelManagement._get_session()
             assert isinstance(session, requests.Session)
             assert ModelManagement._session is session
+            assert session.trust_env is False
 
             # Second call should return the same session
             session2 = ModelManagement._get_session()
