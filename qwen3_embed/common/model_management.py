@@ -6,6 +6,7 @@ import os
 import shutil
 import tarfile
 import time
+import uuid
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Generic, TypeVar
@@ -198,15 +199,21 @@ class ModelManagement(Generic[T]):
         if total_size_in_bytes == 0:
             logger.warning(f"Content-length header is missing or zero in the response from {url}.")
 
-        calculated_md5 = cls._download_and_hash_file(
-            response, output_path, total_size_in_bytes, show_progress
-        )
-
-        if expected_md5 and expected_md5 != calculated_md5:
-            os.remove(output_path)
-            raise ValueError(
-                f"File integrity check failed: expected MD5 {expected_md5}, got {calculated_md5}"
+        tmp_output_path = f"{output_path}.{uuid.uuid4().hex}.tmp"
+        try:
+            calculated_md5 = cls._download_and_hash_file(
+                response, tmp_output_path, total_size_in_bytes, show_progress
             )
+
+            if expected_md5 and expected_md5 != calculated_md5:
+                raise ValueError(
+                    f"File integrity check failed: expected MD5 {expected_md5}, got {calculated_md5}"
+                )
+            os.replace(tmp_output_path, output_path)
+        finally:
+            if os.path.exists(tmp_output_path):
+                with contextlib.suppress(OSError):
+                    os.remove(tmp_output_path)
 
         return output_path
 
