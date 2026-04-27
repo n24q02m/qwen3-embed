@@ -37,6 +37,8 @@ class ModelManagement(Generic[T]):
         # Reusing the TCP connection avoids the overhead of repeated TCP/TLS handshakes
         if cls._session is None:
             cls._session = requests.Session()
+            # SECURITY: Enforce trust_env=False to prevent proxy/CA environment variable injection
+            cls._session.trust_env = False
         return cls._session
 
     @classmethod
