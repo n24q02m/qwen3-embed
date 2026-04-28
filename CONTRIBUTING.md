@@ -4,7 +4,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 
 ## Prerequisites
 
-- [Python](https://www.python.org/) 3.13+
+- [Python](https://www.python.org/) 3.11+ (per `pyproject.toml`; tested through 3.14)
 - [uv](https://docs.astral.sh/uv/)
 - [mise](https://mise.jdx.dev/) (recommended)
 
@@ -57,7 +57,7 @@ tests/
 - **Formatter**: [Ruff](https://docs.astral.sh/ruff/) (4-space indent, double quotes, 99 line width)
 - **Linting**: Ruff rules (E, F, I, UP, B, SIM)
 - **Type checker**: [ty](https://docs.astral.sh/ty/)
-- **Target**: Python 3.13
+- **Target**: Python 3.11+ (matches `requires-python` in `pyproject.toml`)
 
 ## Testing
 

@@ -1,7 +1,7 @@
 # CLAUDE.md - qwen3-embed
 
 Thu vien embedding va reranking Qwen3 qua ONNX Runtime va GGUF.
-Python >= 3.10 (ho tro 3.10-3.14), uv, hatchling. KHONG phai src layout -- package tai `qwen3_embed/`.
+Python >= 3.11 (ho tro 3.11-3.14), uv, hatchling. KHONG phai src layout -- package tai `qwen3_embed/`.
 Fork cua fastembed (Qdrant), chi giu Qwen3 models. License: Apache-2.0.
 
 ## Commands
@@ -84,7 +84,7 @@ PSR v10 (workflow_dispatch) -> PyPI. Khong co Docker (la library, khong phai ser
 ## Luu y
 
 - KHONG phai src layout: package truc tiep tai `qwen3_embed/`, khong phai `src/qwen3_embed/`.
-- `requires-python = ">=3.10"` -- ho tro rong hon cac project khac (3.10-3.14).
+- `requires-python = ">=3.11"` -- ho tro rong hon cac project khac (3.11-3.14).
 - Optional dependency: `pip install qwen3-embed[gguf]` cho llama-cpp-python.
 - GPU auto-detect: ONNX (onnxruntime-gpu/directml), GGUF (llama-cpp-python CUDA build).
 - Last-token pooling (khong phai mean pooling) + MRL support (truncate 32-1024 dims).
