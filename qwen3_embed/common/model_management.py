@@ -6,6 +6,7 @@ import os
 import shutil
 import tarfile
 import time
+import urllib.parse
 import uuid
 from copy import deepcopy
 from pathlib import Path
@@ -171,7 +172,8 @@ class ModelManagement(Generic[T]):
             str: The path to the downloaded file.
         """
 
-        if not url.startswith("https://storage.googleapis.com/"):
+        parsed_url = urllib.parse.urlparse(url)
+        if parsed_url.scheme != "https" or parsed_url.netloc != "storage.googleapis.com":
             raise ValueError(
                 f"Invalid URL: {url}. Only URLs from Google Cloud Storage are allowed."
             )
