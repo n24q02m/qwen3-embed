@@ -145,6 +145,13 @@ class TestDownloadFileFromGcs:
                 "http://storage.googleapis.com/test", str(tmp_path / "out")
             )
 
+    def test_download_file_from_gcs_ssrf_bypass(self, tmp_path):
+        """Verify that an SSRF bypass URL with auth syntax raises a ValueError."""
+        with pytest.raises(ValueError, match="Only URLs from Google Cloud Storage are allowed"):
+            ModelManagement.download_file_from_gcs(
+                "https://storage.googleapis.com@127.0.0.1/test", str(tmp_path / "out")
+            )
+
     @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_download_file_from_gcs_uses_large_chunk_size(self, mock_get_session, tmp_path):
         """Verify that iter_content is called with the optimized chunk_size."""
