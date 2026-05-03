@@ -418,6 +418,7 @@ class TestDecompressToCache:
     def test_decompress_bomb_prevention(self, tmp_path):
         """Test that decompression is aborted if total uncompressed size exceeds limit."""
         import tarfile
+
         tar_path = tmp_path / "bomb.tar.gz"
         cache_dir = tmp_path / "out_bomb"
         cache_dir.mkdir()
@@ -428,6 +429,7 @@ class TestDecompressToCache:
 
         # Mock tarfile.open to return a fake tar object
         from unittest.mock import MagicMock, patch
+
         with patch("qwen3_embed.common.model_management.tarfile.open") as mock_tar_open:
             mock_tar = MagicMock()
             mock_tar_open.return_value.__enter__.return_value = mock_tar
