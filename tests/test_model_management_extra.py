@@ -104,6 +104,8 @@ class TestModelManagementExtra:
             # Mock getmembers to return a list of members
             member = MagicMock()
             member.name = "file.txt"
+            member.size = 0
+            member.isfile.return_value = True
             member.issym.return_value = False
             member.islnk.return_value = False
             mock_tar.getmembers.return_value = [member]

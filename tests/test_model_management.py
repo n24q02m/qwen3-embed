@@ -415,6 +415,37 @@ class TestDownloadFileFromGcs:
 class TestDecompressToCache:
     """Tests for decompress_to_cache method."""
 
+    def test_decompress_bomb_prevention(self, tmp_path):
+        """Test that decompression is aborted if total uncompressed size exceeds limit."""
+        import tarfile
+        import io
+        tar_path = tmp_path / "bomb.tar.gz"
+        cache_dir = tmp_path / "out_bomb"
+        cache_dir.mkdir()
+
+        # Create a tiny dummy file to pass `os.path.isfile`
+        with open(tar_path, "wb") as f:
+            f.write(b"dummy")
+
+        # Mock tarfile.open to return a fake tar object
+        from unittest.mock import patch, MagicMock
+        with patch("qwen3_embed.common.model_management.tarfile.open") as mock_tar_open:
+            mock_tar = MagicMock()
+            mock_tar_open.return_value.__enter__.return_value = mock_tar
+
+            # Create a mock member
+            mock_member = MagicMock()
+            mock_member.name = "huge_file.txt"
+            mock_member.size = 21 * 1024 * 1024 * 1024  # 21 GB
+            mock_member.isfile.return_value = True
+            mock_member.issym.return_value = False
+            mock_member.islnk.return_value = False
+
+            mock_tar.getmembers.return_value = [mock_member]
+
+            with pytest.raises(tarfile.TarError, match="Decompression bomb detected"):
+                ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
     def test_decompress_nonexistent_file(self, tmp_path):
         nonexistent_file = tmp_path / "nonexistent.tar.gz"
         with pytest.raises(ValueError, match="does not exist or is not a file"):
