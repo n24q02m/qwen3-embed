@@ -104,12 +104,14 @@ class TestModelManagementExtra:
             # Mock getmembers to return a list of members
             member = MagicMock()
             member.name = "file.txt"
+            member.size = 0
             member.issym.return_value = False
             member.islnk.return_value = False
             mock_tar.getmembers.return_value = [member]
 
             # Ensure hasattr(tarfile, 'data_filter') returns False
             del mock_tarfile_mod.data_filter
+            mock_tarfile_mod.TarError = tarfile.TarError
 
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 

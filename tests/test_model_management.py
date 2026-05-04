@@ -452,6 +452,34 @@ class TestDecompressToCache:
         assert result == str(cache_dir)
         assert (cache_dir / "model.onnx").exists()
 
+    @patch("tarfile.open")
+    def test_decompress_tar_bomb_prevention(self, mock_tarfile_open, tmp_path):
+        """Extraction fails and removes cache dir if total uncompressed size exceeds 20GB."""
+        tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
+        cache_dir = tmp_path / "bomb_out"
+        cache_dir.mkdir()
+
+        # Mock tar.getmembers() to yield a member with a massive size
+        mock_member = MagicMock(spec=tarfile.TarInfo)
+        mock_member.name = "massive.bin"
+        mock_member.size = 21 * 1024 * 1024 * 1024  # 21 GB
+        mock_member.issym.return_value = False
+        mock_member.islnk.return_value = False
+
+        mock_tar = MagicMock()
+        mock_tar.getmembers.return_value = [mock_member]
+
+        # Setup context manager mock for tarfile.open
+        mock_tarfile_open.return_value.__enter__.return_value = mock_tar
+
+        with pytest.raises(
+            tarfile.TarError,
+            match="Decompression bomb detected: uncompressed size exceeds 20GB limit",
+        ):
+            ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
+        assert not cache_dir.exists()
+
     def test_decompress_extraction_failure_removes_cache_dir(self, tmp_path):
         """If tarfile extraction fails mid-way, the cache directory is completely removed."""
         cache_dir = tmp_path / "cache_dir"

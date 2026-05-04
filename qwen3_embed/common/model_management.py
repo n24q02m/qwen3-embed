@@ -455,8 +455,15 @@ class ModelManagement(Generic[T]):
                 target_dir = os.path.abspath(cache_dir)
 
                 safe_members = []
+                total_size = 0
+                max_size = 20 * 1024 * 1024 * 1024  # 20 GB
                 for member in tar.getmembers():
                     cls._validate_tar_member(member, target_dir)
+                    total_size += member.size
+                    if total_size > max_size:
+                        raise tarfile.TarError(
+                            "Decompression bomb detected: uncompressed size exceeds 20GB limit"
+                        )
                     safe_members.append(member)
 
                 if hasattr(tarfile, "data_filter"):
