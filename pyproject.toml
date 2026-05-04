@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gguf = ["llama-cpp-python>=0.3.21"]
+gguf = ["llama-cpp-python>=0.3.22"]
 
 [project.urls]
 Homepage = "https://github.com/n24q02m/qwen3-embed"
