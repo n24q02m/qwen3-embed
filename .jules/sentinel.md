@@ -6,3 +6,8 @@
 **Vulnerability:** The `download_file_from_gcs` method validated URLs using `url.startswith('https://storage.googleapis.com/')`. This could be bypassed using credentials syntax (e.g., `https://storage.googleapis.com@127.0.0.1/`), allowing an attacker to fetch arbitrary internal resources (Server-Side Request Forgery).
 **Learning:** String matching like `startswith` is insufficient for URL validation because parsers handle auth components differently.
 **Prevention:** Always parse URLs using `urllib.parse.urlparse` and validate the `scheme` and `netloc` (or `hostname`) independently.
+
+## 2026-05-05 - [Decompression Bomb Vulnerability]
+**Vulnerability:** The `decompress_to_cache` method did not restrict the total uncompressed size of a tar archive. A malicious tar file (tar bomb) could consume excessive disk space or memory.
+**Learning:** Extracted tar members can expand to gigabytes or terabytes from a small archive, resulting in Resource Exhaustion (DoS).
+**Prevention:** Track the running total of `.size` properties from `tar.getmembers()` and raise an exception if it exceeds a maximum safe limit (e.g., 20 GB).
