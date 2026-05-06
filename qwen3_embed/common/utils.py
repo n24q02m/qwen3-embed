@@ -111,10 +111,8 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
         return
 
     source_iter = iter(iterable)
-    while True:
-        b = list(islice(source_iter, size))
-        if len(b) == 0:
-            break
+    # ⚡ Bolt: Fast batch iteration using walrus operator to avoid explicit length check overhead
+    while b := list(islice(source_iter, size)):
         yield b
 
 
