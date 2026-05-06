@@ -106,7 +106,9 @@ class TestModelManagementExtra:
             member.name = "file.txt"
             member.issym.return_value = False
             member.islnk.return_value = False
+            member.size = 0
             mock_tar.getmembers.return_value = [member]
+            mock_tarfile_mod.TarError = tarfile.TarError
 
             # Ensure hasattr(tarfile, 'data_filter') returns False
             del mock_tarfile_mod.data_filter
