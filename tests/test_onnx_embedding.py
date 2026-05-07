@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
-from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxEmbeddingConfig, OnnxOutputContext
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
 
 _MODEL_NAME = "test-org/test-model"
@@ -85,15 +85,18 @@ def test_onnx_text_embedding_embed(
 
     mock_embed_documents.assert_called_once()
     kwargs = mock_embed_documents.call_args.kwargs
-    assert kwargs["model_name"] == _MODEL_NAME
-    assert (
-        kwargs["cache_dir"] == str(Path("/tmp/cache").absolute())
+    assert kwargs["documents"] == docs
+    config = kwargs["config"]
+    assert isinstance(config, OnnxEmbeddingConfig)
+    assert config.model_name == _MODEL_NAME
+    expected_cache_dir = (
+        str(Path("/tmp/cache").absolute())
         if Path("/tmp/cache").is_absolute()
         else str(Path("/tmp/cache").resolve())
     )
-    assert kwargs["documents"] == docs
-    assert kwargs["batch_size"] == 32
-    assert kwargs["parallel"] == 4
+    assert config.cache_dir == expected_cache_dir
+    assert config.batch_size == 32
+    assert config.parallel == 4
 
 
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding._select_exposed_session_options")
