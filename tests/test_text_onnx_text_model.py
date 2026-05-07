@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
-from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxInferenceConfig, OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.text.onnx_embedding import (
     OnnxTextEmbedding,
@@ -341,14 +341,16 @@ class TestOnnxTextModelEmbedDocuments:
 
     def test_single_string_becomes_one_result(self) -> None:
         m = self._loaded(1)
-        results = list(m._embed_documents("t", "/tmp", documents="hello"))
+        config = OnnxInferenceConfig(model_name="t", cache_dir="/tmp")
+        results = list(m._embed_documents(documents="hello", config=config))
         assert len(results) == 1
 
     def test_small_list_all_results(self) -> None:
         # _post_process_onnx_output yields the whole batch array as one item,
         # so one batch of 2 docs produces 1 result (a (2, 4) array).
         m = self._loaded(2)
-        results = list(m._embed_documents("t", "/tmp", documents=["a", "b"]))
+        config = OnnxInferenceConfig(model_name="t", cache_dir="/tmp")
+        results = list(m._embed_documents(documents=["a", "b"], config=config))
         assert len(results) == 1
         assert results[0].shape == (2, 4)
 
@@ -363,7 +365,8 @@ class TestOnnxTextModelEmbedDocuments:
             loaded.append(True)
 
         m.load_onnx_model = fake_load  # type: ignore
-        list(m._embed_documents("t", "/tmp", documents=["hi"]))
+        config = OnnxInferenceConfig(model_name="t", cache_dir="/tmp")
+        list(m._embed_documents(documents=["hi"], config=config))
         assert loaded
 
     def _parallel_docs(self) -> list[str]:
@@ -376,11 +379,10 @@ class TestOnnxTextModelEmbedDocuments:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             mock_cls.return_value = pool
-            list(
-                m._embed_documents(
-                    "t", "/tmp", documents=self._parallel_docs(), batch_size=2, parallel=0
-                )
+            config = OnnxInferenceConfig(
+                model_name="t", cache_dir="/tmp", batch_size=2, parallel=0
             )
+            list(m._embed_documents(documents=self._parallel_docs(), config=config))
         mock_cls.assert_called_once()
 
     def test_parallel_positive_sets_num_workers(self) -> None:
@@ -390,11 +392,10 @@ class TestOnnxTextModelEmbedDocuments:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             mock_cls.return_value = pool
-            list(
-                m._embed_documents(
-                    "t", "/tmp", documents=self._parallel_docs(), batch_size=2, parallel=3
-                )
+            config = OnnxInferenceConfig(
+                model_name="t", cache_dir="/tmp", batch_size=2, parallel=3
             )
+            list(m._embed_documents(documents=self._parallel_docs(), config=config))
         call_kwargs = mock_cls.call_args[1]
         assert call_kwargs["num_workers"] == 3
 
@@ -405,16 +406,14 @@ class TestOnnxTextModelEmbedDocuments:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             mock_cls.return_value = pool
-            list(
-                m._embed_documents(
-                    "t",
-                    "/tmp",
-                    documents=self._parallel_docs(),
-                    batch_size=2,
-                    parallel=2,
-                    extra_session_options={"enable_cpu_mem_arena": False},
-                )
+            config = OnnxInferenceConfig(
+                model_name="t",
+                cache_dir="/tmp",
+                batch_size=2,
+                parallel=2,
+                extra_session_options={"enable_cpu_mem_arena": False},
             )
+            list(m._embed_documents(documents=self._parallel_docs(), config=config))
         mock_cls.assert_called_once()
 
     def test_parallel_uses_forkserver_or_spawn(self) -> None:
@@ -425,11 +424,10 @@ class TestOnnxTextModelEmbedDocuments:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             mock_cls.return_value = pool
-            list(
-                m._embed_documents(
-                    "t", "/tmp", documents=self._parallel_docs(), batch_size=2, parallel=1
-                )
+            config = OnnxInferenceConfig(
+                model_name="t", cache_dir="/tmp", batch_size=2, parallel=1
             )
+            list(m._embed_documents(documents=self._parallel_docs(), config=config))
         call_kwargs = mock_cls.call_args[1]
         assert call_kwargs["start_method"] in ("forkserver", "spawn")
 

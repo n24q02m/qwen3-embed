@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
-from qwen3_embed.common.onnx_model import OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxInferenceConfig, OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import (
     OnnxTextCrossEncoder,
@@ -335,43 +335,26 @@ class TestRerankPairsIsSmallBranch:
         m.model = _make_mock_session(n_pairs=1)
         m.model_input_names = {"input_ids"}
         m.tokenizer = _make_mock_tokenizer(n_pairs=1)
-        scores = list(
-            m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
-                pairs=[("query", "doc")],
-                batch_size=64,
-            )
-        )
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp", batch_size=64)
+        scores = list(m._rerank_pairs(pairs=[("query", "doc")], config=config))
         assert len(scores) == 1
         assert all(isinstance(s, float) for s in scores)
 
     def test_list_smaller_than_batch_size(self, loaded_model: ConcreteCrossEncoderModel) -> None:
         pairs = [("q", "d1"), ("q", "d2")]
         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=2)
-        scores = list(
-            loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
-                pairs=pairs,
-                batch_size=64,  # larger than len(pairs)=2 => is_small
-            )
-        )
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp", batch_size=64)
+        scores = list(loaded_model._rerank_pairs(pairs=pairs, config=config))
         assert len(scores) == 2
 
     def test_parallel_none_uses_direct_path(self, loaded_model: ConcreteCrossEncoderModel) -> None:
         pairs = [("q", f"d{i}") for i in range(5)]
         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=5)
         loaded_model.model = _make_mock_session(n_pairs=5)
-        scores = list(
-            loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
-                pairs=pairs,
-                batch_size=10,
-                parallel=None,
-            )
+        config = OnnxInferenceConfig(
+            model_name="m", cache_dir="/tmp", batch_size=10, parallel=None
         )
+        scores = list(loaded_model._rerank_pairs(pairs=pairs, config=config))
         assert len(scores) == 5
 
     def test_loads_model_when_none_in_small_branch(self) -> None:
@@ -386,14 +369,8 @@ class TestRerankPairsIsSmallBranch:
             loaded.append(True)
 
         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
-        list(
-            m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
-                pairs=[("q", "d")],
-                batch_size=64,
-            )
-        )
+        config = OnnxInferenceConfig(model_name="m", cache_dir="/tmp", batch_size=64)
+        list(m._rerank_pairs(pairs=[("q", "d")], config=config))
         assert loaded
 
 
@@ -409,15 +386,10 @@ class TestRerankPairsParallelBranch:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
-            list(
-                loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
-                    pairs=self._large_pairs(),
-                    batch_size=2,
-                    parallel=0,
-                )
+            config = OnnxInferenceConfig(
+                model_name="m", cache_dir="/tmp", batch_size=2, parallel=0
             )
+            list(loaded_model._rerank_pairs(pairs=self._large_pairs(), config=config))
         cls.assert_called_once()
 
     def test_parallel_positive_creates_pool_with_num_workers(
@@ -428,15 +400,10 @@ class TestRerankPairsParallelBranch:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
-            list(
-                loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
-                    pairs=self._large_pairs(),
-                    batch_size=2,
-                    parallel=3,
-                )
+            config = OnnxInferenceConfig(
+                model_name="m", cache_dir="/tmp", batch_size=2, parallel=3
             )
+            list(loaded_model._rerank_pairs(pairs=self._large_pairs(), config=config))
         call_kw = cls.call_args[1]
         assert call_kw["num_workers"] == 3
 
@@ -448,15 +415,10 @@ class TestRerankPairsParallelBranch:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
-            list(
-                loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
-                    pairs=self._large_pairs(),
-                    batch_size=2,
-                    parallel=2,
-                )
+            config = OnnxInferenceConfig(
+                model_name="m", cache_dir="/tmp", batch_size=2, parallel=2
             )
+            list(loaded_model._rerank_pairs(pairs=self._large_pairs(), config=config))
         call_kw = cls.call_args[1]
         assert call_kw["start_method"] in ("forkserver", "spawn")
 
@@ -468,16 +430,14 @@ class TestRerankPairsParallelBranch:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
-            list(
-                loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
-                    pairs=self._large_pairs(),
-                    batch_size=2,
-                    parallel=2,
-                    extra_session_options={"enable_cpu_mem_arena": False},
-                )
+            config = OnnxInferenceConfig(
+                model_name="m",
+                cache_dir="/tmp",
+                batch_size=2,
+                parallel=2,
+                extra_session_options={"enable_cpu_mem_arena": False},
             )
+            list(loaded_model._rerank_pairs(pairs=self._large_pairs(), config=config))
         cls.assert_called_once()
         # The extra session options get passed via pool.ordered_map kwargs
         _, ordered_map_kwargs = pool.ordered_map.call_args

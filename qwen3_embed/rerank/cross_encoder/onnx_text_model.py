@@ -1,5 +1,5 @@
 import os
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from multiprocessing import get_all_start_methods
 from typing import Any
 
@@ -8,11 +8,11 @@ from tokenizers import Encoding
 
 from qwen3_embed.common.onnx_model import (
     EmbeddingWorker,
+    OnnxInferenceConfig,
     OnnxModel,
     OnnxOutputContext,
-    OnnxProvider,
 )
-from qwen3_embed.common.types import Device, NumpyArray
+from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.common.utils import iter_batch
 from qwen3_embed.parallel_processor import ParallelWorkerPool
 
@@ -66,17 +66,8 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
 
     def _rerank_pairs(
         self,
-        model_name: str,
-        cache_dir: str,
         pairs: Iterable[tuple[str, str]],
-        batch_size: int,
-        parallel: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        local_files_only: bool = False,
-        specific_model_path: str | None = None,
-        extra_session_options: dict[str, Any] | None = None,
+        config: OnnxInferenceConfig,
         **kwargs: Any,
     ) -> Iterable[float]:
         is_small = False
@@ -85,39 +76,40 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
             pairs = [pairs]  # type: ignore[invalid-assignment]
             is_small = True
 
-        if isinstance(pairs, list) and len(pairs) < batch_size:
+        if isinstance(pairs, list) and len(pairs) < config.batch_size:
             is_small = True
 
-        if parallel is None or is_small:
+        if config.parallel is None or is_small:
             if not hasattr(self, "model") or self.model is None:
                 self.load_onnx_model()
-            for batch in iter_batch(pairs, batch_size):
+            for batch in iter_batch(pairs, config.batch_size):
                 yield from self._post_process_onnx_output(self.onnx_embed_pairs(batch, **kwargs))
         else:
+            parallel = config.parallel
             if parallel == 0:
                 parallel = os.cpu_count()
 
             start_method = "forkserver" if "forkserver" in get_all_start_methods() else "spawn"
             params = {
-                "model_name": model_name,
-                "cache_dir": cache_dir,
-                "providers": providers,
-                "local_files_only": local_files_only,
-                "specific_model_path": specific_model_path,
+                "model_name": config.model_name,
+                "cache_dir": config.cache_dir,
+                "providers": config.providers,
+                "local_files_only": config.local_files_only,
+                "specific_model_path": config.specific_model_path,
                 **kwargs,
             }
 
-            if extra_session_options is not None:
-                params.update(extra_session_options)
+            if config.extra_session_options is not None:
+                params.update(config.extra_session_options)
 
             pool = ParallelWorkerPool(
                 num_workers=parallel or 1,
                 worker=self._get_worker_class(),
-                cuda=cuda,
-                device_ids=device_ids,
+                cuda=config.cuda,
+                device_ids=config.device_ids,
                 start_method=start_method,
             )
-            for batch in pool.ordered_map(iter_batch(pairs, batch_size), **params):
+            for batch in pool.ordered_map(iter_batch(pairs, config.batch_size), **params):
                 yield from self._post_process_onnx_output(batch)
 
     def _post_process_onnx_output(
