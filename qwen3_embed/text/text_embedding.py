@@ -2,7 +2,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
 
-from qwen3_embed.common.model_description import DenseModelDescription, ModelSource, PoolingType
+from qwen3_embed.common.model_description import DenseModelDescription, PoolingType
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.gguf_embedding import Qwen3TextEmbeddingGGUF

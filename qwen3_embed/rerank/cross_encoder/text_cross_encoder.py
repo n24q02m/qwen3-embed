@@ -5,7 +5,6 @@ from typing import Any
 from qwen3_embed.common import OnnxProvider
 from qwen3_embed.common.model_description import (
     BaseModelDescription,
-    ModelSource,
 )
 from qwen3_embed.common.types import Device
 from qwen3_embed.rerank.cross_encoder.custom_text_cross_encoder import CustomTextCrossEncoder
