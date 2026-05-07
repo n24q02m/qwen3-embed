@@ -79,8 +79,5 @@ class TestPooledNormalizedEmbeddingWorker:
         worker.init_embedding(model_name=model_name, cache_dir=cache_dir, extra=extra_arg)
 
         mock_pooled_normalized_embedding.assert_called_once_with(
-            model_name=model_name,
-            cache_dir=cache_dir,
-            threads=1,
-            extra=extra_arg
+            model_name=model_name, cache_dir=cache_dir, threads=1, extra=extra_arg
         )
