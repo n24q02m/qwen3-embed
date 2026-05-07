@@ -9,14 +9,14 @@ Requires optional dependency: pip install qwen3-embed[gguf]
 from __future__ import annotations
 
 import itertools
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
-from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
+from qwen3_embed.common.types import Device, NumpyArray
 from qwen3_embed.common.utils import define_cache_dir
 from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
@@ -88,13 +88,20 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
         model_name: str = "n24q02m/Qwen3-Embedding-0.6B-GGUF",
         cache_dir: str | None = None,
         threads: int | None = None,
-        # Accept but ignore ONNX-specific args for compatibility with TextEmbedding dispatcher
-        providers: Sequence[OnnxProvider] | None = None,  # noqa: ARG002
         cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,  # noqa: ARG002
-        lazy_load: bool = False,  # noqa: ARG002
         **kwargs: Any,
     ) -> None:
+        """
+        Initialize the Qwen3 GGUF Embedding model.
+
+        Args:
+            model_name: The name of the model to use.
+            cache_dir: The path to the cache directory.
+            threads: The number of threads to use.
+            cuda: Whether to use CUDA for inference.
+            **kwargs: Additional arguments, including those for compatibility with the
+                TextEmbedding dispatcher (e.g., providers, device_ids, lazy_load).
+        """
         _check_llama_cpp()
         super().__init__(model_name, cache_dir, threads, **kwargs)
 
@@ -144,7 +151,7 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
             documents: Single document string or iterable of documents.
             batch_size: Number of documents to encode at once.
             parallel: Ignored (single-threaded for GGUF).
-            **kwargs: ``dim`` (int) enables MRL truncation.
+            **kwargs: dim (int) enables MRL truncation.
 
         Yields:
             NumpyArray: L2-normalised embeddings, one per document.
@@ -178,8 +185,8 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
 
         Args:
             query: Single query string or iterable of queries.
-            **kwargs: ``task`` (str) overrides default retrieval instruction.
-                ``dim`` (int) enables MRL truncation.
+            **kwargs: task (str) overrides default retrieval instruction.
+                dim (int) enables MRL truncation.
 
         Yields:
             NumpyArray: L2-normalised query embeddings.
@@ -198,7 +205,7 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
 
         Args:
             texts: Iterable of passage strings.
-            **kwargs: ``dim`` (int) enables MRL truncation.
+            **kwargs: dim (int) enables MRL truncation.
 
         Yields:
             NumpyArray: L2-normalised passage embeddings.
