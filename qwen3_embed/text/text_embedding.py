@@ -66,39 +66,23 @@ class TextEmbedding(TextEmbeddingBase):
     @classmethod
     def add_custom_model(
         cls,
-        model: str,
+        model_description: DenseModelDescription,
         pooling: PoolingType,
         normalization: bool,
-        sources: ModelSource,
-        dim: int,
-        model_file: str = "onnx/model.onnx",
-        description: str = "",
-        license: str = "",
-        size_in_gb: float = 0.0,
-        additional_files: list[str] | None = None,
     ) -> None:
         cls._build_caches()
         assert cls._embedding_type_cache is not None
 
-        model_lower = model.lower()
+        model_lower = model_description.model.lower()
         if model_lower in cls._embedding_type_cache:
             raise ValueError(
-                f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
+                f"Model {model_description.model} is already registered in TextEmbedding, if you still want to add this model, "
                 f"please use another model name"
             )
 
         cls._clear_model_cache()
         CustomTextEmbedding.add_model(
-            DenseModelDescription(
-                model=model,
-                sources=sources,
-                dim=dim,
-                model_file=model_file,
-                description=description,
-                license=license,
-                size_in_GB=size_in_gb,
-                additional_files=additional_files or [],
-            ),
+            model_description,
             pooling=pooling,
             normalization=normalization,
         )

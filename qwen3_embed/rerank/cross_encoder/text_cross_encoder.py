@@ -175,36 +175,20 @@ class TextCrossEncoder(TextCrossEncoderBase):
     @classmethod
     def add_custom_model(
         cls,
-        model: str,
-        sources: ModelSource,
-        model_file: str = "onnx/model.onnx",
-        description: str = "",
-        license: str = "",
-        size_in_gb: float = 0.0,
-        additional_files: list[str] | None = None,
+        model_description: BaseModelDescription,
     ) -> None:
         cls._build_caches()
         assert cls._encoder_type_cache is not None
 
-        model_lower = model.lower()
+        model_lower = model_description.model.lower()
         if model_lower in cls._encoder_type_cache:
             raise ValueError(
-                f"Model {model} is already registered in CrossEncoderModel, if you still want to add this model, "
+                f"Model {model_description.model} is already registered in CrossEncoderModel, if you still want to add this model, "
                 f"please use another model name"
             )
 
         cls._clear_model_cache()
-        CustomTextCrossEncoder.add_model(
-            BaseModelDescription(
-                model=model,
-                sources=sources,
-                model_file=model_file,
-                description=description,
-                license=license,
-                size_in_GB=size_in_gb,
-                additional_files=additional_files or [],
-            )
-        )
+        CustomTextCrossEncoder.add_model(model_description)
 
     def token_count(
         self, pairs: Iterable[tuple[str, str]], batch_size: int = 1024, **kwargs: Any
