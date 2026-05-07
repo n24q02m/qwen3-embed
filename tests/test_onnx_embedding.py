@@ -88,12 +88,7 @@ def test_onnx_text_embedding_embed(
     assert kwargs["documents"] == docs
     config = kwargs["config"]
     assert config.model_name == _MODEL_NAME
-    expected_cache_dir = (
-        str(Path("/tmp/cache").absolute())
-        if Path("/tmp/cache").is_absolute()
-        else str(Path("/tmp/cache").resolve())
-    )
-    assert config.cache_dir == expected_cache_dir
+    assert config.cache_dir == embedding.cache_dir
     assert config.batch_size == 32
     assert config.parallel == 4
 
