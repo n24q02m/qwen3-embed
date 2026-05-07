@@ -1,19 +1,18 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 
-from qwen3_embed.common import OnnxProvider
 from qwen3_embed.common.model_description import (
     DenseModelDescription,
     PoolingType,
 )
 from qwen3_embed.common.onnx_model import OnnxOutputContext
-from qwen3_embed.common.types import Device, NumpyArray
+from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.common.utils import last_token_pool, mean_pooling, normalize
-from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding
+from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
 
 
 @dataclass(frozen=True)
@@ -29,26 +28,10 @@ class CustomTextEmbedding(OnnxTextEmbedding):
     def __init__(
         self,
         model_name: str,
-        cache_dir: str | None = None,
-        threads: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        lazy_load: bool = False,
-        device_id: int | None = None,
-        specific_model_path: str | None = None,
         **kwargs: Any,
     ):
         super().__init__(
             model_name=model_name,
-            cache_dir=cache_dir,
-            threads=threads,
-            providers=providers,
-            cuda=cuda,
-            device_ids=device_ids,
-            lazy_load=lazy_load,
-            device_id=device_id,
-            specific_model_path=specific_model_path,
             **kwargs,
         )
         self._pooling = self.POSTPROCESSING_MAPPING[model_name].pooling
@@ -57,6 +40,10 @@ class CustomTextEmbedding(OnnxTextEmbedding):
     @classmethod
     def _list_supported_models(cls) -> list[DenseModelDescription]:
         return cls.SUPPORTED_MODELS
+
+    @classmethod
+    def _get_worker_class(cls) -> type["CustomTextEmbeddingWorker"]:
+        return CustomTextEmbeddingWorker
 
     def _post_process_onnx_output(
         self, output: OnnxOutputContext, **kwargs: Any
@@ -102,4 +89,19 @@ class CustomTextEmbedding(OnnxTextEmbedding):
         cls.SUPPORTED_MODELS.append(model_description)
         cls.POSTPROCESSING_MAPPING[model_description.model] = PostprocessingConfig(
             pooling=pooling, normalization=normalization
+        )
+
+
+class CustomTextEmbeddingWorker(OnnxTextEmbeddingWorker):
+    def init_embedding(
+        self,
+        model_name: str,
+        cache_dir: str,
+        **kwargs: Any,
+    ) -> CustomTextEmbedding:
+        return CustomTextEmbedding(
+            model_name=model_name,
+            cache_dir=cache_dir,
+            threads=1,
+            **kwargs,
         )
