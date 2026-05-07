@@ -147,9 +147,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         # AUTO/-1: offload all layers to GPU if available, fallback to CPU
         # CPU/False/0: force CPU only
         n_gpu = (
-            0
-            if (execution_config.cuda is False or execution_config.cuda == Device.CPU)
-            else -1
+            0 if (execution_config.cuda is False or execution_config.cuda == Device.CPU) else -1
         )
         self._llm = Llama(
             model_path=str(model_path),
