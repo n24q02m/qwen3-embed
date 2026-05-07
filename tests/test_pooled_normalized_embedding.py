@@ -1,10 +1,15 @@
 """Unit tests for PooledNormalizedEmbedding."""
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
 
 from qwen3_embed.common.onnx_model import OnnxOutputContext
-from qwen3_embed.text.pooled_normalized_embedding import PooledNormalizedEmbedding
+from qwen3_embed.text.pooled_normalized_embedding import (
+    PooledNormalizedEmbedding,
+    PooledNormalizedEmbeddingWorker,
+)
 
 
 class DummyModel(PooledNormalizedEmbedding):
@@ -55,3 +60,27 @@ class TestPooledNormalizedEmbedding:
         np.testing.assert_allclose(result, expected_normalized, atol=1e-6)
         # Verify L2 norm is 1
         np.testing.assert_allclose(np.linalg.norm(result, axis=1), [1.0], atol=1e-6)
+
+
+class TestPooledNormalizedEmbeddingWorker:
+    """Test PooledNormalizedEmbeddingWorker initialization."""
+
+    @patch("qwen3_embed.text.pooled_normalized_embedding.PooledNormalizedEmbedding")
+    def test_init_embedding(self, mock_pooled_normalized_embedding: MagicMock):
+        """Should initialize PooledNormalizedEmbedding with correct arguments."""
+        worker = PooledNormalizedEmbeddingWorker.__new__(PooledNormalizedEmbeddingWorker)
+        # Avoid calling __init__ which might have side effects or require more mocks
+        worker.__init__ = lambda *args, **kwargs: None
+
+        model_name = "test-model"
+        cache_dir = "/tmp/cache"
+        extra_arg = "extra"
+
+        worker.init_embedding(model_name=model_name, cache_dir=cache_dir, extra=extra_arg)
+
+        mock_pooled_normalized_embedding.assert_called_once_with(
+            model_name=model_name,
+            cache_dir=cache_dir,
+            threads=1,
+            extra=extra_arg
+        )
