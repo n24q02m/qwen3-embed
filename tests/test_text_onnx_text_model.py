@@ -341,14 +341,18 @@ class TestOnnxTextModelEmbedDocuments:
 
     def test_single_string_becomes_one_result(self) -> None:
         m = self._loaded(1)
-        results = list(m._embed_documents(documents="hello", config=OnnxEmbeddingConfig("t", "/tmp")))
+        results = list(
+            m._embed_documents(documents="hello", config=OnnxEmbeddingConfig("t", "/tmp"))
+        )
         assert len(results) == 1
 
     def test_small_list_all_results(self) -> None:
         # _post_process_onnx_output yields the whole batch array as one item,
         # so one batch of 2 docs produces 1 result (a (2, 4) array).
         m = self._loaded(2)
-        results = list(m._embed_documents(documents=["a", "b"], config=OnnxEmbeddingConfig("t", "/tmp")))
+        results = list(
+            m._embed_documents(documents=["a", "b"], config=OnnxEmbeddingConfig("t", "/tmp"))
+        )
         assert len(results) == 1
         assert results[0].shape == (2, 4)
 
@@ -378,7 +382,8 @@ class TestOnnxTextModelEmbedDocuments:
             mock_cls.return_value = pool
             list(
                 m._embed_documents(
-                    documents=self._parallel_docs(), config=OnnxEmbeddingConfig("t", "/tmp", batch_size=2, parallel=0)
+                    documents=self._parallel_docs(),
+                    config=OnnxEmbeddingConfig("t", "/tmp", batch_size=2, parallel=0),
                 )
             )
         mock_cls.assert_called_once()
@@ -392,7 +397,8 @@ class TestOnnxTextModelEmbedDocuments:
             mock_cls.return_value = pool
             list(
                 m._embed_documents(
-                    documents=self._parallel_docs(), config=OnnxEmbeddingConfig("t", "/tmp", batch_size=2, parallel=3)
+                    documents=self._parallel_docs(),
+                    config=OnnxEmbeddingConfig("t", "/tmp", batch_size=2, parallel=3),
                 )
             )
         call_kwargs = mock_cls.call_args[1]
@@ -408,7 +414,13 @@ class TestOnnxTextModelEmbedDocuments:
             list(
                 m._embed_documents(
                     documents=self._parallel_docs(),
-                    config=OnnxEmbeddingConfig("t", "/tmp", batch_size=2, parallel=2, extra_session_options={"enable_cpu_mem_arena": False}),
+                    config=OnnxEmbeddingConfig(
+                        "t",
+                        "/tmp",
+                        batch_size=2,
+                        parallel=2,
+                        extra_session_options={"enable_cpu_mem_arena": False},
+                    ),
                 )
             )
         mock_cls.assert_called_once()
@@ -423,7 +435,8 @@ class TestOnnxTextModelEmbedDocuments:
             mock_cls.return_value = pool
             list(
                 m._embed_documents(
-                    documents=self._parallel_docs(), config=OnnxEmbeddingConfig("t", "/tmp", batch_size=2, parallel=1)
+                    documents=self._parallel_docs(),
+                    config=OnnxEmbeddingConfig("t", "/tmp", batch_size=2, parallel=1),
                 )
             )
         call_kwargs = mock_cls.call_args[1]
