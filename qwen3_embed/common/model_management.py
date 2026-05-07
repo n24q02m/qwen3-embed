@@ -57,19 +57,14 @@ class ModelManagement(Generic[T]):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        """Add a custom model to the existing embedding classes based on the passed model descriptions
+        """Add a custom model to the existing embedding classes based on the passed model descriptions.
 
-        Model description dict should contain the fields same as in one of the model descriptions presented
-         in qwen3_embed.common.model_description
+        Use the specific add_custom_model method of the target class (e.g., TextEmbedding or TextCrossEncoder)
+        passing a model description object (BaseModelDescription or its subclasses).
 
-         E.g. for BaseModelDescription:
-              model: str
-              sources: ModelSource
-              model_file: str
-              description: str
-              license: str
-              size_in_GB: float
-              additional_files: list[str]
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
 
         Returns:
             None

@@ -2,7 +2,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
 
-from qwen3_embed.common.model_description import DenseModelDescription, ModelSource, PoolingType
+from qwen3_embed.common.model_description import DenseModelDescription, PoolingType
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.gguf_embedding import Qwen3TextEmbeddingGGUF
@@ -66,39 +66,24 @@ class TextEmbedding(TextEmbeddingBase):
     @classmethod
     def add_custom_model(
         cls,
-        model: str,
-        pooling: PoolingType,
-        normalization: bool,
-        sources: ModelSource,
-        dim: int,
-        model_file: str = "onnx/model.onnx",
-        description: str = "",
-        license: str = "",
-        size_in_gb: float = 0.0,
-        additional_files: list[str] | None = None,
+        description: DenseModelDescription,
+        pooling: PoolingType = PoolingType.MEAN,
+        normalization: bool = True,
     ) -> None:
-        cls._build_caches()
-        assert cls._embedding_type_cache is not None
+        """
+        Add a custom model to the TextEmbedding.
 
-        model_lower = model.lower()
-        if model_lower in cls._embedding_type_cache:
-            raise ValueError(
-                f"Model {model} is already registered in TextEmbedding, if you still want to add this model, "
-                f"please use another model name"
-            )
+        Args:
+            description (DenseModelDescription): The description of the model to add.
+            pooling (PoolingType, optional): The pooling type to use. Defaults to PoolingType.MEAN.
+            normalization (bool, optional): Whether to normalize the embeddings. Defaults to True.
+        """
+        cls._build_caches()
+        cls._check_model_exists(description.model)
 
         cls._clear_model_cache()
         CustomTextEmbedding.add_model(
-            DenseModelDescription(
-                model=model,
-                sources=sources,
-                dim=dim,
-                model_file=model_file,
-                description=description,
-                license=license,
-                size_in_GB=size_in_gb,
-                additional_files=additional_files or [],
-            ),
+            description,
             pooling=pooling,
             normalization=normalization,
         )
