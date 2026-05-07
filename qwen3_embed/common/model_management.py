@@ -397,6 +397,10 @@ class ModelManagement(Generic[T]):
         Raises:
             tarfile.TarError: If a path traversal attempt is detected.
         """
+        # SECURITY: Only allow regular files, directories, and links
+        if not (member.isreg() or member.isdir() or member.issym() or member.islnk()):
+            raise tarfile.TarError(f"Unsupported file type in tar file: {member.name}")
+
         if os.path.isabs(member.name) or member.name.startswith("/"):
             raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
 
@@ -469,7 +473,14 @@ class ModelManagement(Generic[T]):
                 if hasattr(tarfile, "data_filter"):
                     tar.extractall(path=cache_dir, members=safe_members, filter="data")
                 else:
-                    tar.extractall(path=cache_dir, members=safe_members)
+                    for member in safe_members:
+                        # Sanitize metadata to mimic "data" filter
+                        member.mode &= 0o777
+                        member.uid = 0
+                        member.gid = 0
+                        member.uname = ""
+                        member.gname = ""
+                        tar.extract(member, path=cache_dir)
         except tarfile.TarError as e:
             # If decompression fails, remove the partially extracted directory
             shutil.rmtree(cache_dir, ignore_errors=True)
