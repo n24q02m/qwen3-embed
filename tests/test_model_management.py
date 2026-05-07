@@ -592,7 +592,6 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
-
     def test_decompress_unsupported_file_type(self, tmp_path):
         """Unsupported file type (e.g. FIFO) raises TarError and cache dir is removed."""
         cache_dir = tmp_path / "tmp_cache_dir_unsupported"
@@ -608,6 +607,7 @@ class TestDecompressToCache:
             ModelManagement.decompress_to_cache(str(unsupported_tar), str(cache_dir))
 
         assert not cache_dir.exists()
+
     def test_decompress_mid_extraction_failure(self, tmp_path):
         """Mid-extraction TarError is re-raised and cache dir is removed."""
         tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
