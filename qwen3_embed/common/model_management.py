@@ -226,6 +226,8 @@ class ModelManagement(Generic[T]):
         cls, model_dir: Path, stored_metadata: dict[str, Any], repo_files: list[RepoFile]
     ) -> bool:
         try:
+            # ⚡ Bolt: Convert repo_files to a map for O(1) lookups inside the loop (was O(N*M))
+            repo_files_map = {f.path: f for f in repo_files} if repo_files else {}
             for rel_path, meta in stored_metadata.items():
                 file_path = model_dir / rel_path
 
@@ -233,7 +235,7 @@ class ModelManagement(Generic[T]):
                     return False
 
                 if repo_files:  # online verification
-                    file_info = next((f for f in repo_files if f.path == file_path.name), None)
+                    file_info = repo_files_map.get(file_path.name)
                     if (
                         not file_info
                         or file_info.size != meta["size"]
