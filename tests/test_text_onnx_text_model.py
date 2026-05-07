@@ -396,7 +396,7 @@ class TestOnnxTextModelEmbedDocuments:
                 )
             )
         call_kwargs = mock_cls.call_args[1]
-        assert call_kwargs["num_workers"] == 3
+        assert call_kwargs["config"].num_workers == 3
 
     def test_parallel_extra_session_options_merged(self) -> None:
         m = self._loaded()
@@ -431,7 +431,7 @@ class TestOnnxTextModelEmbedDocuments:
                 )
             )
         call_kwargs = mock_cls.call_args[1]
-        assert call_kwargs["start_method"] in ("forkserver", "spawn")
+        assert call_kwargs["config"].start_method in ("forkserver", "spawn")
 
 
 class TestTextEmbeddingWorkerProcess:
