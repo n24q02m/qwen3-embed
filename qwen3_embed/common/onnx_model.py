@@ -26,6 +26,16 @@ class OnnxOutputContext:
     metadata: dict[str, Any] | None = None
 
 
+@dataclass
+class OnnxSessionConfig:
+    threads: int | None = None
+    providers: Sequence[OnnxProvider] | None = None
+    cuda: bool | Device = Device.AUTO
+    device_id: int | None = None
+    parallel_execution: bool = False
+    extra_session_options: dict[str, Any] | None = None
+
+
 class OnnxModel(Generic[T]):
     EXPOSED_SESSION_OPTIONS = ("enable_cpu_mem_arena",)
 
@@ -134,19 +144,18 @@ class OnnxModel(Generic[T]):
     def _instantiate_onnx_session(
         self,
         model_path: Path,
-        threads: int | None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_id: int | None = None,
-        parallel_execution: bool = False,
-        extra_session_options: dict[str, Any] | None = None,
+        config: OnnxSessionConfig,
     ) -> tuple[ort.InferenceSession, list[str]]:
         # List of Execution Providers: https://onnxruntime.ai/docs/execution-providers
         available_providers = ort.get_available_providers()  # type: ignore[possibly-missing-attribute]
 
-        onnx_providers = self._determine_providers(providers, cuda, device_id, available_providers)
+        onnx_providers = self._determine_providers(
+            config.providers, config.cuda, config.device_id, available_providers
+        )
         requested_provider_names = self._validate_providers(onnx_providers, available_providers)
-        so = self._create_session_options(threads, extra_session_options, parallel_execution)
+        so = self._create_session_options(
+            config.threads, config.extra_session_options, config.parallel_execution
+        )
 
         session = ort.InferenceSession(str(model_path), providers=onnx_providers, sess_options=so)
         input_names = [node.name for node in session.get_inputs()]
@@ -167,22 +176,12 @@ class OnnxModel(Generic[T]):
         self,
         model_dir: Path,
         model_file: str,
-        threads: int | None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_id: int | None = None,
-        parallel_execution: bool = False,
-        extra_session_options: dict[str, Any] | None = None,
+        config: OnnxSessionConfig,
     ) -> tuple[ort.InferenceSession, list[str]]:
         model_path = model_dir / model_file
         self.model, input_names = self._instantiate_onnx_session(
             model_path=model_path,
-            threads=threads,
-            providers=providers,
-            cuda=cuda,
-            device_id=device_id,
-            parallel_execution=parallel_execution,
-            extra_session_options=extra_session_options,
+            config=config,
         )
         self.model_input_names = set(input_names)
         self.tokenizer, self.special_token_to_id = load_tokenizer(model_dir=model_dir)
