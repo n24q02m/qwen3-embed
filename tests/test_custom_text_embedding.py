@@ -203,10 +203,11 @@ class TestCustomTextEmbeddingInit:
 
     def test_custom_worker_returns_correct_type(self, tmp_path: Path) -> None:
         from qwen3_embed.text.custom_text_embedding import CustomTextEmbeddingWorker
+
         _register(pooling=PoolingType.CLS)
         with (
-            patch.object(CustomTextEmbedding, 'download_model', return_value=tmp_path),
-            patch.object(CustomTextEmbedding, 'load_onnx_model'),
+            patch.object(CustomTextEmbedding, "download_model", return_value=tmp_path),
+            patch.object(CustomTextEmbedding, "load_onnx_model"),
         ):
             worker = CustomTextEmbeddingWorker(_MODEL_NAME, str(tmp_path))
             emb = worker.init_embedding(_MODEL_NAME, str(tmp_path))
