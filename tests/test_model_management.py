@@ -1586,3 +1586,28 @@ class TestVerifyFilesFromMetadata:
             )
 
         assert result is False
+
+class TestClearModelCache:
+    """Tests for _clear_model_cache method."""
+
+    def test_clear_model_cache(self):
+        """Verify that _clear_model_cache removes the cache attribute from the class."""
+        # Setup: manually set the cache attribute on the class
+        ModelManagement._model_description_cache = {"test": "data"}
+        assert hasattr(ModelManagement, "_model_description_cache")
+
+        # Action: clear the cache
+        ModelManagement._clear_model_cache()
+
+        # Verification: the attribute should be gone from the class dict
+        assert "_model_description_cache" not in ModelManagement.__dict__
+
+    def test_clear_model_cache_no_attribute(self):
+        """Verify that _clear_model_cache does not raise an error if the attribute is missing."""
+        # Setup: ensure the attribute is NOT present
+        if "_model_description_cache" in ModelManagement.__dict__:
+            delattr(ModelManagement, "_model_description_cache")
+
+        # Action & Verification: calling it should not raise any exceptions
+        ModelManagement._clear_model_cache()
+        assert "_model_description_cache" not in ModelManagement.__dict__
