@@ -2,7 +2,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
 
-from qwen3_embed.common import OnnxProvider
+from qwen3_embed.common import ExecutionConfig, OnnxProvider
 from qwen3_embed.common.model_description import (
     BaseModelDescription,
     ModelSource,
@@ -83,9 +83,21 @@ class TextCrossEncoder(TextCrossEncoderBase):
         cuda: bool | Device = Device.AUTO,
         device_ids: list[int] | None = None,
         lazy_load: bool = False,
+        execution_config: ExecutionConfig | None = None,
         **kwargs: Any,
     ):
-        super().__init__(model_name, cache_dir, threads, **kwargs)
+        if execution_config is None:
+            execution_config = ExecutionConfig(
+                cache_dir=cache_dir,
+                threads=threads,
+                providers=providers,
+                cuda=cuda,
+                device_ids=device_ids,
+                lazy_load=lazy_load,
+                local_files_only=kwargs.get("local_files_only", False),
+            )
+
+        super().__init__(model_name, execution_config=execution_config, **kwargs)
 
         self._build_caches()
         assert self._encoder_type_cache is not None
@@ -96,12 +108,7 @@ class TextCrossEncoder(TextCrossEncoderBase):
         if CROSS_ENCODER_TYPE is not None:
             self.model = CROSS_ENCODER_TYPE(
                 model_name=model_name,
-                cache_dir=cache_dir,
-                threads=threads,
-                providers=providers,
-                cuda=cuda,
-                device_ids=device_ids,
-                lazy_load=lazy_load,
+                execution_config=execution_config,
                 **kwargs,
             )
             return

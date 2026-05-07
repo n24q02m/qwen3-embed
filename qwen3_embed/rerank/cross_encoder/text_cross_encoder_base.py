@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from typing import Any
 
+from qwen3_embed.common import ExecutionConfig
 from qwen3_embed.common.model_description import BaseModelDescription
 from qwen3_embed.common.model_management import ModelManagement
 
@@ -11,12 +12,22 @@ class TextCrossEncoderBase(ModelManagement[BaseModelDescription]):
         model_name: str,
         cache_dir: str | None = None,
         threads: int | None = None,
+        execution_config: ExecutionConfig | None = None,
         **kwargs: Any,
     ):
         self.model_name = model_name
-        self.cache_dir = cache_dir
-        self.threads = threads
-        self._local_files_only = kwargs.pop("local_files_only", False)
+
+        if execution_config is None:
+            execution_config = ExecutionConfig(
+                cache_dir=cache_dir,
+                threads=threads,
+                local_files_only=kwargs.pop("local_files_only", False),
+            )
+
+        self.execution_config = execution_config
+        self.cache_dir = execution_config.cache_dir
+        self.threads = execution_config.threads
+        self._local_files_only = execution_config.local_files_only
 
     def rerank(
         self,

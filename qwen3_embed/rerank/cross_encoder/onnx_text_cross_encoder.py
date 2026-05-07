@@ -3,7 +3,7 @@ from typing import Any
 
 from loguru import logger
 
-from qwen3_embed.common import OnnxProvider
+from qwen3_embed.common import ExecutionConfig, OnnxProvider
 from qwen3_embed.common.model_description import BaseModelDescription
 from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.common.types import Device
@@ -41,6 +41,7 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
         lazy_load: bool = False,
         device_id: int | None = None,
         specific_model_path: str | None = None,
+        execution_config: ExecutionConfig | None = None,
         **kwargs: Any,
     ):
         """
@@ -61,18 +62,32 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
                 Should be set to True when using multiple-gpu and parallel encoding. Defaults to False.
             device_id (Optional[int], optional): The device id to use for loading the model in the worker process.
             specific_model_path (Optional[str], optional): The specific path to the onnx model dir if it should be imported from somewhere else
+            execution_config (Optional[ExecutionConfig], optional): The configuration for model execution.
 
         Raises:
             ValueError: If the model_name is not in the format <org>/<model> e.g. Xenova/ms-marco-MiniLM-L-6-v2.
         """
-        super().__init__(model_name, cache_dir, threads, **kwargs)
-        self.providers = providers
-        self.lazy_load = lazy_load
+        if execution_config is None:
+            execution_config = ExecutionConfig(
+                cache_dir=cache_dir,
+                threads=threads,
+                providers=providers,
+                cuda=cuda,
+                device_ids=device_ids,
+                lazy_load=lazy_load,
+                device_id=device_id,
+                specific_model_path=specific_model_path,
+                local_files_only=kwargs.get("local_files_only", False),
+            )
+
+        super().__init__(model_name, execution_config=execution_config, **kwargs)
+        self.providers = execution_config.providers
+        self.lazy_load = execution_config.lazy_load
         self._extra_session_options = self._select_exposed_session_options(kwargs)
 
         # List of device ids, that can be used for data parallel processing in workers
-        self.device_ids = device_ids
-        self.cuda = cuda
+        self.device_ids = execution_config.device_ids
+        self.cuda = execution_config.cuda
 
         if self.device_ids is not None and len(self.device_ids) > 1:
             logger.warning(
@@ -82,14 +97,14 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
 
         # This device_id will be used if we need to load model in current process
         self.device_id: int | None = None
-        if device_id is not None:
-            self.device_id = device_id
+        if execution_config.device_id is not None:
+            self.device_id = execution_config.device_id
         elif self.device_ids is not None:
             self.device_id = self.device_ids[0]
 
         self.model_description = self._get_model_description(model_name)
-        self.cache_dir = str(define_cache_dir(cache_dir))
-        self._specific_model_path = specific_model_path
+        self.cache_dir = str(define_cache_dir(execution_config.cache_dir))
+        self._specific_model_path = execution_config.specific_model_path
         self._model_dir = self.download_model(
             self.model_description,
             self.cache_dir,

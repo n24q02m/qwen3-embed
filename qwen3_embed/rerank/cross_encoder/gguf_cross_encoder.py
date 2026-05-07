@@ -15,8 +15,9 @@ from typing import Any
 
 import numpy as np
 
+from qwen3_embed.common import ExecutionConfig, OnnxProvider
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
-from qwen3_embed.common.types import Device, OnnxProvider
+from qwen3_embed.common.types import Device
 from qwen3_embed.common.utils import define_cache_dir
 from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
 
@@ -109,13 +110,26 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         cuda: bool | Device = Device.AUTO,
         device_ids: list[int] | None = None,  # noqa: ARG002
         lazy_load: bool = False,  # noqa: ARG002
+        execution_config: ExecutionConfig | None = None,
         **kwargs: Any,
     ) -> None:
         _check_llama_cpp()
-        super().__init__(model_name, cache_dir, threads, **kwargs)
+
+        if execution_config is None:
+            execution_config = ExecutionConfig(
+                cache_dir=cache_dir,
+                threads=threads,
+                providers=providers,
+                cuda=cuda,
+                device_ids=device_ids,
+                lazy_load=lazy_load,
+                local_files_only=kwargs.get("local_files_only", False),
+            )
+
+        super().__init__(model_name, execution_config=execution_config, **kwargs)
 
         self.model_description = self._get_model_description(model_name)
-        self.cache_dir = str(define_cache_dir(cache_dir))
+        self.cache_dir = str(define_cache_dir(execution_config.cache_dir))
 
         self._model_dir = self.download_model(
             self.model_description,
@@ -132,12 +146,16 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
 
         # AUTO/-1: offload all layers to GPU if available, fallback to CPU
         # CPU/False/0: force CPU only
-        n_gpu = 0 if (cuda is False or cuda == Device.CPU) else -1
+        n_gpu = (
+            0
+            if (execution_config.cuda is False or execution_config.cuda == Device.CPU)
+            else -1
+        )
         self._llm = Llama(
             model_path=str(model_path),
             n_ctx=40960,
             logits_all=False,  # Only need last-token logits
-            n_threads=threads or 0,
+            n_threads=execution_config.threads or 0,
             n_gpu_layers=n_gpu,
             verbose=False,
         )
