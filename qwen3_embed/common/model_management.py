@@ -588,18 +588,18 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _download_from_gcs(
         cls,
-        model_name: str,
-        url_source: str | None,
+        model: T,
         cache_dir: str,
-        deprecated_tar_struct: bool,
-        local_files_only: bool,
+        **kwargs: Any,
     ) -> Path | None:
+        url_source = model.sources.url
+        local_files_only = kwargs.get("local_files_only", False)
         try:
             return cls.retrieve_model_gcs(
-                model_name,
+                model.model,
                 str(url_source),
                 str(cache_dir),
-                deprecated_tar_struct=deprecated_tar_struct,
+                deprecated_tar_struct=model.sources.deprecated_tar_struct,
                 local_files_only=local_files_only,
             )
         except (OSError, ValueError, requests.RequestException, tarfile.TarError):
@@ -671,11 +671,9 @@ class ModelManagement(Generic[T]):
 
             if url_source or local_files_only:
                 gcs_path = cls._download_from_gcs(
-                    model_name=model.model,
-                    url_source=url_source,
+                    model=model,
                     cache_dir=cache_dir,
-                    deprecated_tar_struct=model.sources.deprecated_tar_struct,
-                    local_files_only=local_files_only,
+                    **kwargs,
                 )
                 if gcs_path:
                     return gcs_path
