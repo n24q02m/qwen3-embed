@@ -57,6 +57,7 @@ def test_dense_model_description_invalid_dim():
             dim=None,
         )
 
+
 def test_model_source_deprecated_tar_struct():
     """Test ModelSource deprecated_tar_struct property."""
     # Test default value
