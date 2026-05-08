@@ -10,12 +10,12 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
-from qwen3_embed.common.types import Device, OnnxProvider
+from qwen3_embed.common.types import Device
 from qwen3_embed.common.utils import define_cache_dir
 from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
 
@@ -103,11 +103,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         model_name: str = "n24q02m/Qwen3-Reranker-0.6B-GGUF",
         cache_dir: str | None = None,
         threads: int | None = None,
-        # Accept but ignore ONNX-specific args for compatibility with TextCrossEncoder dispatcher
-        providers: Sequence[OnnxProvider] | None = None,  # noqa: ARG002
         cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,  # noqa: ARG002
-        lazy_load: bool = False,  # noqa: ARG002
         **kwargs: Any,
     ) -> None:
         _check_llama_cpp()
