@@ -2,7 +2,11 @@
 
 import pytest
 
-from qwen3_embed.common.model_description import ModelSource, PoolingType
+from qwen3_embed.common.model_description import (
+    DenseModelDescription,
+    ModelSource,
+    PoolingType,
+)
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.text_embedding import TextEmbedding
 
@@ -10,77 +14,91 @@ from qwen3_embed.text.text_embedding import TextEmbedding
 class TestCustomModelRegistration:
     """Verify custom model registration works for all pooling types."""
 
-    def setup_method(self):
+    def setup_method(self, method):
         """Clear custom model registry between tests."""
         CustomTextEmbedding.SUPPORTED_MODELS.clear()
         CustomTextEmbedding.POSTPROCESSING_MAPPING.clear()
 
     def test_register_cls_pooling_model(self):
         TextEmbedding.add_custom_model(
-            model="test/cls-model",
+            model_description=DenseModelDescription(
+                model="test/cls-model",
+                sources=ModelSource(hf="test/cls-model"),
+                dim=768,
+            ),
             pooling=PoolingType.CLS,
             normalization=True,
-            sources=ModelSource(hf="test/cls-model"),
-            dim=768,
         )
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/cls-model" for m in models)
 
     def test_register_mean_pooling_model(self):
         TextEmbedding.add_custom_model(
-            model="test/mean-model",
+            model_description=DenseModelDescription(
+                model="test/mean-model",
+                sources=ModelSource(hf="test/mean-model"),
+                dim=512,
+            ),
             pooling=PoolingType.MEAN,
             normalization=True,
-            sources=ModelSource(hf="test/mean-model"),
-            dim=512,
         )
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/mean-model" for m in models)
 
     def test_register_last_token_pooling_model(self):
         TextEmbedding.add_custom_model(
-            model="test/last-token-model",
+            model_description=DenseModelDescription(
+                model="test/last-token-model",
+                sources=ModelSource(hf="test/last-token-model"),
+                dim=1024,
+            ),
             pooling=PoolingType.LAST_TOKEN,
             normalization=True,
-            sources=ModelSource(hf="test/last-token-model"),
-            dim=1024,
         )
         models = TextEmbedding.list_supported_models()
         assert any(m["model"] == "test/last-token-model" for m in models)
 
     def test_duplicate_model_raises(self):
         TextEmbedding.add_custom_model(
-            model="test/duplicate",
+            model_description=DenseModelDescription(
+                model="test/duplicate",
+                sources=ModelSource(hf="test/duplicate"),
+                dim=256,
+            ),
             pooling=PoolingType.CLS,
             normalization=True,
-            sources=ModelSource(hf="test/duplicate"),
-            dim=256,
         )
         with pytest.raises(ValueError, match="already registered"):
             TextEmbedding.add_custom_model(
-                model="test/duplicate",
+                model_description=DenseModelDescription(
+                    model="test/duplicate",
+                    sources=ModelSource(hf="test/duplicate"),
+                    dim=256,
+                ),
                 pooling=PoolingType.CLS,
                 normalization=True,
-                sources=ModelSource(hf="test/duplicate"),
-                dim=256,
             )
 
     def test_duplicate_model_case_insensitive_raises(self):
         """Verify that duplicate checks are case-insensitive."""
         TextEmbedding.add_custom_model(
-            model="test/Case-Insensitive",
+            model_description=DenseModelDescription(
+                model="test/Case-Insensitive",
+                sources=ModelSource(hf="test/Case-Insensitive"),
+                dim=256,
+            ),
             pooling=PoolingType.CLS,
             normalization=True,
-            sources=ModelSource(hf="test/Case-Insensitive"),
-            dim=256,
         )
         with pytest.raises(ValueError, match="already registered"):
             TextEmbedding.add_custom_model(
-                model="test/case-insensitive",
+                model_description=DenseModelDescription(
+                    model="test/case-insensitive",
+                    sources=ModelSource(hf="test/case-insensitive"),
+                    dim=256,
+                ),
                 pooling=PoolingType.CLS,
                 normalization=True,
-                sources=ModelSource(hf="test/case-insensitive"),
-                dim=256,
             )
 
     def test_conflict_with_builtin_model_raises(self):
@@ -88,11 +106,13 @@ class TestCustomModelRegistration:
         builtin_model = "n24q02m/Qwen3-Embedding-0.6B-ONNX"
         with pytest.raises(ValueError, match="already registered"):
             TextEmbedding.add_custom_model(
-                model=builtin_model,
+                model_description=DenseModelDescription(
+                    model=builtin_model,
+                    sources=ModelSource(hf="dummy/builtin-conflict"),
+                    dim=256,
+                ),
                 pooling=PoolingType.CLS,
                 normalization=True,
-                sources=ModelSource(hf="dummy/builtin-conflict"),
-                dim=256,
             )
 
     def test_register_model_with_full_metadata(self):
@@ -101,16 +121,18 @@ class TestCustomModelRegistration:
         sources = ModelSource(hf="test/full-metadata")
         additional_files = ["config.json", "vocab.txt"]
         TextEmbedding.add_custom_model(
-            model=model_name,
+            model_description=DenseModelDescription(
+                model=model_name,
+                sources=sources,
+                dim=128,
+                model_file="custom_model.onnx",
+                description="A test model with full metadata",
+                license="MIT",
+                size_in_GB=1.5,
+                additional_files=additional_files,
+            ),
             pooling=PoolingType.MEAN,
             normalization=False,
-            sources=sources,
-            dim=128,
-            model_file="custom_model.onnx",
-            description="A test model with full metadata",
-            license="MIT",
-            size_in_gb=1.5,
-            additional_files=additional_files,
         )
 
         models = TextEmbedding.list_supported_models()
