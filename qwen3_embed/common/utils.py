@@ -69,6 +69,13 @@ def normalize(input_array: NumpyArray, p: int = 2, dim: int = 1, eps: float = 1e
         norm = np.maximum(norm, eps)[:, np.newaxis]
         return input_array / norm
 
+    # ⚡ Bolt: Fast L2 norm for 1D arrays avoiding np.linalg.norm overhead
+    if p == 2 and input_array.ndim == 1:
+        norm_sq = input_array.dot(input_array)
+        norm_val = np.sqrt(norm_sq)
+        norm_val = max(norm_val, eps)
+        return input_array / norm_val
+
     # Calculate the Lp norm along the specified dimension
     norm = np.linalg.norm(input_array, ord=p, axis=dim, keepdims=True)
     norm = np.maximum(norm, eps)  # Avoid division by zero
