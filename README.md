@@ -39,6 +39,19 @@
 </details>
 <!-- END: AUTO-GENERATED-CROSS-PROMO -->
 
+## Table of contents
+
+- [Features](#features)
+- [Supported Models](#supported-models)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Related Projects](#related-projects)
+- [Contributing](#contributing)
+- [License](#license)
+
+
 
 Trimmed fork of [fastembed](https://github.com/qdrant/fastembed), keeping only Qwen3 models.
 
