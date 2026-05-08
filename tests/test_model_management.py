@@ -1602,3 +1602,38 @@ class TestVerifyFilesFromMetadata:
             )
 
         assert result is False
+
+
+# ---------------------------------------------------------------------------
+# TestGetExpectedMd5
+# ---------------------------------------------------------------------------
+
+
+class TestGetExpectedMd5:
+    """Tests for _get_expected_md5 method."""
+
+    def test_get_expected_md5_no_header(self):
+        """None should be returned if x-goog-hash header is missing."""
+        assert ModelManagement._get_expected_md5({}) is None
+
+    def test_get_expected_md5_no_md5(self):
+        """None should be returned if x-goog-hash header is present but missing md5."""
+        headers = {"x-goog-hash": "crc32c=n9f4Sg=="}
+        assert ModelManagement._get_expected_md5(headers) is None
+
+    def test_get_expected_md5_success(self):
+        """Correct hex MD5 should be returned if md5 is present in x-goog-hash."""
+        # "test" md5 is 098f6bcd4621d373cade4e832627b4f6
+        # base64 encoded: CY9rzUYh03PK3k6DJie09g==
+        headers = {"x-goog-hash": "md5=CY9rzUYh03PK3k6DJie09g=="}
+        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+
+    def test_get_expected_md5_multi_part(self):
+        """Correct hex MD5 should be returned if multiple hashes are present."""
+        headers = {"x-goog-hash": "crc32c=n9f4Sg==, md5=CY9rzUYh03PK3k6DJie09g=="}
+        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+
+    def test_get_expected_md5_whitespace(self):
+        """Correct hex MD5 should be returned even with extra whitespace."""
+        headers = {"x-goog-hash": " crc32c=n9f4Sg== , md5=CY9rzUYh03PK3k6DJie09g== "}
+        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
