@@ -1234,11 +1234,10 @@ class TestDownloadFromGcs:
         with patch.object(
             ModelManagement, "retrieve_model_gcs", side_effect=ValueError("GCS Error")
         ):
+            model = make_model_description(url="http://example.com/model.tar.gz")
             result = ModelManagement._download_from_gcs(
-                model_name="test/model",
-                url_source="http://example.com/model.tar.gz",
+                model=model,
                 cache_dir=str(tmp_path),
-                deprecated_tar_struct=False,
                 local_files_only=False,
             )
 
@@ -1253,11 +1252,10 @@ class TestDownloadFromGcs:
         with patch.object(
             ModelManagement, "retrieve_model_gcs", side_effect=ValueError("GCS Error")
         ):
+            model = make_model_description(url="http://example.com/model.tar.gz")
             result = ModelManagement._download_from_gcs(
-                model_name="test/model",
-                url_source="http://example.com/model.tar.gz",
+                model=model,
                 cache_dir=str(tmp_path),
-                deprecated_tar_struct=False,
                 local_files_only=True,
             )
 
