@@ -85,7 +85,7 @@ class TestModelManagementExtra:
         assert (cache_dir / "hardlink.txt").exists()
 
     def test_decompress_no_data_filter(self, tmp_path):
-        """Cover fallback line 412 by mocking tarfile to lack data_filter."""
+        """Cover fallback by mocking tarfile to lack data_filter and verify manual extraction loop."""
         tar_path = tmp_path / "test.tar.gz"
         with tarfile.open(tar_path, "w:gz") as tar:
             info = tarfile.TarInfo(name="file.txt")
@@ -104,6 +104,8 @@ class TestModelManagementExtra:
             # Mock getmembers to return a list of members
             member = MagicMock()
             member.name = "file.txt"
+            member.isreg.return_value = True
+            member.isdir.return_value = False
             member.issym.return_value = False
             member.islnk.return_value = False
             member.size = 0
@@ -115,10 +117,16 @@ class TestModelManagementExtra:
 
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
-            # Verify extractall was called without filter keyword
-            mock_tar.extractall.assert_called_once()
-            args, kwargs = mock_tar.extractall.call_args
-            assert "filter" not in kwargs
+            # Verify extract was called for the member (since extractall is no longer called in fallback)
+            mock_tar.extract.assert_called_once_with(member, path=str(cache_dir))
+            # Verify metadata sanitization
+            # Since member.mode was a MagicMock, &= operation on it might be tricky to verify this way
+            # In our code: member.mode &= 0o777 (which is member.mode = member.mode.__and__(0o777))
+            # But member is also a MagicMock, so we can check attributes directly if we set them before
+            assert member.uid == 0
+            assert member.gid == 0
+            assert member.uname == ""
+            assert member.gname == ""
 
     def test_decompress_logging_on_error(self, tmp_path):
         """Verify logger.error is called on TarError."""
