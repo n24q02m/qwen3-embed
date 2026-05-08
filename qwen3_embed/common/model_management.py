@@ -514,8 +514,10 @@ class ModelManagement(Generic[T]):
             shutil.rmtree(model_tmp_dir)
 
         cache_tmp_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-        with contextlib.suppress(OSError):
-            os.chmod(cache_tmp_dir, 0o700)
+        # SECURITY: Prevent arbitrary permission modification via symlink attacks
+        if not cache_tmp_dir.is_symlink():
+            with contextlib.suppress(OSError):
+                cache_tmp_dir.chmod(0o700)
 
         model_tar_gz = Path(cache_dir) / f"{fast_model_name}.tar.gz"
 
