@@ -56,3 +56,13 @@ def test_dense_model_description_invalid_dim():
             size_in_GB=1.0,
             dim=None,
         )
+
+def test_model_source_deprecated_tar_struct():
+    """Test ModelSource deprecated_tar_struct property."""
+    # Test default value
+    source_default = ModelSource(hf="org/model")
+    assert source_default.deprecated_tar_struct is False
+
+    # Test explicitly set value
+    source_deprecated = ModelSource(hf="org/model", _deprecated_tar_struct=True)
+    assert source_deprecated.deprecated_tar_struct is True
