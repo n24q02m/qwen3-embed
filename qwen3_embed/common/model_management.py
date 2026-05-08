@@ -226,6 +226,8 @@ class ModelManagement(Generic[T]):
         cls, model_dir: Path, stored_metadata: dict[str, Any], repo_files: list[RepoFile]
     ) -> bool:
         try:
+            # ⚡ Bolt: Convert repo_files to a map for O(1) lookups inside the loop (was O(N*M))
+            repo_files_map = {f.path: f for f in repo_files} if repo_files else {}
             for rel_path, meta in stored_metadata.items():
                 file_path = model_dir / rel_path
 
@@ -233,7 +235,7 @@ class ModelManagement(Generic[T]):
                     return False
 
                 if repo_files:  # online verification
-                    file_info = next((f for f in repo_files if f.path == file_path.name), None)
+                    file_info = repo_files_map.get(file_path.name)
                     if (
                         not file_info
                         or file_info.size != meta["size"]
@@ -397,6 +399,10 @@ class ModelManagement(Generic[T]):
         Raises:
             tarfile.TarError: If a path traversal attempt is detected.
         """
+        # SECURITY: Only allow regular files, directories, and links
+        if not (member.isreg() or member.isdir() or member.issym() or member.islnk()):
+            raise tarfile.TarError(f"Unsupported file type in tar file: {member.name}")
+
         if os.path.isabs(member.name) or member.name.startswith("/"):
             raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
 
@@ -469,7 +475,14 @@ class ModelManagement(Generic[T]):
                 if hasattr(tarfile, "data_filter"):
                     tar.extractall(path=cache_dir, members=safe_members, filter="data")
                 else:
-                    tar.extractall(path=cache_dir, members=safe_members)
+                    for member in safe_members:
+                        # Sanitize metadata to mimic "data" filter
+                        member.mode &= 0o777
+                        member.uid = 0
+                        member.gid = 0
+                        member.uname = ""
+                        member.gname = ""
+                        tar.extract(member, path=cache_dir)
         except tarfile.TarError as e:
             # If decompression fails, remove the partially extracted directory
             shutil.rmtree(cache_dir, ignore_errors=True)
@@ -588,18 +601,18 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _download_from_gcs(
         cls,
-        model_name: str,
-        url_source: str | None,
+        model: T,
         cache_dir: str,
-        deprecated_tar_struct: bool,
-        local_files_only: bool,
+        **kwargs: Any,
     ) -> Path | None:
+        url_source = model.sources.url
+        local_files_only = kwargs.get("local_files_only", False)
         try:
             return cls.retrieve_model_gcs(
-                model_name,
+                model.model,
                 str(url_source),
                 str(cache_dir),
-                deprecated_tar_struct=deprecated_tar_struct,
+                deprecated_tar_struct=model.sources.deprecated_tar_struct,
                 local_files_only=local_files_only,
             )
         except (OSError, ValueError, requests.RequestException, tarfile.TarError):
@@ -671,11 +684,9 @@ class ModelManagement(Generic[T]):
 
             if url_source or local_files_only:
                 gcs_path = cls._download_from_gcs(
-                    model_name=model.model,
-                    url_source=url_source,
+                    model=model,
                     cache_dir=cache_dir,
-                    deprecated_tar_struct=model.sources.deprecated_tar_struct,
-                    local_files_only=local_files_only,
+                    **kwargs,
                 )
                 if gcs_path:
                     return gcs_path

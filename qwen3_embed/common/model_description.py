@@ -24,10 +24,10 @@ class ModelSource:
 class BaseModelDescription:
     model: str
     sources: ModelSource
-    model_file: str
-    description: str
-    license: str
-    size_in_GB: float
+    model_file: str = "onnx/model.onnx"
+    description: str = ""
+    license: str = ""
+    size_in_GB: float = 0.0
     additional_files: list[str] = field(default_factory=list)
 
 

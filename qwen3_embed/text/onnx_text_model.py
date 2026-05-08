@@ -16,7 +16,7 @@ from qwen3_embed.common.onnx_model import (
 )
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.common.utils import iter_batch
-from qwen3_embed.parallel_processor import ParallelWorkerPool
+from qwen3_embed.parallel_processor import ParallelWorkerPool, PoolConfig
 
 
 class OnnxTextModel(OnnxModel[T]):
@@ -128,11 +128,13 @@ class OnnxTextModel(OnnxModel[T]):
                 params.update(config.extra_session_options)
 
             pool = ParallelWorkerPool(
-                num_workers=parallel or 1,
                 worker=self._get_worker_class(),
-                cuda=config.cuda,
-                device_ids=config.device_ids,
-                start_method=start_method,
+                config=PoolConfig(
+                    num_workers=parallel or 1,
+                    cuda=config.cuda,
+                    device_ids=config.device_ids,
+                    start_method=start_method,
+                ),
             )
             for batch in pool.ordered_map(iter_batch(documents, config.batch_size), **params):
                 yield from self._post_process_onnx_output(batch, **kwargs)

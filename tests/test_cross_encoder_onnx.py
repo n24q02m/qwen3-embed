@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
-from qwen3_embed.common.onnx_model import OnnxInferenceConfig, OnnxOutputContext
+from qwen3_embed.common.onnx_model import OnnxInferenceConfig, OnnxOutputContext, OnnxSessionConfig
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import (
     OnnxTextCrossEncoder,
@@ -405,7 +405,7 @@ class TestRerankPairsParallelBranch:
             )
             list(loaded_model._rerank_pairs(pairs=self._large_pairs(), config=config))
         call_kw = cls.call_args[1]
-        assert call_kw["num_workers"] == 3
+        assert call_kw["config"].num_workers == 3
 
     def test_parallel_start_method_is_forkserver_or_spawn(
         self, loaded_model: ConcreteCrossEncoderModel
@@ -420,7 +420,7 @@ class TestRerankPairsParallelBranch:
             )
             list(loaded_model._rerank_pairs(pairs=self._large_pairs(), config=config))
         call_kw = cls.call_args[1]
-        assert call_kw["start_method"] in ("forkserver", "spawn")
+        assert call_kw["config"].start_method in ("forkserver", "spawn")
 
     def test_extra_session_options_merged_into_params(
         self, loaded_model: ConcreteCrossEncoderModel
@@ -532,7 +532,7 @@ class TestLoadOnnxModel:
             session_mock.get_inputs.return_value = []
             mock_ort.InferenceSession.return_value = session_mock
 
-            m._load_onnx_model(tmp_path, "model.onnx", threads=None)
+            m._load_onnx_model(tmp_path, "model.onnx", config=OnnxSessionConfig(threads=None))
 
         assert m.tokenizer is mock_tokenizer
 
@@ -638,11 +638,13 @@ class TestOnnxTextCrossEncoderLoadOnnxModel:
         mock_load.assert_called_once_with(
             model_dir=tmp_path,
             model_file=_MODEL_DESC.model_file,
-            threads=enc.threads,
-            providers=enc.providers,
-            cuda=enc.cuda,
-            device_id=enc.device_id,
-            extra_session_options=enc._extra_session_options,
+            config=OnnxSessionConfig(
+                threads=enc.threads,
+                providers=enc.providers,
+                cuda=enc.cuda,
+                device_id=enc.device_id,
+                extra_session_options=enc._extra_session_options,
+            ),
         )
 
 

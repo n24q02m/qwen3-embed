@@ -2,6 +2,7 @@ import logging
 import os
 from collections.abc import Iterable
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import StrEnum
 from multiprocessing import Queue, get_context
 from multiprocessing.context import BaseContext
@@ -102,25 +103,33 @@ def _worker(
         _cleanup_worker(input_queue, output_queue, num_active_workers, worker_id)
 
 
+@dataclass
+class PoolConfig:
+    num_workers: int
+    start_method: str | None = None
+    device_ids: list[int] | None = None
+    cuda: bool | Device = Device.AUTO
+
+
 class ParallelWorkerPool:
     def __init__(
         self,
-        num_workers: int,
         worker: type[Worker],
-        start_method: str | None = None,
-        device_ids: list[int] | None = None,
-        cuda: bool | Device = Device.AUTO,
+        config: PoolConfig | None = None,
     ):
+        if config is None:
+            config = PoolConfig(num_workers=1)
+
         self.worker_class = worker
-        self.num_workers = num_workers
+        self.num_workers = config.num_workers
         self.input_queue: Queue | None = None
         self.output_queue: Queue | None = None
-        self.ctx: BaseContext = get_context(start_method)
+        self.ctx: BaseContext = get_context(config.start_method)
         self.processes: list[BaseProcess] = []
         self.queue_size = self.num_workers * max_internal_batch_size
         self.emergency_shutdown = False
-        self.device_ids = device_ids
-        self.cuda = cuda
+        self.device_ids = config.device_ids
+        self.cuda = config.cuda
         self.num_active_workers: BaseValue | None = None
 
     def start(self, **kwargs: Any) -> None:
