@@ -64,3 +64,4 @@ docs/superpowers/
 coverage.xml
 htmlcov/
 .coverage
+ty_output.txt
