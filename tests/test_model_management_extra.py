@@ -47,6 +47,7 @@ class TestModelManagementExtra:
 
         with patch("tarfile.open") as mock_open:
             mock_tar = mock_open.return_value.__enter__.return_value
+            mock_tar.__iter__.return_value = iter([mock_member])
             mock_tar.getmembers.return_value = [mock_member]
 
             with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
@@ -109,6 +110,7 @@ class TestModelManagementExtra:
             member.issym.return_value = False
             member.islnk.return_value = False
             member.size = 0
+            mock_tar.__iter__.return_value = iter([member])
             mock_tar.getmembers.return_value = [member]
             mock_tarfile_mod.TarError = tarfile.TarError
 
