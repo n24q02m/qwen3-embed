@@ -9,3 +9,7 @@
 ## 2024-05-06 - [Fast single scalar math operations]
 **Learning:** For mathematical operations on single scalar values (e.g., computing a sigmoid from a logit difference), using Python's built-in `math.exp` is significantly faster than `numpy.exp` due to the avoidance of numpy's C-API dispatch and object creation overhead. Because `math.exp` raises an `OverflowError` for large negative exponents, it should be wrapped in a `try...except OverflowError` block to handle edge cases appropriately (e.g., returning 0.0 or 1.0 for sigmoid boundaries).
 **Action:** Use `math.exp` instead of `np.exp` when operating on single scalar values, wrapping it in a `try...except OverflowError` block to handle numerical boundaries.
+
+## 2026-05-12 - [Optimize last token index calculation for right-padded attention masks]
+**Learning:** When calculating the last token index for strictly right-padded attention masks in causal LMs, using `np.argmax(mask[:, ::-1], axis=1)` is unnecessarily slow due to array reversal and intermediate allocation. Since the mask contains contiguous 1s followed by 0s, simply summing the mask per row and subtracting 1 gives the exact same index.
+**Action:** Always prefer `mask.sum(axis=1) - 1` over `np.argmax` on reversed arrays for finding the length of right-padded sequences in NLP tasks to avoid array allocation and stride manipulation overhead.
