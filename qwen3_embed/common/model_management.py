@@ -463,7 +463,7 @@ class ModelManagement(Generic[T]):
                 safe_members = []
                 total_size = 0
                 max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
-                for member in tar.getmembers():
+                for member in tar:
                     cls._validate_tar_member(member, target_dir)
                     total_size += member.size
                     if total_size > max_uncompressed_size:
