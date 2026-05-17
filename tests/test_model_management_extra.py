@@ -30,7 +30,7 @@ class TestModelManagementExtra:
             ModelManagement._session = original_session
 
     def test_decompress_absolute_path_mock(self, tmp_path):
-        """Mock getmembers to return an absolute path to trigger line 371."""
+        """Mock tar iteration to return an absolute path to trigger line 371."""
         tar_path = tmp_path / "test.tar.gz"
         # Create a dummy tar file
         with tarfile.open(tar_path, "w:gz") as tar:
@@ -47,7 +47,7 @@ class TestModelManagementExtra:
 
         with patch("tarfile.open") as mock_open:
             mock_tar = mock_open.return_value.__enter__.return_value
-            mock_tar.getmembers.return_value = [mock_member]
+            mock_tar.__iter__.return_value = iter([mock_member])
 
             with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
                 ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
@@ -101,7 +101,7 @@ class TestModelManagementExtra:
             mock_tar = MagicMock()
             mock_tarfile_mod.open.return_value.__enter__.return_value = mock_tar
 
-            # Mock getmembers to return a list of members
+            # Mock tar iteration to return a list of members
             member = MagicMock()
             member.name = "file.txt"
             member.isreg.return_value = True
@@ -109,7 +109,7 @@ class TestModelManagementExtra:
             member.issym.return_value = False
             member.islnk.return_value = False
             member.size = 0
-            mock_tar.getmembers.return_value = [member]
+            mock_tar.__iter__.return_value = iter([member])
             mock_tarfile_mod.TarError = tarfile.TarError
 
             # Ensure hasattr(tarfile, 'data_filter') returns False
