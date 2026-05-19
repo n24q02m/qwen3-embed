@@ -11,3 +11,8 @@
 **Vulnerability:** The `decompress_to_cache` method did not restrict the total uncompressed size of a tar archive. A malicious tar file (tar bomb) could consume excessive disk space or memory.
 **Learning:** Extracted tar members can expand to gigabytes or terabytes from a small archive, resulting in Resource Exhaustion (DoS).
 **Prevention:** Track the running total of `.size` properties from `tar.getmembers()` and raise an exception if it exceeds a maximum safe limit (e.g., 20 GB).
+
+## 2024-10-24 - [Decompression Bomb Vulnerability in tarfile]
+**Vulnerability:** The `decompress_to_cache` method previously loaded all tar members into memory using `tar.getmembers()`. A malicious archive containing an enormous number of small files could cause an Out-Of-Memory (OOM) Denial of Service (DoS).
+**Learning:** Loading entire metadata tables into memory for unbounded archives is dangerous and leads to resource exhaustion.
+**Prevention:** Use `for member in tar:` as a memory-efficient iterator to validate and extract archive files one by one, keeping memory footprints small even for massive archives.
