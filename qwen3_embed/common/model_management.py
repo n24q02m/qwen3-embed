@@ -478,7 +478,9 @@ class ModelManagement(Generic[T]):
                         yield member
 
                 if hasattr(tarfile, "data_filter"):
-                    tar.extractall(path=cache_dir, members=_safe_members_generator(), filter="data")
+                    tar.extractall(
+                        path=cache_dir, members=_safe_members_generator(), filter="data"
+                    )
                 else:
                     for member in _safe_members_generator():
                         # Sanitize metadata to mimic "data" filter
