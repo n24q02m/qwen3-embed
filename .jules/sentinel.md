@@ -11,8 +11,12 @@
 **Vulnerability:** The `decompress_to_cache` method did not restrict the total uncompressed size of a tar archive. A malicious tar file (tar bomb) could consume excessive disk space or memory.
 **Learning:** Extracted tar members can expand to gigabytes or terabytes from a small archive, resulting in Resource Exhaustion (DoS).
 **Prevention:** Track the running total of `.size` properties from `tar.getmembers()` and raise an exception if it exceeds a maximum safe limit (e.g., 20 GB).
+## 2026-05-21 - [Decompression Bomb Vulnerability]
+**Vulnerability:** The `decompress_to_cache` method called `tar.getmembers()` which reads all archive members into memory at once. For malicious archives with millions of files (tar bomb), this can cause Out-Of-Memory (OOM) exhaustion DoS.
+**Learning:** When extracting or iterating through untrusted archives, avoid loading all metadata into memory simultaneously.
+**Prevention:** Use an iterator (`for member in tar:`) instead of `tar.getmembers()` to process and validate archive members one by one.
 
-## 2024-05-30 - Fix arbitrary permission modification via symlink attacks
+## 2026-05-22 - Fix arbitrary permission modification via symlink attacks
 **Vulnerability:** os.chmod and Path.chmod follow symlinks by default. When setting permissions on a directory that an attacker can preemptively create as a symlink (e.g. cache directory), the permissions of the symlink target (such as /etc/passwd) are altered, causing Local Privilege Escalation or DoS.
-**Learning:** Always use `follow_symlinks=False` when calling `os.chmod` on dynamically created directories that might reside in shared or user-controlled locations.
-**Prevention:** Use `os.chmod(path, mode, follow_symlinks=False)` instead of `Path.chmod(mode)`. Since some platforms do not support `follow_symlinks=False` in `os.chmod`, wrap it in `contextlib.suppress(OSError, NotImplementedError)`.
+**Learning:** Always check `Path.is_symlink()` before calling `chmod` on dynamically created directories that might reside in shared or user-controlled locations.
+**Prevention:** Guard the `chmod` call with `if not cache_path.is_symlink():` so symlink targets are never altered.

@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import tarfile
+import threading
 import time
 import urllib.parse
 import uuid
@@ -31,15 +32,19 @@ T = TypeVar("T", bound=BaseModelDescription)
 class ModelManagement(Generic[T]):
     METADATA_FILE = "files_metadata.json"
     _session: requests.Session | None = None
+    _session_lock = threading.Lock()
 
     @classmethod
     def _get_session(cls) -> requests.Session:
         # ⚡ Bolt: Use requests.Session for connection pooling (~30% faster for multiple files)
         # Reusing the TCP connection avoids the overhead of repeated TCP/TLS handshakes
         if cls._session is None:
-            cls._session = requests.Session()
-            # SECURITY: Enforce trust_env=False to prevent proxy/CA environment variable injection
-            cls._session.trust_env = False
+            with cls._session_lock:
+                if cls._session is None:
+                    session = requests.Session()
+                    # SECURITY: Enforce trust_env=False to prevent proxy/CA environment variable injection
+                    session.trust_env = False
+                    cls._session = session
         return cls._session
 
     @classmethod
@@ -463,7 +468,7 @@ class ModelManagement(Generic[T]):
                 safe_members = []
                 total_size = 0
                 max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
-                for member in tar.getmembers():
+                for member in tar:
                     cls._validate_tar_member(member, target_dir)
                     total_size += member.size
                     if total_size > max_uncompressed_size:
