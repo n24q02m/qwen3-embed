@@ -20,3 +20,8 @@
 **Vulnerability:** os.chmod and Path.chmod follow symlinks by default. When setting permissions on a directory that an attacker can preemptively create as a symlink (e.g. cache directory), the permissions of the symlink target (such as /etc/passwd) are altered, causing Local Privilege Escalation or DoS.
 **Learning:** Always check `Path.is_symlink()` before calling `chmod` on dynamically created directories that might reside in shared or user-controlled locations.
 **Prevention:** Guard the `chmod` call with `if not cache_path.is_symlink():` so symlink targets are never altered.
+
+## 2026-05-21 - [Decompression Bomb Vulnerability]
+**Vulnerability:** The `decompress_to_cache` method loaded all archive members into memory using a list, causing OOM for malicious archives with millions of files (tar bomb).
+**Learning:** When extracting or iterating through untrusted archives, avoid loading all metadata into memory simultaneously.
+**Prevention:** Use a generator function yielding members to process and validate archive members one by one instead of aggregating them in a list.

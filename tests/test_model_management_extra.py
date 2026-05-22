@@ -48,6 +48,7 @@ class TestModelManagementExtra:
         with patch("tarfile.open") as mock_open:
             mock_tar = mock_open.return_value.__enter__.return_value
             mock_tar.__iter__.return_value = iter([mock_member])
+            mock_tar.extractall.side_effect = lambda path, members, filter=None: list(members)
 
             with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
                 ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
