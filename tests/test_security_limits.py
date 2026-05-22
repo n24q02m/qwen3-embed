@@ -80,3 +80,21 @@ def test_text_cross_encoder_limits(monkeypatch):
             list(tce.rerank_pairs([("q1", "d1"), ("q2", "d2" * 101)]))
         assert len(list(tce.rerank("query", ["doc1", "doc2"]))) == 2
         assert len(list(tce.rerank_pairs([("q1", "d1"), ("q2", "d2")]))) == 2
+
+
+def test_define_cache_dir_symlink_prevention(tmp_path):
+    import os
+
+    from qwen3_embed.common.utils import define_cache_dir
+
+    target_dir = tmp_path / "target"
+    target_dir.mkdir(mode=0o777)
+
+    link_dir = tmp_path / "link"
+    os.symlink(str(target_dir), str(link_dir))
+
+    # define_cache_dir should not follow symlink to chmod the target
+    define_cache_dir(str(link_dir))
+
+    # Target directory permissions should remain 0o777 (or umask, but not 0o700)
+    assert oct(target_dir.stat().st_mode)[-3:] != "700"

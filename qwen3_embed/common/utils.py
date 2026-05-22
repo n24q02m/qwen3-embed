@@ -131,8 +131,10 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
         cache_path = Path(cache_dir)
     cache_path.mkdir(mode=0o700, parents=True, exist_ok=True)
 
-    with contextlib.suppress(OSError):
-        cache_path.chmod(0o700)
+    # SECURITY: Prevent arbitrary permission modification via symlink attacks
+    if not cache_path.is_symlink():
+        with contextlib.suppress(OSError):
+            cache_path.chmod(0o700)
 
     return cache_path
 

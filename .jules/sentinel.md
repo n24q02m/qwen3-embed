@@ -15,3 +15,8 @@
 **Vulnerability:** The `decompress_to_cache` method called `tar.getmembers()` which reads all archive members into memory at once. For malicious archives with millions of files (tar bomb), this can cause Out-Of-Memory (OOM) exhaustion DoS.
 **Learning:** When extracting or iterating through untrusted archives, avoid loading all metadata into memory simultaneously.
 **Prevention:** Use an iterator (`for member in tar:`) instead of `tar.getmembers()` to process and validate archive members one by one.
+
+## 2026-05-22 - Fix arbitrary permission modification via symlink attacks
+**Vulnerability:** os.chmod and Path.chmod follow symlinks by default. When setting permissions on a directory that an attacker can preemptively create as a symlink (e.g. cache directory), the permissions of the symlink target (such as /etc/passwd) are altered, causing Local Privilege Escalation or DoS.
+**Learning:** Always check `Path.is_symlink()` before calling `chmod` on dynamically created directories that might reside in shared or user-controlled locations.
+**Prevention:** Guard the `chmod` call with `if not cache_path.is_symlink():` so symlink targets are never altered.
