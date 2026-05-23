@@ -465,22 +465,22 @@ class ModelManagement(Generic[T]):
                 # Extract all files into the cache directory securely
                 target_dir = os.path.abspath(cache_dir)
 
-                safe_members = []
-                total_size = 0
-                max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
-                for member in tar:
-                    cls._validate_tar_member(member, target_dir)
-                    total_size += member.size
-                    if total_size > max_uncompressed_size:
-                        raise tarfile.TarError(
-                            f"Decompression bomb detected: total uncompressed size exceeds {max_uncompressed_size} bytes"
-                        )
-                    safe_members.append(member)
+                def validate_and_yield_members():
+                    total_size = 0
+                    max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
+                    for member in tar:
+                        cls._validate_tar_member(member, target_dir)
+                        total_size += member.size
+                        if total_size > max_uncompressed_size:
+                            raise tarfile.TarError(
+                                f"Decompression bomb detected: total uncompressed size exceeds {max_uncompressed_size} bytes"
+                            )
+                        yield member
 
                 if hasattr(tarfile, "data_filter"):
-                    tar.extractall(path=cache_dir, members=safe_members, filter="data")
+                    tar.extractall(path=cache_dir, members=validate_and_yield_members(), filter="data")
                 else:
-                    for member in safe_members:
+                    for member in validate_and_yield_members():
                         # Sanitize metadata to mimic "data" filter
                         member.mode &= 0o777
                         member.uid = 0

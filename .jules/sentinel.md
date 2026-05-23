@@ -20,3 +20,8 @@
 **Vulnerability:** os.chmod and Path.chmod follow symlinks by default. When setting permissions on a directory that an attacker can preemptively create as a symlink (e.g. cache directory), the permissions of the symlink target (such as /etc/passwd) are altered, causing Local Privilege Escalation or DoS.
 **Learning:** Always check `Path.is_symlink()` before calling `chmod` on dynamically created directories that might reside in shared or user-controlled locations.
 **Prevention:** Guard the `chmod` call with `if not cache_path.is_symlink():` so symlink targets are never altered.
+
+## 2026-05-22 - [Decompression Bomb OOM via TarInfo List]
+**Vulnerability:** Even when using `for member in tar:` to avoid `tar.getmembers()`, accumulating the resulting `TarInfo` objects in a list (e.g., `safe_members.append(member)`) still caused Out-Of-Memory (OOM) exhaustion DoS for archives with millions of files.
+**Learning:** Holding millions of object references in memory for pre-validation defeats the purpose of stream-based archive parsing.
+**Prevention:** Use a nested generator function that yields validated members lazily, and pass this generator directly to `tar.extractall(members=generator())` or iterate over it.
