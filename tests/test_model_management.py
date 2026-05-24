@@ -585,6 +585,7 @@ class TestDecompressToCache:
         with patch("tarfile.open") as mock_tar_open:
             mock_tar = MagicMock()
             mock_tar.__iter__.return_value = iter([mock_member])
+            mock_tar.extractall.side_effect = lambda path, members, filter=None: list(members)
             mock_tar_open.return_value.__enter__.return_value = mock_tar
 
             with pytest.raises(tarfile.TarError, match="Decompression bomb detected"):
