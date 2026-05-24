@@ -63,15 +63,15 @@ def normalize(input_array: NumpyArray, p: int = 2, dim: int = 1, eps: float = 1e
     # ⚡ Bolt: Fast L2 norm using einsum (~2.5x faster than linalg.norm)
     if p == 2 and dim == 1 and input_array.ndim == 2:
         norm_sq = np.einsum("ij,ij->i", input_array, input_array)
-        norm = np.sqrt(norm_sq)
-        norm = np.maximum(norm, eps)[:, np.newaxis]
+        # ⚡ Bolt: Fast L2 norm using in-place operations for intermediate arrays to save memory allocations
+        norm = np.sqrt(norm_sq, out=norm_sq)
+        norm = np.maximum(norm, eps, out=norm)[:, np.newaxis]
         return input_array / norm
 
     # Calculate the Lp norm along the specified dimension
     norm = np.linalg.norm(input_array, ord=p, axis=dim, keepdims=True)
     norm = np.maximum(norm, eps)  # Avoid division by zero
-    normalized_array = input_array / norm
-    return normalized_array
+    return input_array / norm
 
 
 def mean_pooling(input_array: NumpyArray, attention_mask: NDArray[np.int64]) -> NumpyArray:
