@@ -201,7 +201,9 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
             # Fast sigmoid calculation on logit difference for 2-class classification (~10x faster)
             # ⚡ Bolt: Fast logit subtraction without stack array allocation overhead (~4.5x faster)
             # Type cast to float32 is required to prevent type errors during in-place mutation
-            diff = np.subtract(last_logits[:, TOKEN_NO_ID], last_logits[:, TOKEN_YES_ID], dtype=np.float32)
+            diff = np.subtract(
+                last_logits[:, TOKEN_NO_ID], last_logits[:, TOKEN_YES_ID], dtype=np.float32
+            )
 
         # ⚡ Bolt: Fast sigmoid using in-place operations to avoid array allocation overhead (~20% faster)
         with np.errstate(over="ignore"):
