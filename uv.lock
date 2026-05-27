@@ -788,7 +788,7 @@ wheels = [
 
 [[package]]
 name = "qwen3-embed"
-version = "1.10.0b1"
+version = "1.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "huggingface-hub" },

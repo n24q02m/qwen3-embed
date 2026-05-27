@@ -17,3 +17,7 @@
 ## 2025-05-24 - Fast L2 Normalization
 **Learning:** In hot paths like embedding normalization, chained numpy operations (`np.sqrt`, `np.maximum`, `/`) allocate large intermediate arrays.
 **Action:** Use in-place operations (`out=` parameter for ufuncs and `/=`) to reuse memory. We optimized `normalize` in `utils.py` to mutate the array in-place, yielding a ~25% speedup without breaking semantics, as the pooled array is temporary.
+
+## 2026-05-24 - [Fast logit extraction in Numpy]
+**Learning:** When extracting two specific columns from a 2D numpy array to calculate their difference (e.g., logits for binary classification), avoid constructing an intermediate array via `np.stack`. Direct subtraction of the sliced columns via `np.subtract(array[:, 0], array[:, 1])` avoids unnecessary memory allocation overhead and is significantly faster.
+**Action:** Avoid `np.stack` for simple extraction when the elements can be operated on directly via slices.
