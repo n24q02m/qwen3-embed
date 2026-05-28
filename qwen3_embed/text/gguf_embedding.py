@@ -17,7 +17,7 @@ import numpy as np
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
 from qwen3_embed.common.types import Device, NumpyArray
-from qwen3_embed.common.utils import define_cache_dir
+from qwen3_embed.common.utils import define_cache_dir, normalize
 from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
 # ---------------------------------------------------------------------------
@@ -165,20 +165,14 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
         while batch := tuple(itertools.islice(it, batch_size)):
             # PERFORMANCE: Pass batches to create_embedding to allow llama-cpp-python parallelize processing
             result = self._llm.create_embedding(list(batch))
-            for item in result["data"]:
-                embedding = np.array(item["embedding"], dtype=np.float32)
+            embeddings = np.array([item["embedding"] for item in result["data"]], dtype=np.float32)
 
-                # MRL: optionally truncate to requested dimension
-                if dim is not None:
-                    embedding = embedding[:dim]
+            # MRL: optionally truncate to requested dimension
+            if dim is not None:
+                embeddings = embeddings[:, :dim]
 
-                # L2 normalize
-                # Bolt: Fast L2 norm using .dot (~30% faster than linalg.norm)
-                norm_sq = embedding.dot(embedding)
-                if norm_sq > 0:
-                    embedding = embedding / np.sqrt(norm_sq)
-
-                yield embedding
+            # Vectorized L2 normalize
+            yield from normalize(embeddings)
 
     def query_embed(self, query: str | Iterable[str], **kwargs: Any) -> Iterable[NumpyArray]:
         """Embed queries with instruction prefix.
