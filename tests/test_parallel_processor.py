@@ -239,14 +239,15 @@ def test_worker_function_exception_handling():
     # failure_val=5 means item 5 raises an exception
     input_queue.get.side_effect = [(0, 5), QueueSignals.stop]
 
-    _worker(
-        FailingWorker,
-        input_queue,
-        output_queue,
-        num_active_workers,
-        worker_id=0,
-        kwargs={"failure_val": 5},
-    )
+    with pytest.raises(ValueError, match="Intentional failure on 5"):
+        _worker(
+            FailingWorker,
+            input_queue,
+            output_queue,
+            num_active_workers,
+            worker_id=0,
+            kwargs={"failure_val": 5},
+        )
 
     # Should put the error signal
     output_queue.put.assert_called_once_with(QueueSignals.error)
@@ -570,14 +571,15 @@ def test_worker_start_exception_handling():
     num_active_workers.value = 1
     worker_id = 0
 
-    _worker(
-        worker_class=StartFailingWorker,
-        input_queue=input_queue,
-        output_queue=output_queue,
-        num_active_workers=num_active_workers,
-        worker_id=worker_id,
-        kwargs={},
-    )
+    with pytest.raises(RuntimeError, match="Initialization failed"):
+        _worker(
+            worker_class=StartFailingWorker,
+            input_queue=input_queue,
+            output_queue=output_queue,
+            num_active_workers=num_active_workers,
+            worker_id=worker_id,
+            kwargs={},
+        )
 
     # Verify that QueueSignals.error was put in the output queue
     output_queue.put.assert_called_with(QueueSignals.error)
