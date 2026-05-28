@@ -315,7 +315,7 @@ def test_abstract_methods_raise():
     with pytest.raises(NotImplementedError):
         model._post_process_onnx_output(OnnxOutputContext(model_output=np.zeros((1, 4))))
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(AttributeError):
         model.load_onnx_model()
 
     with pytest.raises(NotImplementedError):

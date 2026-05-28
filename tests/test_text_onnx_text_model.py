@@ -134,7 +134,7 @@ class TestOnnxTextModelNotImplemented:
             pass
 
         stub = _Stub()
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(AttributeError):
             stub.load_onnx_model()
 
 

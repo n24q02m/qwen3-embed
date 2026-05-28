@@ -1,0 +1,7 @@
+<<<<<<< SEARCH
+    with pytest.raises(NotImplementedError):
+        model.load_onnx_model()
+=======
+    with pytest.raises(AttributeError):
+        model.load_onnx_model()
+>>>>>>> REPLACE
