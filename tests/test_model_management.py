@@ -1584,6 +1584,25 @@ class TestSaveFileMetadata:
             "Failed to save metadata file. Next load may take longer to verify."
         )
 
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_save_file_metadata_handles_typeerror(self, mock_logger, tmp_path):
+        """Verify that TypeError during json.dumps is caught and logged."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        meta = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        # Mock json.dumps to raise TypeError
+        with patch(
+            "qwen3_embed.common.model_management.json.dumps",
+            side_effect=TypeError("Object of type set is not JSON serializable"),
+        ):
+            ModelManagement._save_file_metadata(model_dir, meta)
+
+        mock_logger.exception.assert_called_once()
+        mock_logger.warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
+
 
 class TestVerifyFilesFromMetadata:
     """Tests for direct verification of the _verify_files_from_metadata method."""
