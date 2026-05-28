@@ -630,6 +630,79 @@ class ModelManagement(Generic[T]):
         return None
 
     @classmethod
+    def _attempt_download(
+        cls,
+        model: T,
+        cache_dir: str,
+        extra_patterns: list[str],
+        hf_source: str | None,
+        url_source: str | None,
+        **kwargs: Any,
+    ) -> Path | None:
+        """Attempts to download the model from available sources once."""
+        local_files_only = kwargs.get("local_files_only", False)
+        if hf_source and not local_files_only:
+            hf_path = cls._download_from_hf(
+                hf_source=hf_source,
+                cache_dir=cache_dir,
+                extra_patterns=extra_patterns,
+                **kwargs,
+            )
+            if hf_path:
+                return hf_path
+
+        if url_source or local_files_only:
+            gcs_path = cls._download_from_gcs(
+                model=model,
+                cache_dir=cache_dir,
+                **kwargs,
+            )
+            if gcs_path:
+                return gcs_path
+
+        return None
+
+    @classmethod
+    def _download_with_retries(
+        cls,
+        model: T,
+        cache_dir: str,
+        retries: int,
+        extra_patterns: list[str],
+        hf_source: str | None,
+        url_source: str | None,
+        **kwargs: Any,
+    ) -> Path | None:
+        """Manages the retry loop and exponential backoff for model downloading."""
+        local_files_only = kwargs.get("local_files_only", False)
+        sleep = 3.0
+        while retries > 0:
+            retries -= 1
+
+            path = cls._attempt_download(
+                model=model,
+                cache_dir=cache_dir,
+                extra_patterns=extra_patterns,
+                hf_source=hf_source,
+                url_source=url_source,
+                **kwargs,
+            )
+            if path:
+                return path
+
+            if local_files_only:
+                logger.error("Could not find model in cache_dir")
+                break
+
+            logger.error(
+                f"Could not download model from either source, sleeping for {sleep} seconds, {retries} retries left."
+            )
+            time.sleep(sleep)
+            sleep *= 3
+
+        return None
+
+    @classmethod
     def download_model(cls, model: T, cache_dir: str, retries: int = 3, **kwargs: Any) -> Path:
         """
         Downloads a model from HuggingFace Hub or Google Cloud Storage.
@@ -659,6 +732,7 @@ class ModelManagement(Generic[T]):
         specific_model_path: str | None = kwargs.pop("specific_model_path", None)
         if specific_model_path:
             return Path(specific_model_path)
+
         retries = 1 if local_files_only else retries
         hf_source = model.sources.hf
         url_source = model.sources.url
@@ -677,37 +751,17 @@ class ModelManagement(Generic[T]):
             if cached_path:
                 return cached_path
 
-        sleep = 3.0
-        while retries > 0:
-            retries -= 1
+        path = cls._download_with_retries(
+            model=model,
+            cache_dir=cache_dir,
+            retries=retries,
+            extra_patterns=extra_patterns,
+            hf_source=hf_source,
+            url_source=url_source,
+            **kwargs,
+        )
 
-            if hf_source and not local_files_only:
-                hf_path = cls._download_from_hf(
-                    hf_source=hf_source,
-                    cache_dir=cache_dir,
-                    extra_patterns=extra_patterns,
-                    **kwargs,
-                )
-                if hf_path:
-                    return hf_path
-
-            if url_source or local_files_only:
-                gcs_path = cls._download_from_gcs(
-                    model=model,
-                    cache_dir=cache_dir,
-                    **kwargs,
-                )
-                if gcs_path:
-                    return gcs_path
-
-            if local_files_only:
-                logger.error("Could not find model in cache_dir")
-                break
-            else:
-                logger.error(
-                    f"Could not download model from either source, sleeping for {sleep} seconds, {retries} retries left."
-                )
-                time.sleep(sleep)
-                sleep *= 3
+        if path:
+            return path
 
         raise ValueError(f"Could not load model {model.model} from any source.")
