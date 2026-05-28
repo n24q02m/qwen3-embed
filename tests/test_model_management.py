@@ -1636,3 +1636,109 @@ class TestGetExpectedMd5:
         """Correct hex MD5 should be returned even with extra whitespace."""
         headers = {"x-goog-hash": " crc32c=n9f4Sg== , md5=CY9rzUYh03PK3k6DJie09g== "}
         assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+
+
+# ---------------------------------------------------------------------------
+# TestValidateTarMember
+# ---------------------------------------------------------------------------
+
+
+class TestValidateTarMember:
+    """Tests for _validate_tar_member method."""
+
+    def setup_method(self, method):
+        self.cache_dir = "/tmp/cache"
+
+    def _create_mock_member(
+        self,
+        name: str,
+        is_reg: bool = True,
+        is_dir: bool = False,
+        is_sym: bool = False,
+        is_lnk: bool = False,
+        linkname: str = "",
+    ) -> MagicMock:
+        member = MagicMock(spec=tarfile.TarInfo)
+        member.name = name
+        member.linkname = linkname
+        member.isreg.return_value = is_reg
+        member.isdir.return_value = is_dir
+        member.issym.return_value = is_sym
+        member.islnk.return_value = is_lnk
+        return member
+
+    def test_validate_regular_file(self):
+        """Regular file in cache directory should pass."""
+        member = self._create_mock_member("file.txt")
+        # Should not raise
+        ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_validate_directory(self):
+        """Directory in cache directory should pass."""
+        member = self._create_mock_member("subdir", is_reg=False, is_dir=True)
+        # Should not raise
+        ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_validate_relative_symlink(self):
+        """Symlink pointing inside cache directory should pass."""
+        member = self._create_mock_member(
+            "dir/link", is_reg=False, is_sym=True, linkname="../file.txt"
+        )
+        # Should not raise
+        ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_validate_relative_hardlink(self):
+        """Hardlink pointing inside cache directory should pass."""
+        member = self._create_mock_member("link", is_reg=False, is_lnk=True, linkname="file.txt")
+        # Should not raise
+        ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_unsupported_file_type(self):
+        """Unsupported file types (e.g. character device) should raise TarError."""
+        member = self._create_mock_member("dev", is_reg=False)
+        with pytest.raises(tarfile.TarError, match="Unsupported file type"):
+            ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_absolute_path_name(self):
+        """Absolute path in member name should raise TarError."""
+        member = self._create_mock_member("/etc/passwd")
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
+            ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_path_traversal_name(self):
+        """Path traversal in member name should raise TarError."""
+        member = self._create_mock_member("../outside.txt")
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
+            ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_absolute_symlink_target(self):
+        """Absolute path in symlink target should raise TarError."""
+        member = self._create_mock_member(
+            "link", is_reg=False, is_sym=True, linkname="/etc/passwd"
+        )
+        with pytest.raises(tarfile.TarError, match="Attempted absolute path traversal"):
+            ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_absolute_hardlink_target(self):
+        """Absolute path in hardlink target should raise TarError."""
+        member = self._create_mock_member(
+            "link", is_reg=False, is_lnk=True, linkname="/etc/passwd"
+        )
+        with pytest.raises(tarfile.TarError, match="Attempted absolute path traversal"):
+            ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_path_traversal_symlink_target(self):
+        """Symlink target escaping cache directory should raise TarError."""
+        member = self._create_mock_member(
+            "link", is_reg=False, is_sym=True, linkname="../outside.txt"
+        )
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal in symlink/hardlink"):
+            ModelManagement._validate_tar_member(member, self.cache_dir)
+
+    def test_path_traversal_hardlink_target(self):
+        """Hardlink target escaping cache directory should raise TarError."""
+        member = self._create_mock_member(
+            "link", is_reg=False, is_lnk=True, linkname="../outside.txt"
+        )
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal in symlink/hardlink"):
+            ModelManagement._validate_tar_member(member, self.cache_dir)
