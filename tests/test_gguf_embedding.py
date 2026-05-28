@@ -15,29 +15,29 @@ import pytest
 _mock_llama_module = MagicMock()
 sys.modules["llama_cpp"] = _mock_llama_module
 
+from qwen3_embed.common.utils import check_llama_cpp  # noqa: E402
 from qwen3_embed.text.gguf_embedding import (  # noqa: E402
     DEFAULT_TASK,
     QUERY_INSTRUCTION_TEMPLATE,
     Qwen3TextEmbeddingGGUF,
-    _check_llama_cpp,
 )
 
 # ---------------------------------------------------------------------------
-# Tests for _check_llama_cpp
+# Tests for check_llama_cpp
 # ---------------------------------------------------------------------------
 
 
 def test_check_llama_cpp_missing():
-    """Test that _check_llama_cpp raises ImportError when llama_cpp is absent."""
+    """Test that check_llama_cpp raises ImportError when llama_cpp is absent."""
     with (
         patch.dict(sys.modules, {"llama_cpp": None}),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
-        _check_llama_cpp()
+        check_llama_cpp()
 
 
 def test_check_llama_cpp_import_error_with_mock():
-    """Test that _check_llama_cpp raises ImportError from builtins.__import__."""
+    """Test that check_llama_cpp raises ImportError from builtins.__import__."""
     original_import = __import__
 
     def mock_import(name, *args, **kwargs):
@@ -49,14 +49,14 @@ def test_check_llama_cpp_import_error_with_mock():
         patch("builtins.__import__", side_effect=mock_import),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
-        _check_llama_cpp()
+        check_llama_cpp()
 
 
 def test_check_llama_cpp_present():
-    """Test that _check_llama_cpp does not raise when llama_cpp is present."""
+    """Test that check_llama_cpp does not raise when llama_cpp is present."""
     mock_module = MagicMock()
     with patch.dict(sys.modules, {"llama_cpp": mock_module}):
-        _check_llama_cpp()  # Should not raise
+        check_llama_cpp()  # Should not raise
 
 
 # ---------------------------------------------------------------------------

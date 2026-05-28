@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
+from qwen3_embed.common.utils import check_llama_cpp
 from qwen3_embed.rerank.cross_encoder.gguf_cross_encoder import (
     DEFAULT_INSTRUCTION,
     RERANK_TEMPLATE,
@@ -18,11 +19,10 @@ from qwen3_embed.rerank.cross_encoder.gguf_cross_encoder import (
     TOKEN_NO_ID,
     TOKEN_YES_ID,
     Qwen3CrossEncoderGGUF,
-    _check_llama_cpp,
 )
 
 # ---------------------------------------------------------------------------
-# Tests for _check_llama_cpp
+# Tests for check_llama_cpp
 # ---------------------------------------------------------------------------
 
 
@@ -32,7 +32,7 @@ def test_check_llama_cpp_missing():
         mock.patch.dict(sys.modules, {"llama_cpp": None}),
         pytest.raises(ImportError, match="llama-cpp-python is required"),
     ):
-        _check_llama_cpp()
+        check_llama_cpp()
 
 
 def test_check_llama_cpp_present():
@@ -41,7 +41,7 @@ def test_check_llama_cpp_present():
     mock_module = mock.Mock()
     with mock.patch.dict(sys.modules, {"llama_cpp": mock_module}):
         try:
-            _check_llama_cpp()
+            check_llama_cpp()
         except ImportError:
             pytest.fail("ImportError raised unexpectedly when llama_cpp is mocked as present")
 

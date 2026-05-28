@@ -9,6 +9,7 @@ import pytest
 
 from qwen3_embed.common.utils import (
     check_input_length,
+    check_llama_cpp,
     define_cache_dir,
     iter_batch,
     iter_checked_texts,
@@ -437,3 +438,27 @@ class TestInputValidation:
             ValueError, match="Input string exceeds maximum allowed length of 5 characters"
         ):
             next(iterator)
+
+
+class TestCheckLlamaCpp:
+    """Tests for check_llama_cpp dependency validator."""
+
+    def test_missing_dependency(self) -> None:
+        """Should raise ImportError when llama_cpp cannot be imported."""
+        import sys
+
+        with (
+            patch.dict(sys.modules, {"llama_cpp": None}),
+            pytest.raises(ImportError, match="llama-cpp-python is required for GGUF models"),
+        ):
+            check_llama_cpp()
+
+    def test_present_dependency(self) -> None:
+        """Should not raise error when llama_cpp is present."""
+        import sys
+        from unittest.mock import MagicMock
+
+        mock_module = MagicMock()
+        with patch.dict(sys.modules, {"llama_cpp": mock_module}):
+            # Should not raise
+            check_llama_cpp()

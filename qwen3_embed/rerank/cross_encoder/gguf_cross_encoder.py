@@ -16,7 +16,7 @@ from typing import Any
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
 from qwen3_embed.common.types import Device
-from qwen3_embed.common.utils import define_cache_dir
+from qwen3_embed.common.utils import check_llama_cpp, define_cache_dir
 from qwen3_embed.rerank.cross_encoder.text_cross_encoder_base import TextCrossEncoderBase
 
 # ---------------------------------------------------------------------------
@@ -64,18 +64,6 @@ supported_qwen3_reranker_gguf_models: list[BaseModelDescription] = [
 ]
 
 
-def _check_llama_cpp() -> None:
-    """Check that llama-cpp-python is installed."""
-    try:
-        import llama_cpp  # type: ignore[unresolved-import] # noqa: F401
-    except ImportError as e:
-        msg = (
-            "llama-cpp-python is required for GGUF models. "
-            "Install with: pip install qwen3-embed[gguf]"
-        )
-        raise ImportError(msg) from e
-
-
 # ---------------------------------------------------------------------------
 # GGUF reranker implementation
 # ---------------------------------------------------------------------------
@@ -106,7 +94,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         cuda: bool | Device = Device.AUTO,
         **kwargs: Any,
     ) -> None:
-        _check_llama_cpp()
+        check_llama_cpp()
         super().__init__(model_name, cache_dir, threads, **kwargs)
 
         self.model_description = self._get_model_description(model_name)
