@@ -10,6 +10,7 @@ from loguru import logger
 from numpy.typing import NDArray
 from tokenizers import Tokenizer
 
+from qwen3_embed.common.model_description import BaseModelDescription
 from qwen3_embed.common.preprocessor_utils import load_tokenizer
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
 from qwen3_embed.parallel_processor import Worker
@@ -60,6 +61,15 @@ class OnnxModel(Generic[T]):
         self.model_input_names: set[str] | None = None
         self.tokenizer: Tokenizer | None = None
         self.special_token_to_id: dict[str, int] = {}
+
+        # These will be set by subclasses
+        self.threads: int | None = None
+        self.providers: Sequence[OnnxProvider] | None = None
+        self.cuda: bool | Device = Device.AUTO
+        self.device_id: int | None = None
+        self._extra_session_options: dict[str, Any] | None = None
+        self.model_description: BaseModelDescription | None = None
+        self._model_dir: Path | None = None
 
     def _preprocess_onnx_input(
         self, onnx_input: dict[str, NumpyArray], **kwargs: Any
@@ -218,7 +228,27 @@ class OnnxModel(Generic[T]):
             session_options.enable_cpu_mem_arena = extra_options["enable_cpu_mem_arena"]
 
     def load_onnx_model(self) -> None:
-        raise NotImplementedError("Subclasses must implement this method")
+        if self.model_description is None:
+            raise AttributeError(
+                "model_description is not set. Initialize the model properly before loading."
+            )
+        if self._model_dir is None:
+            raise AttributeError(
+                "_model_dir is not set. Initialize the model properly before loading."
+            )
+
+        config = OnnxSessionConfig(
+            threads=self.threads,
+            providers=self.providers,
+            cuda=self.cuda,
+            device_id=self.device_id,
+            extra_session_options=self._extra_session_options,
+        )
+        self._load_onnx_model(
+            model_dir=self._model_dir,
+            model_file=self.model_description.model_file,
+            config=config,
+        )
 
     def onnx_embed(self, *args: Any, **kwargs: Any) -> OnnxOutputContext:
         raise NotImplementedError("Subclasses must implement this method")

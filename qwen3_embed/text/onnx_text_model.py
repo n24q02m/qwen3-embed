@@ -43,9 +43,6 @@ class OnnxTextModel(OnnxModel[T]):
         """
         return onnx_input
 
-    def load_onnx_model(self) -> None:
-        raise NotImplementedError("Subclasses must implement this method")
-
     def tokenize(self, documents: list[str], **kwargs: Any) -> list[Encoding]:
         assert self.tokenizer is not None
         return self.tokenizer.encode_batch(documents)
