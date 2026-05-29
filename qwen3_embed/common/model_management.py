@@ -278,7 +278,7 @@ class ModelManagement(Generic[T]):
             if not model_dir.exists():
                 model_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
             (model_dir / cls.METADATA_FILE).write_text(json.dumps(meta))
-        except (OSError, ValueError) as e:
+        except (OSError, ValueError, TypeError) as e:
             logger.exception(e)
             logger.warning("Failed to save metadata file. Next load may take longer to verify.")
 
