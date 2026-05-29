@@ -392,6 +392,26 @@ class ModelManagement(Generic[T]):
 
         return result
 
+    @staticmethod
+    def _is_within_dir(base: str, candidate: str) -> bool:
+        """
+        Returns True if ``candidate`` resolves to a path inside ``base``.
+
+        Uses ``os.path.commonpath`` rather than a naive ``startswith`` so that
+        results are correct regardless of trailing separators, mixed path
+        separators, or sibling directories that share a name prefix (e.g.
+        ``cache`` vs ``cache-evil``). Paths on different drives (Windows) raise
+        ``ValueError`` from ``commonpath`` and are treated as outside ``base``.
+        """
+        base = os.path.abspath(base)
+        candidate = os.path.abspath(candidate)
+        if base == candidate:
+            return True
+        try:
+            return os.path.commonpath([base, candidate]) == base
+        except ValueError:
+            return False
+
     @classmethod
     def _validate_tar_member(cls, member: tarfile.TarInfo, cache_dir: str) -> None:
         """
@@ -404,21 +424,25 @@ class ModelManagement(Generic[T]):
         Raises:
             tarfile.TarError: If a path traversal attempt is detected.
         """
+        # Normalize so containment checks are stable regardless of how the
+        # caller spelled the directory (trailing separator, relative path, ...).
+        cache_dir = os.path.abspath(cache_dir)
+
         # SECURITY: Only allow regular files, directories, and links
         if not (member.isreg() or member.isdir() or member.issym() or member.islnk()):
             raise tarfile.TarError(f"Unsupported file type in tar file: {member.name}")
 
-        if os.path.isabs(member.name) or member.name.startswith("/"):
+        if os.path.isabs(member.name) or member.name.startswith(("/", "\\")):
             raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
 
         member_path = os.path.abspath(os.path.join(cache_dir, member.name))
-        if not member_path.startswith(cache_dir + os.sep) and member_path != cache_dir:
+        if not cls._is_within_dir(cache_dir, member_path):
             raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
 
         # SECURITY: Validate symlink and hardlink targets to prevent
         # arbitrary file writes outside the extraction directory.
         if member.issym() or member.islnk():
-            if os.path.isabs(member.linkname) or member.linkname.startswith("/"):
+            if os.path.isabs(member.linkname) or member.linkname.startswith(("/", "\\")):
                 raise tarfile.TarError(
                     f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
                 )
@@ -431,10 +455,7 @@ class ModelManagement(Generic[T]):
                 # Hardlinks (LNKTYPE) resolve relative to the extraction root
                 link_target_path = os.path.abspath(os.path.join(cache_dir, member.linkname))
 
-            if (
-                not link_target_path.startswith(cache_dir + os.sep)
-                and link_target_path != cache_dir
-            ):
+            if not cls._is_within_dir(cache_dir, link_target_path):
                 raise tarfile.TarError(
                     f"Attempted path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
                 )

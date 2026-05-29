@@ -1693,3 +1693,104 @@ class TestFetchRepoFiles:
 
         assert sha == "rev123"
         assert repo_files == []
+
+
+class TestValidateTarMember:
+    """Tests for _validate_tar_member: must allow safe relative members while
+    blocking absolute paths and ``..`` traversal (cross-platform)."""
+
+    def _member(
+        self,
+        name: str,
+        *,
+        is_reg: bool = True,
+        is_dir: bool = False,
+        is_sym: bool = False,
+        is_lnk: bool = False,
+        linkname: str = "",
+    ) -> MagicMock:
+        member = MagicMock(spec=tarfile.TarInfo)
+        member.name = name
+        member.linkname = linkname
+        member.isreg.return_value = is_reg
+        member.isdir.return_value = is_dir
+        member.issym.return_value = is_sym
+        member.islnk.return_value = is_lnk
+        return member
+
+    # --- safe members must be ALLOWED (regression for the over-strict bug) ---
+
+    def test_allows_plain_file(self, tmp_path):
+        ModelManagement._validate_tar_member(self._member("file.txt"), str(tmp_path))
+
+    def test_allows_nested_relative_file(self, tmp_path):
+        # Forward slashes are the canonical tar separator and must be accepted.
+        ModelManagement._validate_tar_member(self._member("sub/nested/model.onnx"), str(tmp_path))
+
+    def test_allows_directory(self, tmp_path):
+        ModelManagement._validate_tar_member(
+            self._member("subdir", is_reg=False, is_dir=True), str(tmp_path)
+        )
+
+    def test_allows_member_when_cache_dir_has_trailing_separator(self, tmp_path):
+        # A trailing separator on cache_dir previously broke the naive
+        # ``startswith(cache_dir + os.sep)`` check and wrongly rejected the file.
+        cache_dir = str(tmp_path) + os.sep
+        ModelManagement._validate_tar_member(self._member("file.txt"), cache_dir)
+
+    def test_allows_safe_relative_symlink(self, tmp_path):
+        ModelManagement._validate_tar_member(
+            self._member("dir/link", is_reg=False, is_sym=True, linkname="../file.txt"),
+            str(tmp_path),
+        )
+
+    def test_allows_safe_relative_hardlink(self, tmp_path):
+        ModelManagement._validate_tar_member(
+            self._member("link", is_reg=False, is_lnk=True, linkname="file.txt"),
+            str(tmp_path),
+        )
+
+    # --- real traversal attempts must be BLOCKED ---
+
+    def test_blocks_parent_traversal_name(self, tmp_path):
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
+            ModelManagement._validate_tar_member(self._member("../evil.txt"), str(tmp_path))
+
+    def test_blocks_nested_parent_traversal_name(self, tmp_path):
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
+            ModelManagement._validate_tar_member(self._member("sub/../../evil.txt"), str(tmp_path))
+
+    def test_blocks_absolute_posix_name(self, tmp_path):
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
+            ModelManagement._validate_tar_member(self._member("/etc/passwd"), str(tmp_path))
+
+    def test_blocks_backslash_rooted_name(self, tmp_path):
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
+            ModelManagement._validate_tar_member(
+                self._member("\\windows\\system32"), str(tmp_path)
+            )
+
+    def test_blocks_unsupported_file_type(self, tmp_path):
+        with pytest.raises(tarfile.TarError, match="Unsupported file type"):
+            ModelManagement._validate_tar_member(self._member("dev", is_reg=False), str(tmp_path))
+
+    def test_blocks_absolute_symlink_target(self, tmp_path):
+        with pytest.raises(tarfile.TarError, match="Attempted absolute path traversal"):
+            ModelManagement._validate_tar_member(
+                self._member("link", is_reg=False, is_sym=True, linkname="/etc/passwd"),
+                str(tmp_path),
+            )
+
+    def test_blocks_parent_traversal_symlink_target(self, tmp_path):
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal in symlink/hardlink"):
+            ModelManagement._validate_tar_member(
+                self._member("link", is_reg=False, is_sym=True, linkname="../../../etc/passwd"),
+                str(tmp_path),
+            )
+
+    def test_blocks_parent_traversal_hardlink_target(self, tmp_path):
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal in symlink/hardlink"):
+            ModelManagement._validate_tar_member(
+                self._member("link", is_reg=False, is_lnk=True, linkname="../outside.txt"),
+                str(tmp_path),
+            )
