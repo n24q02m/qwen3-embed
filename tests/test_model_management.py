@@ -1636,3 +1636,60 @@ class TestGetExpectedMd5:
         """Correct hex MD5 should be returned even with extra whitespace."""
         headers = {"x-goog-hash": " crc32c=n9f4Sg== , md5=CY9rzUYh03PK3k6DJie09g== "}
         assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+
+
+# ---------------------------------------------------------------------------
+# TestFetchRepoFiles
+# ---------------------------------------------------------------------------
+
+
+class TestFetchRepoFiles:
+    """Tests for _fetch_repo_files method."""
+
+    @patch("qwen3_embed.common.model_management.model_info")
+    @patch("qwen3_embed.common.model_management.list_repo_tree")
+    def test_fetch_repo_files_success(self, mock_list_tree, mock_model_info):
+        """Verify SHA retrieval and file filtering by extension."""
+        mock_model_info.return_value = MagicMock(sha="rev123")
+
+        files = [
+            make_repo_file("config.json"),
+            make_repo_file("model.onnx"),
+            make_repo_file("weights.gguf"),
+            make_repo_file("vocab.txt"),
+            make_repo_file("README.md"),  # Should be filtered out
+            make_repo_file("script.py"),  # Should be filtered out
+        ]
+        mock_list_tree.return_value = files
+
+        sha, repo_files = ModelManagement._fetch_repo_files("org/repo")
+
+        assert sha == "rev123"
+        assert len(repo_files) == 4
+        file_paths = {f.path for f in repo_files}
+        assert "config.json" in file_paths
+        assert "model.onnx" in file_paths
+        assert "weights.gguf" in file_paths
+        assert "vocab.txt" in file_paths
+        assert "README.md" not in file_paths
+        assert "script.py" not in file_paths
+
+    @patch("qwen3_embed.common.model_management.model_info")
+    def test_fetch_repo_files_no_sha_raises_error(self, mock_model_info):
+        """Verify ValueError is raised if SHA is None."""
+        mock_model_info.return_value = MagicMock(sha=None)
+
+        with pytest.raises(ValueError, match="Could not determine revision sha"):
+            ModelManagement._fetch_repo_files("org/repo")
+
+    @patch("qwen3_embed.common.model_management.model_info")
+    @patch("qwen3_embed.common.model_management.list_repo_tree")
+    def test_fetch_repo_files_empty_tree(self, mock_list_tree, mock_model_info):
+        """Verify empty list is returned if repo tree is empty."""
+        mock_model_info.return_value = MagicMock(sha="rev123")
+        mock_list_tree.return_value = []
+
+        sha, repo_files = ModelManagement._fetch_repo_files("org/repo")
+
+        assert sha == "rev123"
+        assert repo_files == []
