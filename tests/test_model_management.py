@@ -1636,3 +1636,83 @@ class TestGetExpectedMd5:
         """Correct hex MD5 should be returned even with extra whitespace."""
         headers = {"x-goog-hash": " crc32c=n9f4Sg== , md5=CY9rzUYh03PK3k6DJie09g== "}
         assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+
+
+class TestVerifyLocalMetadata:
+    """Tests for _verify_local_metadata method."""
+
+    def test_verify_local_metadata_success(self, tmp_path):
+        """Verify returns True when metadata and snapshot are valid."""
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+        metadata_file = tmp_path / "metadata.json"
+        metadata_file.write_text('{"file.txt": {"size": 100, "blob_id": "abc"}}')
+        repo_files = []
+
+        with patch.object(ModelManagement, "_verify_files_from_metadata", return_value=True):
+            result = ModelManagement._verify_local_metadata(
+                snapshot_dir, metadata_file, repo_files
+            )
+
+        assert result is True
+
+    def test_verify_local_metadata_no_snapshot(self, tmp_path):
+        """Verify returns False when snapshot_dir does not exist."""
+        snapshot_dir = tmp_path / "nonexistent"
+        metadata_file = tmp_path / "metadata.json"
+        metadata_file.write_text("{}")
+
+        result = ModelManagement._verify_local_metadata(snapshot_dir, metadata_file, [])
+        assert result is False
+
+    def test_verify_local_metadata_no_metadata(self, tmp_path):
+        """Verify returns False when metadata_file does not exist."""
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+        metadata_file = tmp_path / "nonexistent.json"
+
+        result = ModelManagement._verify_local_metadata(snapshot_dir, metadata_file, [])
+        assert result is False
+
+    def test_verify_local_metadata_invalid_json(self, tmp_path):
+        """Verify returns False and logs warning on invalid JSON."""
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+        metadata_file = tmp_path / "metadata.json"
+        metadata_file.write_text("invalid json")
+
+        with patch("qwen3_embed.common.model_management.logger") as mock_logger:
+            result = ModelManagement._verify_local_metadata(snapshot_dir, metadata_file, [])
+
+        assert result is False
+        mock_logger.warning.assert_called_once()
+        assert "Failed to read or parse metadata file" in mock_logger.warning.call_args[0][0]
+
+    def test_verify_local_metadata_oserror(self, tmp_path):
+        """Verify returns False and logs warning on OSError."""
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+        metadata_file = tmp_path / "metadata.json"
+        metadata_file.write_text("{}")
+
+        with (
+            patch("pathlib.Path.read_text", side_effect=OSError("Read error")),
+            patch("qwen3_embed.common.model_management.logger") as mock_logger,
+        ):
+            result = ModelManagement._verify_local_metadata(snapshot_dir, metadata_file, [])
+
+        assert result is False
+        mock_logger.warning.assert_called_once()
+        assert "Failed to read or parse metadata file" in mock_logger.warning.call_args[0][0]
+
+    def test_verify_local_metadata_verification_fails(self, tmp_path):
+        """Verify returns False when _verify_files_from_metadata returns False."""
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+        metadata_file = tmp_path / "metadata.json"
+        metadata_file.write_text("{}")
+
+        with patch.object(ModelManagement, "_verify_files_from_metadata", return_value=False):
+            result = ModelManagement._verify_local_metadata(snapshot_dir, metadata_file, [])
+
+        assert result is False
