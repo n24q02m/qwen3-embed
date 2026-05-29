@@ -405,10 +405,13 @@ class ModelManagement(Generic[T]):
             tarfile.TarError: If a path traversal attempt is detected.
         """
         # SECURITY: Only allow regular files, directories, and links
+        # SECURITY: Normalize cache_dir to absolute path for robust comparison
+        cache_dir = os.path.abspath(cache_dir)
+
         if not (member.isreg() or member.isdir() or member.issym() or member.islnk()):
             raise tarfile.TarError(f"Unsupported file type in tar file: {member.name}")
 
-        if os.path.isabs(member.name) or member.name.startswith("/"):
+        if os.path.isabs(member.name) or member.name.startswith("/") or member.name.startswith("\\"):
             raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
 
         member_path = os.path.abspath(os.path.join(cache_dir, member.name))
@@ -418,7 +421,7 @@ class ModelManagement(Generic[T]):
         # SECURITY: Validate symlink and hardlink targets to prevent
         # arbitrary file writes outside the extraction directory.
         if member.issym() or member.islnk():
-            if os.path.isabs(member.linkname) or member.linkname.startswith("/"):
+            if os.path.isabs(member.linkname) or member.linkname.startswith("/") or member.linkname.startswith("\\"):
                 raise tarfile.TarError(
                     f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
                 )

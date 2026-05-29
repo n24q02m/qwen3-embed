@@ -1647,7 +1647,7 @@ class TestValidateTarMember:
     """Tests for _validate_tar_member method."""
 
     def setup_method(self, method):
-        self.cache_dir = "/tmp/cache"
+        self.cache_dir = os.path.abspath("/tmp/cache")
 
     def _create_mock_member(
         self,
