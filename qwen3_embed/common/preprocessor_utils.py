@@ -56,11 +56,15 @@ def load_tokenizer(model_dir: Path) -> tuple[Tokenizer, dict[str, int]]:
             pad_token = pad_token.get("content", "")
         tokenizer.enable_padding(pad_id=pad_token_id, pad_token=pad_token)
 
+    # ⚡ Bolt: Fast batching for special token additions to avoid O(N) boundary crossings and tree rebuilds
+    added_tokens: list[str | AddedToken] = []
     for token in tokens_map.values():
         if isinstance(token, str):
-            tokenizer.add_special_tokens([token])
+            added_tokens.append(token)
         elif isinstance(token, dict):
-            tokenizer.add_special_tokens([AddedToken(**token)])
+            added_tokens.append(AddedToken(**token))
+    if added_tokens:
+        tokenizer.add_special_tokens(added_tokens)
 
     special_token_to_id: dict[str, int] = {}
 
