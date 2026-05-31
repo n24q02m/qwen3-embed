@@ -21,3 +21,7 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-05-31 - [Fast multiple literal string replacement]
+**Learning:** For iterative removal of multiple literal string tokens (e.g., preventing prompt injection in `_sanitize_input`), using a nested `while True` loop that iterates over the tokens and applies `str.replace` is significantly faster (~2x) than using a compiled regular expression's `subn` method.
+**Action:** Use iterative `str.replace` instead of `re.subn` when removing a small list of known literal strings from user input.
