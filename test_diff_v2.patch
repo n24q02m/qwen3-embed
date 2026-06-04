@@ -1,0 +1,45 @@
+<<<<<<< SEARCH
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    def test_hf_source_cache_miss_falls_through_to_retry(self, mock_enable, tmp_path):
+        """HF local cache miss leads to online retry, then success."""
+        model = make_model_description(hf="org/repo")
+        online_path = str(tmp_path / "online")
+
+        call_count = 0
+
+        def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if kwargs.get("local_files_only"):
+                raise OSError("not in cache")
+            return online_path
+
+        with patch.object(
+            ModelManagement, "download_files_from_huggingface", side_effect=side_effect
+        ):
+            result = ModelManagement.download_model(model, cache_dir=str(tmp_path), retries=1)
+
+        assert result == Path(online_path)
+        assert call_count == 2
+=======
+    @patch("qwen3_embed.common.model_management.enable_progress_bars")
+    def test_hf_source_cache_miss_falls_through_to_retry(self, mock_enable, tmp_path):
+        """HF local cache miss leads to online retry, then success."""
+        model = make_model_description(hf="org/repo")
+        online_path = str(tmp_path / "online")
+
+        call_count = 0
+
+        def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            return online_path
+
+        with patch.object(
+            ModelManagement, "download_files_from_huggingface", side_effect=side_effect
+        ):
+            result = ModelManagement.download_model(model, cache_dir=str(tmp_path), retries=1)
+
+        assert result == Path(online_path)
+        assert call_count == 1
+>>>>>>> REPLACE

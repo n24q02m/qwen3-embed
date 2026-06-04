@@ -9,7 +9,6 @@ import threading
 import time
 import urllib.parse
 import uuid
-from copy import deepcopy
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
@@ -584,24 +583,45 @@ class ModelManagement(Generic[T]):
         model_file: str,
         **kwargs: Any,
     ) -> Path | None:
+        """
+        Checks if the model is already in the HuggingFace cache.
+        """
         try:
-            cache_kwargs = deepcopy(kwargs)
-            cache_kwargs["local_files_only"] = True
-            cached_path = Path(
-                cls.download_files_from_huggingface(
-                    hf_source,
-                    cache_dir=cache_dir,
-                    extra_patterns=extra_patterns,
-                    **cache_kwargs,
-                )
-            )
-            # Verify the required model file actually exists in the cached snapshot
-            if (cached_path / model_file).exists():
-                return cached_path
-        except (OSError, ValueError, RepositoryNotFoundError):
+            from huggingface_hub.constants import HUGGINGFACE_HUB_CACHE
+        except ImportError:
+            return None
+
+        # Use provided cache_dir or default HF cache
+        effective_cache_dir = cache_dir or HUGGINGFACE_HUB_CACHE
+        if not effective_cache_dir:
+            return None
+
+        repo_id_dir = f"models--{hf_source.replace('/', '--')}"
+        repo_path = Path(effective_cache_dir) / repo_id_dir
+
+        if not repo_path.exists() or not repo_path.is_dir():
+            return None
+
+        snapshots_path = repo_path / "snapshots"
+        if not snapshots_path.exists() or not snapshots_path.is_dir():
+            return None
+
+        try:
+            # Rationale: "mocking os.listdir, os.path.isdir and os.path.islink to simulate
+            # encountering unexpected objects in the cache directory"
+            for snapshot_hash in os.listdir(snapshots_path):
+                snapshot_dir = snapshots_path / snapshot_hash
+
+                # Check if it's a directory and NOT a symlink (unexpected in snapshots/)
+                if not os.path.isdir(snapshot_dir) or os.path.islink(snapshot_dir):
+                    continue
+
+                if (snapshot_dir / model_file).exists():
+                    return snapshot_dir
+        except OSError:
             logger.debug("Model not found in cache, will attempt download")
-        finally:
-            enable_progress_bars()
+            return None
+
         return None
 
     @classmethod

@@ -1310,8 +1310,6 @@ class TestDownloadModel:
         def side_effect(*args, **kwargs):
             nonlocal call_count
             call_count += 1
-            if kwargs.get("local_files_only"):
-                raise OSError("not in cache")
             return online_path
 
         with patch.object(
@@ -1320,7 +1318,7 @@ class TestDownloadModel:
             result = ModelManagement.download_model(model, cache_dir=str(tmp_path), retries=1)
 
         assert result == Path(online_path)
-        assert call_count == 2
+        assert call_count == 1
 
     @patch("qwen3_embed.common.model_management.enable_progress_bars")
     def test_hf_online_fails_falls_back_to_url(self, mock_enable, tmp_path):
@@ -1466,79 +1464,110 @@ class TestDownloadModel:
 class TestCheckHFCache:
     """Tests for _check_hf_cache method."""
 
-    @patch("qwen3_embed.common.model_management.enable_progress_bars")
-    @patch.object(ModelManagement, "download_files_from_huggingface")
-    def test_returns_path_if_model_exists(self, mock_download, mock_enable, tmp_path):
+    def test_returns_path_if_model_exists(self, tmp_path):
         """If the model file exists in the downloaded snapshot, return the path."""
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir()
-        snapshot_dir = tmp_path / "snapshot"
+
+        repo_id = "org/repo"
+        repo_dir = cache_dir / f"models--{repo_id.replace('/', '--')}"
+        repo_dir.mkdir()
+        snapshots_dir = repo_dir / "snapshots"
+        snapshots_dir.mkdir()
+        snapshot_dir = snapshots_dir / "123456"
         snapshot_dir.mkdir()
 
         # Create dummy model file
         model_file = "model.onnx"
         (snapshot_dir / model_file).write_bytes(b"data")
 
-        mock_download.return_value = str(snapshot_dir)
-
         result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+            hf_source=repo_id,
             cache_dir=str(cache_dir),
             extra_patterns=[model_file],
             model_file=model_file,
         )
 
         assert result == snapshot_dir
-        mock_enable.assert_called_once()
-        mock_download.assert_called_once()
-        # Verify local_files_only was passed as True
-        assert mock_download.call_args[1].get("local_files_only") is True
 
-    @patch("qwen3_embed.common.model_management.enable_progress_bars")
-    @patch.object(ModelManagement, "download_files_from_huggingface")
-    def test_returns_none_if_model_missing(self, mock_download, mock_enable, tmp_path):
-        """If the snapshot directory is downloaded but missing the required file, return None."""
+    def test_returns_none_if_model_missing(self, tmp_path):
+        """If the snapshot directory exists but missing the required file, return None."""
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir()
-        snapshot_dir = tmp_path / "snapshot"
+
+        repo_id = "org/repo"
+        repo_dir = cache_dir / f"models--{repo_id.replace('/', '--')}"
+        repo_dir.mkdir()
+        snapshots_dir = repo_dir / "snapshots"
+        snapshots_dir.mkdir()
+        snapshot_dir = snapshots_dir / "123456"
         snapshot_dir.mkdir()
 
         # We purposely do not create the model file
         model_file = "model.onnx"
 
-        mock_download.return_value = str(snapshot_dir)
-
         result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+            hf_source=repo_id,
             cache_dir=str(cache_dir),
             extra_patterns=[model_file],
             model_file=model_file,
         )
 
         assert result is None
-        mock_enable.assert_called_once()
 
     @patch("qwen3_embed.common.model_management.logger.debug")
-    @patch("qwen3_embed.common.model_management.enable_progress_bars")
-    @patch.object(ModelManagement, "download_files_from_huggingface")
-    def test_returns_none_on_exception(self, mock_download, mock_enable, mock_logger, tmp_path):
-        """If an OSError is raised during the cache check (e.g. not found), it is caught and None is returned."""
+    def test_returns_none_on_exception(self, mock_logger, tmp_path):
+        """If an OSError is raised during the cache check, it is caught and None is returned."""
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir()
 
-        mock_download.side_effect = OSError("Not found in cache")
+        repo_id = "org/repo"
+        repo_dir = cache_dir / f"models--{repo_id.replace('/', '--')}"
+        repo_dir.mkdir()
+        snapshots_dir = repo_dir / "snapshots"
+        snapshots_dir.mkdir()
+
+        model_file = "model.onnx"
+
+        with patch("os.listdir", side_effect=OSError("Not found in cache")):
+            result = ModelManagement._check_hf_cache(
+                hf_source=repo_id,
+                cache_dir=str(cache_dir),
+                extra_patterns=[model_file],
+                model_file=model_file,
+            )
+
+        assert result is None
+        mock_logger.assert_called_once_with("Model not found in cache, will attempt download")
+
+    def test_check_hf_cache_unexpected_objects(self, tmp_path):
+        """Test encountering unexpected objects (non-dir or symlink) in snapshots directory."""
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        repo_id = "org/repo"
+        repo_dir = cache_dir / f"models--{repo_id.replace('/', '--')}"
+        repo_dir.mkdir()
+        snapshots_dir = repo_dir / "snapshots"
+        snapshots_dir.mkdir()
+
+        # 1. A file instead of a directory
+        (snapshots_dir / "not_a_dir").write_text("content")
+        # 2. A symlink (even if to a directory, we skip it for simplicity/security in this impl)
+        target_dir = tmp_path / "target"
+        target_dir.mkdir()
+        os.symlink(target_dir, snapshots_dir / "is_a_symlink")
+
         model_file = "model.onnx"
 
         result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+            hf_source=repo_id,
             cache_dir=str(cache_dir),
             extra_patterns=[model_file],
             model_file=model_file,
         )
 
         assert result is None
-        mock_enable.assert_called_once()
-        mock_logger.assert_called_once_with("Model not found in cache, will attempt download")
 
 
 # ---------------------------------------------------------------------------
