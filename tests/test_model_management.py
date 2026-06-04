@@ -16,7 +16,7 @@ from huggingface_hub.errors import RepositoryNotFoundError
 from huggingface_hub.hf_api import RepoFile
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
-from qwen3_embed.common.model_management import ModelManagement
+from qwen3_embed.common.model_management import ModelManagement, _DownloadContext
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures
@@ -1481,11 +1481,17 @@ class TestCheckHFCache:
 
         mock_download.return_value = str(snapshot_dir)
 
-        result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+        model = make_model_description(model_file=model_file)
+        ctx = _DownloadContext(
+            model=model,
             cache_dir=str(cache_dir),
             extra_patterns=[model_file],
-            model_file=model_file,
+            hf_source="org/repo",
+            url_source=None,
+        )
+
+        result = ModelManagement._check_hf_cache(
+            ctx=ctx,
         )
 
         assert result == snapshot_dir
@@ -1508,11 +1514,17 @@ class TestCheckHFCache:
 
         mock_download.return_value = str(snapshot_dir)
 
-        result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+        model = make_model_description(model_file=model_file)
+        ctx = _DownloadContext(
+            model=model,
             cache_dir=str(cache_dir),
             extra_patterns=[model_file],
-            model_file=model_file,
+            hf_source="org/repo",
+            url_source=None,
+        )
+
+        result = ModelManagement._check_hf_cache(
+            ctx=ctx,
         )
 
         assert result is None
@@ -1529,11 +1541,17 @@ class TestCheckHFCache:
         mock_download.side_effect = OSError("Not found in cache")
         model_file = "model.onnx"
 
-        result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+        model = make_model_description(model_file=model_file)
+        ctx = _DownloadContext(
+            model=model,
             cache_dir=str(cache_dir),
             extra_patterns=[model_file],
-            model_file=model_file,
+            hf_source="org/repo",
+            url_source=None,
+        )
+
+        result = ModelManagement._check_hf_cache(
+            ctx=ctx,
         )
 
         assert result is None

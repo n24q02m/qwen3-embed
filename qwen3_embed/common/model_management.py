@@ -10,6 +10,7 @@ import time
 import urllib.parse
 import uuid
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
@@ -27,6 +28,15 @@ from tqdm import tqdm
 from qwen3_embed.common.model_description import BaseModelDescription
 
 T = TypeVar("T", bound=BaseModelDescription)
+
+
+@dataclass(frozen=True)
+class _DownloadContext(Generic[T]):
+    model: T
+    cache_dir: str
+    extra_patterns: list[str]
+    hf_source: str | None
+    url_source: str | None
 
 
 class ModelManagement(Generic[T]):
@@ -578,25 +588,24 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _check_hf_cache(
         cls,
-        hf_source: str,
-        cache_dir: str,
-        extra_patterns: list[str],
-        model_file: str,
+        ctx: _DownloadContext[T],
         **kwargs: Any,
     ) -> Path | None:
+        if not ctx.hf_source:
+            return None
         try:
             cache_kwargs = deepcopy(kwargs)
             cache_kwargs["local_files_only"] = True
             cached_path = Path(
                 cls.download_files_from_huggingface(
-                    hf_source,
-                    cache_dir=cache_dir,
-                    extra_patterns=extra_patterns,
+                    ctx.hf_source,
+                    cache_dir=ctx.cache_dir,
+                    extra_patterns=ctx.extra_patterns,
                     **cache_kwargs,
                 )
             )
             # Verify the required model file actually exists in the cached snapshot
-            if (cached_path / model_file).exists():
+            if (cached_path / ctx.model.model_file).exists():
                 return cached_path
         except (OSError, ValueError, RepositoryNotFoundError):
             logger.debug("Model not found in cache, will attempt download")
@@ -653,29 +662,25 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _attempt_download(
         cls,
-        model: T,
-        cache_dir: str,
-        extra_patterns: list[str],
-        hf_source: str | None,
-        url_source: str | None,
+        ctx: _DownloadContext[T],
         **kwargs: Any,
     ) -> Path | None:
         """Attempts to download the model from available sources once."""
         local_files_only = kwargs.get("local_files_only", False)
-        if hf_source and not local_files_only:
+        if ctx.hf_source and not local_files_only:
             hf_path = cls._download_from_hf(
-                hf_source=hf_source,
-                cache_dir=cache_dir,
-                extra_patterns=extra_patterns,
+                hf_source=ctx.hf_source,
+                cache_dir=ctx.cache_dir,
+                extra_patterns=ctx.extra_patterns,
                 **kwargs,
             )
             if hf_path:
                 return hf_path
 
-        if url_source or local_files_only:
+        if ctx.url_source or local_files_only:
             gcs_path = cls._download_from_gcs(
-                model=model,
-                cache_dir=cache_dir,
+                model=ctx.model,
+                cache_dir=ctx.cache_dir,
                 **kwargs,
             )
             if gcs_path:
@@ -686,12 +691,8 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _download_with_retries(
         cls,
-        model: T,
-        cache_dir: str,
+        ctx: _DownloadContext[T],
         retries: int,
-        extra_patterns: list[str],
-        hf_source: str | None,
-        url_source: str | None,
         **kwargs: Any,
     ) -> Path | None:
         """Manages the retry loop and exponential backoff for model downloading."""
@@ -701,11 +702,7 @@ class ModelManagement(Generic[T]):
             retries -= 1
 
             path = cls._attempt_download(
-                model=model,
-                cache_dir=cache_dir,
-                extra_patterns=extra_patterns,
-                hf_source=hf_source,
-                url_source=url_source,
+                ctx=ctx,
                 **kwargs,
             )
             if path:
@@ -761,24 +758,25 @@ class ModelManagement(Generic[T]):
         extra_patterns = [model.model_file]
         extra_patterns.extend(model.additional_files)
 
+        ctx: _DownloadContext[T] = _DownloadContext(
+            model=model,
+            cache_dir=cache_dir,
+            extra_patterns=extra_patterns,
+            hf_source=hf_source,
+            url_source=url_source,
+        )
+
         if hf_source:
             cached_path = cls._check_hf_cache(
-                hf_source=hf_source,
-                cache_dir=cache_dir,
-                extra_patterns=extra_patterns,
-                model_file=model.model_file,
+                ctx=ctx,
                 **kwargs,
             )
             if cached_path:
                 return cached_path
 
         path = cls._download_with_retries(
-            model=model,
-            cache_dir=cache_dir,
+            ctx=ctx,
             retries=retries,
-            extra_patterns=extra_patterns,
-            hf_source=hf_source,
-            url_source=url_source,
             **kwargs,
         )
 
