@@ -583,3 +583,30 @@ def test_worker_start_exception_handling():
     output_queue.put.assert_called_with(QueueSignals.error)
     # Verify that the worker was cleaned up (num_active_workers decremented)
     assert num_active_workers.value == 0
+
+
+def test_process_stream_get_nowait_empty_handled():
+    """Test that Empty exception from output_queue.get_nowait() is handled by setting out_item to None."""
+    # Set max_internal_batch_size to a large value to ensure we hit get_nowait
+    with patch.object(pp_module, "max_internal_batch_size", 10):
+        pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+        pool.input_queue = MagicMock()
+        pool.output_queue = MagicMock()
+
+        # On the first iteration of the for loop:
+        # pushed = 0, read = 0, queue_size = 10.
+        # So pushed - read < queue_size is 0 < 10 (True).
+        # It will call get_nowait().
+        pool.output_queue.get_nowait.side_effect = Empty()
+
+        # After the for loop, it enters the while loop to drain the remaining items.
+        # It will call get(timeout=processing_timeout).
+        pool.output_queue.get.return_value = (0, 1)
+
+        pool.check_worker_health = MagicMock()
+
+        results = list(pool._process_stream([1]))
+
+        assert results == [(0, 1)]
+        pool.output_queue.get_nowait.assert_called_once()
+        pool.output_queue.get.assert_called_with(timeout=pp_module.processing_timeout)
