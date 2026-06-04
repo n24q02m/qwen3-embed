@@ -257,7 +257,7 @@ class TestQwen3CrossEncoderInference:
             encoder = Qwen3CrossEncoder("n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo", lazy_load=True)
         encoder.model = MagicMock()
         encoder.tokenizer = None
-        with pytest.raises(AssertionError, match="Tokenizer not loaded"):
+        with pytest.raises(RuntimeError, match="Tokenizer not loaded"):
             encoder._onnx_embed_texts(["text1"])
 
     def test_onnx_embed_texts_success(self, mocked_qwen3_encoder):

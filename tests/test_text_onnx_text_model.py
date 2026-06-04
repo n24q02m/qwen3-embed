@@ -169,7 +169,7 @@ class TestOnnxTextModelTokenize:
 
     def test_asserts_tokenizer_not_none(self) -> None:
         m = ConcreteOnnxTextModel()
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError):
             m.tokenize(["hello"])
 
 

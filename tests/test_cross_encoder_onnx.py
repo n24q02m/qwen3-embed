@@ -200,7 +200,7 @@ class TestOnnxCrossEncoderModelTokenize:
 
     def test_tokenize_asserts_tokenizer_not_none(self) -> None:
         m = ConcreteCrossEncoderModel()
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError):
             m.tokenize([("q", "d")])
 
 
