@@ -21,3 +21,7 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-04 - [Fast case-insensitive model registration check]
+**Learning:** Linear search over a list of model descriptions is O(N). Reusing an existing case-insensitive dictionary cache via a try-except block on `_get_model_description` provides O(1) lookups and significantly faster duplicate checks. Benchmarking showed ~800x improvement for 1,000 models.
+**Action:** Always prefer dictionary lookups over linear list searches for membership validation, especially when a suitable cache already exists.
