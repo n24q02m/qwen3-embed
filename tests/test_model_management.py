@@ -1803,8 +1803,16 @@ class TestValidateTarMember:
     def test_validate_tar_member_invalid_path(self, tmp_path):
         """Verify that ValueError during abspath in _validate_tar_member raises TarError."""
         member = self._member("file.txt")
+        # Ensure we only raise ValueError for the path containing member.name
+        orig_abspath = os.path.abspath
+
+        def side_effect(path):
+            if "file.txt" in str(path):
+                raise ValueError("Invalid path")
+            return orig_abspath(path)
+
         with (
-            patch("os.path.abspath", side_effect=ValueError("Invalid path")),
+            patch("os.path.abspath", side_effect=side_effect),
             pytest.raises(tarfile.TarError, match="Invalid member path"),
         ):
             ModelManagement._validate_tar_member(member, str(tmp_path))

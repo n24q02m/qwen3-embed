@@ -424,18 +424,18 @@ class ModelManagement(Generic[T]):
         Raises:
             tarfile.TarError: If a path traversal attempt is detected.
         """
-        # Normalize so containment checks are stable regardless of how the
-        # caller spelled the directory (trailing separator, relative path, ...).
-        cache_dir = os.path.abspath(cache_dir)
-
-        # SECURITY: Only allow regular files, directories, and links
-        if not (member.isreg() or member.isdir() or member.issym() or member.islnk()):
-            raise tarfile.TarError(f"Unsupported file type in tar file: {member.name}")
-
-        if os.path.isabs(member.name) or member.name.startswith(("/", "\\")):
-            raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
-
         try:
+            # Normalize so containment checks are stable regardless of how the
+            # caller spelled the directory (trailing separator, relative path, ...).
+            cache_dir = os.path.abspath(cache_dir)
+
+            # SECURITY: Only allow regular files, directories, and links
+            if not (member.isreg() or member.isdir() or member.issym() or member.islnk()):
+                raise tarfile.TarError(f"Unsupported file type in tar file: {member.name}")
+
+            if os.path.isabs(member.name) or member.name.startswith(("/", "\\")):
+                raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
+
             member_path = os.path.abspath(os.path.join(cache_dir, member.name))
         except ValueError:
             raise tarfile.TarError(f"Invalid member path in tar file: {member.name}") from None
