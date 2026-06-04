@@ -21,3 +21,7 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-04 - Avoid redundant generator iteration for list checking
+**Learning:** Re-evaluating the entire list of supported models in error paths is inefficient when a populated cache of descriptions is already available.
+**Action:** Replaced `cls._list_supported_models()` with `cls._embedding_description_cache.values()` in `get_embedding_size` to retrieve available model names directly from the cache.

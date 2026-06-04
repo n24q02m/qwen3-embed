@@ -153,7 +153,7 @@ class TextEmbedding(TextEmbeddingBase):
             assert desc.dim is not None
             return desc.dim
 
-        model_names = [desc.model for desc in cls._list_supported_models()]
+        model_names = [desc.model for desc in cls._embedding_description_cache.values()]
         raise ValueError(
             f"Embedding size for model {model_name} was None. Available model names: {model_names}"
         )
