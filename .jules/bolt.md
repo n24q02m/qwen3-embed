@@ -21,3 +21,6 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+## 2026-06-04 - Merge duplicate loops in tokenizer loading
+**Learning:** Batching calls to `tokenizer.add_special_tokens` by passing a list of tokens instead of calling it individually in a loop is significantly more efficient as it reduces Python-to-Rust boundary crossings and avoids multiple internal token tree rebuilds. Combining multiple loops over the same small collection (like special tokens) further reduces overhead.
+**Action:** Consolidate multiple passes over special token maps into a single pass that collects tokens for batch addition and simultaneously prepares data for the ID mapping.

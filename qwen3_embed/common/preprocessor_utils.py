@@ -56,19 +56,21 @@ def load_tokenizer(model_dir: Path) -> tuple[Tokenizer, dict[str, int]]:
             pad_token = pad_token.get("content", "")
         tokenizer.enable_padding(pad_id=pad_token_id, pad_token=pad_token)
 
+    added_tokens: list[str | AddedToken] = []
+    token_strings: list[str] = []
     for token in tokens_map.values():
         if isinstance(token, str):
-            tokenizer.add_special_tokens([token])
+            added_tokens.append(token)
+            token_strings.append(token)
         elif isinstance(token, dict):
-            tokenizer.add_special_tokens([AddedToken(**token)])
+            added_tokens.append(AddedToken(**token))
+            token_strings.append(token.get("content", ""))
 
-    special_token_to_id: dict[str, int] = {}
+    if added_tokens:
+        tokenizer.add_special_tokens(added_tokens)
 
-    for token in tokens_map.values():
-        if isinstance(token, str):
-            special_token_to_id[token] = tokenizer.token_to_id(token)
-        elif isinstance(token, dict):
-            token_str = token.get("content", "")
-            special_token_to_id[token_str] = tokenizer.token_to_id(token_str)
+    special_token_to_id: dict[str, int] = {
+        ts: tid for ts in token_strings if (tid := tokenizer.token_to_id(ts)) is not None
+    }
 
     return tokenizer, special_token_to_id
