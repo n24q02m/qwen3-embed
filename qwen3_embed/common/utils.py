@@ -150,3 +150,15 @@ _NON_ALPHANUMERIC_RE = re.compile(r"[^\w\s]", flags=re.UNICODE)
 
 def remove_non_alphanumeric(text: str) -> str:
     return _NON_ALPHANUMERIC_RE.sub(" ", text)
+
+
+def check_llama_cpp() -> None:
+    """Check that llama-cpp-python is installed."""
+    try:
+        import llama_cpp  # type: ignore[unresolved-import] # noqa: F401
+    except ImportError as e:
+        msg = (
+            "llama-cpp-python is required for GGUF models. "
+            "Install with: pip install qwen3-embed[gguf]"
+        )
+        raise ImportError(msg) from e
