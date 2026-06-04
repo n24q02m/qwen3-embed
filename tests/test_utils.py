@@ -206,15 +206,15 @@ class TestIterBatch:
         assert result == [[0, 1], [2, 3], [4]]
 
     def test_batch_size_zero(self) -> None:
-        """Test with batch size 0 (should return empty list)."""
+        """Test with batch size 0 (should raise ValueError)."""
         data = [1, 2, 3]
-        result = list(iter_batch(data, 0))
-        assert result == []
+        with pytest.raises(ValueError, match="Batch size must be a positive integer."):
+            list(iter_batch(data, 0))
 
     def test_negative_batch_size(self) -> None:
         """Test with negative batch size (should raise ValueError)."""
         data = [1, 2, 3]
-        with pytest.raises(ValueError, match="Stop argument for islice"):
+        with pytest.raises(ValueError, match="Batch size must be a positive integer."):
             list(iter_batch(data, -1))
 
 
