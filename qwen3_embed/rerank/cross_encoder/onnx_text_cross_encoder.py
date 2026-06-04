@@ -5,7 +5,11 @@ from loguru import logger
 
 from qwen3_embed.common import OnnxProvider
 from qwen3_embed.common.model_description import BaseModelDescription
-from qwen3_embed.common.onnx_model import OnnxOutputContext, OnnxSessionConfig
+from qwen3_embed.common.onnx_model import (
+    InferenceConfig,
+    OnnxOutputContext,
+    OnnxSessionConfig,
+)
 from qwen3_embed.common.types import Device
 from qwen3_embed.common.utils import define_cache_dir
 from qwen3_embed.rerank.cross_encoder.onnx_text_model import (
@@ -143,10 +147,9 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
         parallel: int | None = None,
         **kwargs: Any,
     ) -> Iterable[float]:
-        yield from self._rerank_pairs(
+        config = InferenceConfig(
             model_name=self.model_name,
             cache_dir=str(self.cache_dir),
-            pairs=pairs,
             batch_size=batch_size,
             parallel=parallel,
             providers=self.providers,
@@ -155,6 +158,10 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
             local_files_only=self._local_files_only,
             specific_model_path=self._specific_model_path,
             extra_session_options=self._extra_session_options,
+        )
+        yield from self._rerank_pairs(
+            pairs=pairs,
+            config=config,
             **kwargs,
         )
 

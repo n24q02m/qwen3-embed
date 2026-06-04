@@ -36,6 +36,20 @@ class OnnxSessionConfig:
     extra_session_options: dict[str, Any] | None = None
 
 
+@dataclass
+class InferenceConfig:
+    model_name: str
+    cache_dir: str
+    batch_size: int = 256
+    parallel: int | None = None
+    providers: Sequence[OnnxProvider] | None = None
+    cuda: bool | Device = Device.AUTO
+    device_ids: list[int] | None = None
+    local_files_only: bool = False
+    specific_model_path: str | None = None
+    extra_session_options: dict[str, Any] | None = None
+
+
 class OnnxModel(Generic[T]):
     EXPOSED_SESSION_OPTIONS = ("enable_cpu_mem_arena",)
 

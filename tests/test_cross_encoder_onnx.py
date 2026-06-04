@@ -14,7 +14,11 @@ import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
-from qwen3_embed.common.onnx_model import OnnxOutputContext, OnnxSessionConfig
+from qwen3_embed.common.onnx_model import (
+    InferenceConfig,
+    OnnxOutputContext,
+    OnnxSessionConfig,
+)
 from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import (
     OnnxTextCrossEncoder,
@@ -335,12 +339,11 @@ class TestRerankPairsIsSmallBranch:
         m.model = _make_mock_session(n_pairs=1)
         m.model_input_names = {"input_ids"}
         m.tokenizer = _make_mock_tokenizer(n_pairs=1)
+        config = InferenceConfig(model_name="m", cache_dir="/tmp", batch_size=64)
         scores = list(
             m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=[("query", "doc")],
-                batch_size=64,
+                config=config,
             )
         )
         assert len(scores) == 1
@@ -349,12 +352,11 @@ class TestRerankPairsIsSmallBranch:
     def test_list_smaller_than_batch_size(self, loaded_model: ConcreteCrossEncoderModel) -> None:
         pairs = [("q", "d1"), ("q", "d2")]
         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=2)
+        config = InferenceConfig(model_name="m", cache_dir="/tmp", batch_size=64)
         scores = list(
             loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=pairs,
-                batch_size=64,  # larger than len(pairs)=2 => is_small
+                config=config,  # larger than len(pairs)=2 => is_small
             )
         )
         assert len(scores) == 2
@@ -363,13 +365,16 @@ class TestRerankPairsIsSmallBranch:
         pairs = [("q", f"d{i}") for i in range(5)]
         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=5)
         loaded_model.model = _make_mock_session(n_pairs=5)
+        config = InferenceConfig(
+            model_name="m",
+            cache_dir="/tmp",
+            batch_size=10,
+            parallel=None,
+        )
         scores = list(
             loaded_model._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=pairs,
-                batch_size=10,
-                parallel=None,
+                config=config,
             )
         )
         assert len(scores) == 5
@@ -386,12 +391,11 @@ class TestRerankPairsIsSmallBranch:
             loaded.append(True)
 
         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
+        config = InferenceConfig(model_name="m", cache_dir="/tmp", batch_size=64)
         list(
             m._rerank_pairs(
-                model_name="m",
-                cache_dir="/tmp",
                 pairs=[("q", "d")],
-                batch_size=64,
+                config=config,
             )
         )
         assert loaded
@@ -409,13 +413,16 @@ class TestRerankPairsParallelBranch:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
+            config = InferenceConfig(
+                model_name="m",
+                cache_dir="/tmp",
+                batch_size=2,
+                parallel=0,
+            )
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
-                    batch_size=2,
-                    parallel=0,
+                    config=config,
                 )
             )
         cls.assert_called_once()
@@ -428,13 +435,16 @@ class TestRerankPairsParallelBranch:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
+            config = InferenceConfig(
+                model_name="m",
+                cache_dir="/tmp",
+                batch_size=2,
+                parallel=3,
+            )
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
-                    batch_size=2,
-                    parallel=3,
+                    config=config,
                 )
             )
         call_kw = cls.call_args[1]
@@ -448,13 +458,16 @@ class TestRerankPairsParallelBranch:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
+            config = InferenceConfig(
+                model_name="m",
+                cache_dir="/tmp",
+                batch_size=2,
+                parallel=2,
+            )
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
-                    batch_size=2,
-                    parallel=2,
+                    config=config,
                 )
             )
         call_kw = cls.call_args[1]
@@ -468,14 +481,17 @@ class TestRerankPairsParallelBranch:
             pool = MagicMock()
             pool.ordered_map.return_value = [out]
             cls.return_value = pool
+            config = InferenceConfig(
+                model_name="m",
+                cache_dir="/tmp",
+                batch_size=2,
+                parallel=2,
+                extra_session_options={"enable_cpu_mem_arena": False},
+            )
             list(
                 loaded_model._rerank_pairs(
-                    model_name="m",
-                    cache_dir="/tmp",
                     pairs=self._large_pairs(),
-                    batch_size=2,
-                    parallel=2,
-                    extra_session_options={"enable_cpu_mem_arena": False},
+                    config=config,
                 )
             )
         cls.assert_called_once()
