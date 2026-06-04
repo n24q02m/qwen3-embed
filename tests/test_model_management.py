@@ -1603,6 +1603,73 @@ class TestVerifyFilesFromMetadata:
         assert result is False
 
 
+
+class TestVerifyLocalMetadata:
+    """Tests for _verify_local_metadata method."""
+
+    def test_verify_local_metadata_success(self, tmp_path):
+        """Verify successful metadata parsing and verification."""
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+        metadata_file = snapshot_dir / ".metadata.json"
+        metadata = {"file.txt": {"size": 100, "blob_id": "abc"}}
+        metadata_file.write_text(json.dumps(metadata))
+
+        with patch.object(ModelManagement, "_verify_files_from_metadata") as mock_verify:
+            mock_verify.return_value = True
+            result = ModelManagement._verify_local_metadata(
+                snapshot_dir, metadata_file, repo_files=[]
+            )
+
+        assert result is True
+        mock_verify.assert_called_once_with(snapshot_dir, metadata, [])
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_verify_local_metadata_json_decode_error(self, mock_logger, tmp_path):
+        """Verify handling of invalid JSON in metadata file."""
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+        metadata_file = snapshot_dir / ".metadata.json"
+        metadata_file.write_text("invalid json")
+
+        result = ModelManagement._verify_local_metadata(
+            snapshot_dir, metadata_file, repo_files=[]
+        )
+
+        assert result is False
+        mock_logger.warning.assert_called_once()
+        assert "Failed to read or parse metadata file" in mock_logger.warning.call_args[0][0]
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_verify_local_metadata_os_error(self, mock_logger, tmp_path):
+        """Verify handling of OSError during metadata reading."""
+        snapshot_dir = tmp_path / "snapshot"
+        snapshot_dir.mkdir()
+        metadata_file = snapshot_dir / ".metadata.json"
+        metadata_file.write_text("{}")
+
+        with patch("pathlib.Path.read_text", side_effect=OSError("Read error")):
+            result = ModelManagement._verify_local_metadata(
+                snapshot_dir, metadata_file, repo_files=[]
+            )
+
+        assert result is False
+        mock_logger.warning.assert_called_once()
+        assert "Failed to read or parse metadata file" in mock_logger.warning.call_args[0][0]
+
+    def test_verify_local_metadata_not_exists(self, tmp_path):
+        """Verify return False if snapshot_dir or metadata_file does not exist."""
+        snapshot_dir = tmp_path / "snapshot"
+        metadata_file = snapshot_dir / ".metadata.json"
+
+        # Case 1: snapshot_dir doesn't exist
+        assert ModelManagement._verify_local_metadata(snapshot_dir, metadata_file, []) is False
+
+        # Case 2: snapshot_dir exists but metadata_file doesn't
+        snapshot_dir.mkdir()
+        assert ModelManagement._verify_local_metadata(snapshot_dir, metadata_file, []) is False
+
+
 # ---------------------------------------------------------------------------
 # TestGetExpectedMd5
 # ---------------------------------------------------------------------------
