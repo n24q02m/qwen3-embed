@@ -1603,7 +1603,6 @@ class TestVerifyFilesFromMetadata:
         assert result is False
 
 
-
 class TestVerifyLocalMetadata:
     """Tests for _verify_local_metadata method."""
 
@@ -1632,9 +1631,7 @@ class TestVerifyLocalMetadata:
         metadata_file = snapshot_dir / ".metadata.json"
         metadata_file.write_text("invalid json")
 
-        result = ModelManagement._verify_local_metadata(
-            snapshot_dir, metadata_file, repo_files=[]
-        )
+        result = ModelManagement._verify_local_metadata(snapshot_dir, metadata_file, repo_files=[])
 
         assert result is False
         mock_logger.warning.assert_called_once()
