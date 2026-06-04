@@ -47,7 +47,8 @@ class OnnxTextModel(OnnxModel[T]):
         raise NotImplementedError("Subclasses must implement this method")
 
     def tokenize(self, documents: list[str], **kwargs: Any) -> list[Encoding]:
-        assert self.tokenizer is not None
+        if self.tokenizer is None:
+            raise RuntimeError("Tokenizer not initialized")
         return self.tokenizer.encode_batch(documents)
 
     def onnx_embed(
@@ -61,7 +62,8 @@ class OnnxTextModel(OnnxModel[T]):
         input_ids = np.array([e.ids for e in encoded])
         attention_mask = np.array([e.attention_mask for e in encoded])
         input_names = self.model_input_names or set()
-        assert input_names is not None
+        if input_names is None:
+            raise RuntimeError("Input names not found")
         onnx_input: dict[str, NumpyArray] = {
             "input_ids": np.array(input_ids, dtype=np.int64),
         }
@@ -146,7 +148,8 @@ class OnnxTextModel(OnnxModel[T]):
             self.load_onnx_model()  # loads the tokenizer as well
 
         token_num = 0
-        assert self.tokenizer is not None
+        if self.tokenizer is None:
+            raise RuntimeError("Tokenizer not initialized")
         texts = [texts] if isinstance(texts, str) else texts
         for batch in iter_batch(texts, batch_size):
             for tokens in self.tokenizer.encode_batch(batch):

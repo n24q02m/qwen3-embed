@@ -137,7 +137,8 @@ class ParallelWorkerPool:
         self.output_queue = self.ctx.Queue(self.queue_size)
 
         ctx_value = self.ctx.Value("i", self.num_workers)
-        assert isinstance(ctx_value, BaseValue)
+        if not isinstance(ctx_value, BaseValue):
+            raise TypeError(f"Expected BaseValue, got {type(ctx_value)}")
         self.num_active_workers = ctx_value
 
         for worker_id in range(0, self.num_workers):
@@ -147,7 +148,8 @@ class ParallelWorkerPool:
                 worker_kwargs["device_id"] = device_id
                 worker_kwargs["cuda"] = self.cuda
 
-            assert hasattr(self.ctx, "Process")
+            if not hasattr(self.ctx, "Process"):
+                raise AttributeError(f"Context {self.ctx} missing 'Process'")
             process = self.ctx.Process(  # type: ignore[call-non-callable]
                 target=_worker,
                 args=(
@@ -179,8 +181,10 @@ class ParallelWorkerPool:
             self.start(**kwargs)
             yield from self._process_stream(stream)
         finally:
-            assert self.input_queue is not None, "Input queue is None"
-            assert self.output_queue is not None, "Output queue is None"
+            if self.input_queue is None:
+                raise RuntimeError("Input queue is None")
+            if self.output_queue is None:
+                raise RuntimeError("Output queue is None")
             self.join()
             self.input_queue.close()
             self.output_queue.close()
@@ -192,8 +196,10 @@ class ParallelWorkerPool:
                 self.output_queue.join_thread()
 
     def _process_stream(self, stream: Iterable[Any]) -> Iterable[tuple[int, Any]]:
-        assert self.input_queue is not None, "Input queue was not initialized"
-        assert self.output_queue is not None, "Output queue was not initialized"
+        if self.input_queue is None:
+            raise RuntimeError("Input queue was not initialized")
+        if self.output_queue is None:
+            raise RuntimeError("Output queue was not initialized")
 
         pushed = 0
         read = 0

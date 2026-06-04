@@ -25,7 +25,8 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         raise NotImplementedError("Subclasses must implement this method")
 
     def tokenize(self, pairs: list[tuple[str, str]], **_: Any) -> list[Encoding]:
-        assert self.tokenizer is not None
+        if self.tokenizer is None:
+            raise RuntimeError("Tokenizer not initialized")
         return self.tokenizer.encode_batch(pairs)
 
     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
@@ -151,7 +152,8 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
             self.load_onnx_model()  # loads the tokenizer as well
 
         token_num = 0
-        assert self.tokenizer is not None
+        if self.tokenizer is None:
+            raise RuntimeError("Tokenizer not initialized")
         for batch in iter_batch(pairs, batch_size):
             for tokens in self.tokenizer.encode_batch(batch):
                 # ⚡ Bolt: Fast token counting using .count(1) (~30% faster than sum())

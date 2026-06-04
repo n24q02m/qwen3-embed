@@ -71,7 +71,8 @@ class TextEmbedding(TextEmbeddingBase):
         normalization: bool,
     ) -> None:
         cls._build_caches()
-        assert cls._embedding_type_cache is not None
+        if cls._embedding_type_cache is None:
+            raise RuntimeError("Embedding type cache not initialized")
 
         model_lower = model_description.model.lower()
         if model_lower in cls._embedding_type_cache:
@@ -100,7 +101,8 @@ class TextEmbedding(TextEmbeddingBase):
     ):
         super().__init__(model_name, cache_dir, threads, **kwargs)
         self._build_caches()
-        assert self._embedding_type_cache is not None
+        if self._embedding_type_cache is None:
+            raise RuntimeError("Embedding type cache not initialized")
 
         model_name_lower = model_name.lower()
         EMBEDDING_MODEL_TYPE = self._embedding_type_cache.get(model_name_lower)
@@ -144,13 +146,15 @@ class TextEmbedding(TextEmbeddingBase):
             ValueError: If the model name is not found in the supported models.
         """
         cls._build_caches()
-        assert cls._embedding_description_cache is not None
+        if cls._embedding_description_cache is None:
+            raise RuntimeError("Embedding description cache not initialized")
 
         model_name_lower = model_name.lower()
         desc = cls._embedding_description_cache.get(model_name_lower)
 
         if desc is not None:
-            assert desc.dim is not None
+            if desc.dim is None:
+                raise ValueError(f"Model dimension for {desc.model} must be specified")
             return desc.dim
 
         model_names = [desc.model for desc in cls._list_supported_models()]

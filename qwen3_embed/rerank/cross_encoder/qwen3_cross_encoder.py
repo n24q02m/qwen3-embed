@@ -231,10 +231,12 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         """Tokenise and run model using batched inference (dynamic batch ONNX graph)."""
         if self.model is None:
             raise ValueError("Model not loaded. Please call load_onnx_model() first.")
-        assert self.tokenizer is not None, "Tokenizer not loaded. Call load_onnx_model() first."
+        if self.tokenizer is None:
+            raise RuntimeError("Tokenizer not loaded. Call load_onnx_model() first.")
 
         input_names = self.model_input_names or set()
-        assert input_names is not None
+        if input_names is None:
+            raise RuntimeError("Input names not found")
 
         # Causal-LM reranker: the yes/no token lives at the LAST content position of every
         # row. With the default right-padding, shorter rows push their last-content position

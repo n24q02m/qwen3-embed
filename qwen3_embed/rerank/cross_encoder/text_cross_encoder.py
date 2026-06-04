@@ -87,7 +87,8 @@ class TextCrossEncoder(TextCrossEncoderBase):
         super().__init__(model_name, cache_dir, threads, **kwargs)
 
         self._build_caches()
-        assert self._encoder_type_cache is not None
+        if self._encoder_type_cache is None:
+            raise RuntimeError("Encoder type cache not initialized")
 
         model_name_lower = model_name.lower()
         CROSS_ENCODER_TYPE = self._encoder_type_cache.get(model_name_lower)
@@ -177,7 +178,8 @@ class TextCrossEncoder(TextCrossEncoderBase):
         model_description: BaseModelDescription,
     ) -> None:
         cls._build_caches()
-        assert cls._encoder_type_cache is not None
+        if cls._encoder_type_cache is None:
+            raise RuntimeError("Encoder type cache not initialized")
 
         model_lower = model_description.model.lower()
         if model_lower in cls._encoder_type_cache:
