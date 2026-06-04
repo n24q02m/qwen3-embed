@@ -15,7 +15,6 @@ from qwen3_embed.common.utils import (
     last_token_pool,
     mean_pooling,
     normalize,
-    remove_non_alphanumeric,
 )
 
 
@@ -291,49 +290,6 @@ class TestGetAllPunctuation:
         assert "=" not in punctuation
         assert "$" not in punctuation
         assert "\u20ac" not in punctuation  # euro sign
-
-
-class TestRemoveNonAlphanumeric:
-    """Tests for remove_non_alphanumeric utility."""
-
-    def test_basic_punctuation(self) -> None:
-        """Punctuation should be replaced by spaces."""
-        assert remove_non_alphanumeric("hello, world!") == "hello  world "
-
-    def test_underscore_is_kept(self) -> None:
-        """Underscores are alphanumeric in regex terms (\\w)."""
-        assert remove_non_alphanumeric("hello_world") == "hello_world"
-
-    def test_unicode_characters(self) -> None:
-        """Accents should be kept, emojis should be removed."""
-        assert remove_non_alphanumeric("café au lait! 😊") == "café au lait   "
-
-    def test_empty_string(self) -> None:
-        """Empty string remains empty."""
-        assert remove_non_alphanumeric("") == ""
-
-    def test_numbers_are_kept(self) -> None:
-        """Digits should remain untouched."""
-        assert remove_non_alphanumeric("year 2024 is here.") == "year 2024 is here "
-
-    def test_multiple_consecutive_punctuation(self) -> None:
-        """Multiple punctuations each get replaced with a space."""
-        assert remove_non_alphanumeric("hello... world!!!") == "hello    world   "
-
-    def test_only_non_alphanumeric(self) -> None:
-        """Strings with only non-alphanumeric characters should become spaces."""
-        assert remove_non_alphanumeric("!@#$%^&*()") == "          "
-
-    def test_whitespace_preservation(self) -> None:
-        """Newlines, tabs, and other whitespace should be preserved (\\s)."""
-        assert remove_non_alphanumeric("hello\nworld\t123") == "hello\nworld\t123"
-
-    def test_math_and_currency_symbols(self) -> None:
-        """Math and currency symbols should be removed."""
-        assert (
-            remove_non_alphanumeric("price: $100 + €50 = £150 ± ∞")
-            == "price   100    50    150    "
-        )
 
 
 class TestDefineCacheDir:

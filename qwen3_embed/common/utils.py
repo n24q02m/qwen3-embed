@@ -1,7 +1,6 @@
 import contextlib
 import functools
 import os
-import re
 import sys
 import unicodedata
 from collections.abc import Iterable
@@ -142,11 +141,3 @@ def get_all_punctuation() -> frozenset[str]:
     return frozenset(
         chr(i) for i in range(sys.maxunicode + 1) if unicodedata.category(chr(i)).startswith("P")
     )
-
-
-# ⚡ Bolt: Compile regex once at the module level to avoid recompilation overhead in hot loops
-_NON_ALPHANUMERIC_RE = re.compile(r"[^\w\s]", flags=re.UNICODE)
-
-
-def remove_non_alphanumeric(text: str) -> str:
-    return _NON_ALPHANUMERIC_RE.sub(" ", text)
