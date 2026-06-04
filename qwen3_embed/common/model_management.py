@@ -435,7 +435,11 @@ class ModelManagement(Generic[T]):
         if os.path.isabs(member.name) or member.name.startswith(("/", "\\")):
             raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
 
-        member_path = os.path.abspath(os.path.join(cache_dir, member.name))
+        try:
+            member_path = os.path.abspath(os.path.join(cache_dir, member.name))
+        except ValueError:
+            raise tarfile.TarError(f"Invalid member path in tar file: {member.name}") from None
+
         if not cls._is_within_dir(cache_dir, member_path):
             raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
 
