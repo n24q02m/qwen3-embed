@@ -606,9 +606,7 @@ def test_worker_processing_exception_handling():
 
     # Mock _get_items_from_queue to return a single item then stop
     # This triggers worker.process() and then the exception.
-    with patch(
-        "qwen3_embed.parallel_processor._get_items_from_queue", return_value=[(0, "item")]
-    ):
+    with patch("qwen3_embed.parallel_processor._get_items_from_queue", return_value=[(0, "item")]):
         _worker(
             worker_class=ProcessFailingWorker,
             input_queue=input_queue,
