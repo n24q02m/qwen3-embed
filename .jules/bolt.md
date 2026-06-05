@@ -21,3 +21,7 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-05 - [Fast non-alphanumeric character removal]
+**Learning:** When sanitizing strings by removing non-alphanumeric characters, using `str.translate()` with a custom dictionary class that implements `__missing__` (and pre-populating ASCII characters) is significantly faster (~15x) than using `re.sub()` with a compiled regex.
+**Action:** Use `str.translate()` with a dictionary with `__missing__` instead of regex substitution for character-level string cleaning operations in hot paths.
