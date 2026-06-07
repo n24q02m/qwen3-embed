@@ -151,5 +151,7 @@ class TestModelManagementExtra:
         """Verify ValueError is raised if repo revision sha is None (line 289)."""
         mock_model_info.return_value = MagicMock(sha=None)
         repo = "org/repo"
-        with pytest.raises(ValueError, match=f"Could not determine revision sha for repo '{repo}'"):
+        with pytest.raises(
+            ValueError, match=f"Could not determine revision sha for repo '{repo}'"
+        ):
             ModelManagement._fetch_repo_files(repo)
