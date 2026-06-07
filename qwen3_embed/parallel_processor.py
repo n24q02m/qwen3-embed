@@ -88,16 +88,20 @@ def _worker(
     try:
         try:
             worker = worker_class.start(**kwargs)
-        except Exception as e:  # pylint: disable=broad-except
-            logging.exception(f"Worker {worker_id} failed to start: {e}")
+        except Exception:  # pylint: disable=broad-except
+            # We must catch all exceptions here to ensure we signal the error
+            # to the parent process, otherwise it may deadlock waiting for output.
+            logging.exception(f"Worker {worker_id} failed to start")
             output_queue.put(QueueSignals.error)
             return
 
         try:
             for processed_item in worker.process(_get_items_from_queue(input_queue)):
                 output_queue.put(processed_item)
-        except Exception as e:  # pylint: disable=broad-except
-            logging.exception(f"Worker {worker_id} failed during processing: {e}")
+        except Exception:  # pylint: disable=broad-except
+            # We must catch all exceptions here to ensure we signal the error
+            # to the parent process, otherwise it may deadlock waiting for output.
+            logging.exception(f"Worker {worker_id} failed during processing")
             output_queue.put(QueueSignals.error)
     finally:
         _cleanup_worker(input_queue, output_queue, num_active_workers, worker_id)
