@@ -1604,38 +1604,77 @@ class TestVerifyFilesFromMetadata:
 
 
 # ---------------------------------------------------------------------------
-# TestGetExpectedMd5
+# TestGetExpectedChecksums
 # ---------------------------------------------------------------------------
 
 
-class TestGetExpectedMd5:
-    """Tests for _get_expected_md5 method."""
+class TestGetExpectedChecksums:
+    """Tests for _get_expected_checksums method."""
 
-    def test_get_expected_md5_no_header(self):
-        """None should be returned if x-goog-hash header is missing."""
-        assert ModelManagement._get_expected_md5({}) is None
+    def test_get_expected_checksums_no_header(self):
+        """Empty dict should be returned if x-goog-hash header is missing."""
+        assert ModelManagement._get_expected_checksums({}) == {}
 
-    def test_get_expected_md5_no_md5(self):
-        """None should be returned if x-goog-hash header is present but missing md5."""
+    def test_get_expected_checksums_no_md5(self):
+        """Empty dict should be returned if x-goog-hash header is present but missing md5."""
         headers = {"x-goog-hash": "crc32c=n9f4Sg=="}
-        assert ModelManagement._get_expected_md5(headers) is None
+        assert ModelManagement._get_expected_checksums(headers) == {}
 
-    def test_get_expected_md5_success(self):
+    def test_get_expected_checksums_success(self):
         """Correct hex MD5 should be returned if md5 is present in x-goog-hash."""
         # "test" md5 is 098f6bcd4621d373cade4e832627b4f6
         # base64 encoded: CY9rzUYh03PK3k6DJie09g==
         headers = {"x-goog-hash": "md5=CY9rzUYh03PK3k6DJie09g=="}
-        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+        assert ModelManagement._get_expected_checksums(headers) == {
+            "md5": "098f6bcd4621d373cade4e832627b4f6"
+        }
 
-    def test_get_expected_md5_multi_part(self):
+    def test_get_expected_checksums_sha256_placeholder(self):
+        """Verify that it handles sha256 if we ever add it to headers (future proofing)."""
+        # Note: GCS doesn't currently use sha256 in x-goog-hash, but our code is ready.
+        headers = {"x-goog-hash": "sha256=ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0="}
+        # sha256 in hex: ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+        assert ModelManagement._get_expected_checksums(headers) == {
+            "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+
+    def test_get_expected_checksums_multi_part(self):
         """Correct hex MD5 should be returned if multiple hashes are present."""
         headers = {"x-goog-hash": "crc32c=n9f4Sg==, md5=CY9rzUYh03PK3k6DJie09g=="}
-        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+        assert ModelManagement._get_expected_checksums(headers) == {
+            "md5": "098f6bcd4621d373cade4e832627b4f6"
+        }
 
-    def test_get_expected_md5_whitespace(self):
+    def test_get_expected_checksums_whitespace(self):
         """Correct hex MD5 should be returned even with extra whitespace."""
         headers = {"x-goog-hash": " crc32c=n9f4Sg== , md5=CY9rzUYh03PK3k6DJie09g== "}
-        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+        assert ModelManagement._get_expected_checksums(headers) == {
+            "md5": "098f6bcd4621d373cade4e832627b4f6"
+        }
+
+
+# ---------------------------------------------------------------------------
+# TestDownloadAndCalculateChecksums
+# ---------------------------------------------------------------------------
+
+
+class TestDownloadAndCalculateChecksums:
+    """Tests for _download_and_calculate_checksums method."""
+
+    def test_calculate_checksums(self, tmp_path):
+        """Verify that both MD5 and SHA256 are calculated correctly."""
+        response = Mock()
+        data = b"hello world"
+        response.iter_content.return_value = [data]
+        output_path = tmp_path / "test.file"
+
+        checksums = ModelManagement._download_and_calculate_checksums(
+            response, str(output_path), len(data), show_progress=False
+        )
+
+        assert checksums["md5"] == hashlib.md5(data, usedforsecurity=False).hexdigest()
+        assert checksums["sha256"] == hashlib.sha256(data).hexdigest()
+        assert output_path.read_bytes() == data
 
 
 # ---------------------------------------------------------------------------
