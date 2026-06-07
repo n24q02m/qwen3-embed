@@ -1794,3 +1794,8 @@ class TestValidateTarMember:
                 self._member("link", is_reg=False, is_lnk=True, linkname="../outside.txt"),
                 str(tmp_path),
             )
+
+    def test_is_within_dir_value_error(self):
+        """Verify that ValueError in _is_within_dir returns False."""
+        with patch("os.path.commonpath", side_effect=ValueError("Invalid path")):
+            assert ModelManagement._is_within_dir("/tmp", "/tmp/foo") is False
