@@ -30,9 +30,28 @@ def test_check_llama_cpp_missing():
     """Test that ImportError is raised when llama-cpp-python is missing."""
     with (
         mock.patch.dict(sys.modules, {"llama_cpp": None}),
-        pytest.raises(ImportError, match="llama-cpp-python is required"),
+        pytest.raises(ImportError) as excinfo,
     ):
         _check_llama_cpp()
+
+    # Verify message and exception chaining (raise ... from e)
+    assert "llama-cpp-python is required for GGUF models" in str(excinfo.value)
+    assert excinfo.value.__cause__ is not None
+    assert isinstance(excinfo.value.__cause__, ImportError)
+
+
+def test_check_llama_cpp_exact_message():
+    """Test that _check_llama_cpp raises ImportError with the exact expected message."""
+    expected_msg = (
+        "llama-cpp-python is required for GGUF models. Install with: pip install qwen3-embed[gguf]"
+    )
+    with (
+        mock.patch.dict(sys.modules, {"llama_cpp": None}),
+        pytest.raises(ImportError) as excinfo,
+    ):
+        _check_llama_cpp()
+
+    assert str(excinfo.value) == expected_msg
 
 
 def test_check_llama_cpp_present():
