@@ -499,6 +499,8 @@ class ModelManagement(Generic[T]):
                         yield member
 
                 if hasattr(tarfile, "data_filter"):
+                    # SECURITY: extractall is safe here because members are validated
+                    # by the validate_and_yield_members generator before extraction.
                     tar.extractall(
                         path=cache_dir, members=validate_and_yield_members(), filter="data"
                     )
