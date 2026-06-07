@@ -21,3 +21,6 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+## 2026-06-07 - [Risk vs Reward in Core Inference]
+**Learning:** Replacing regex with sequential string replacements for prompt injection sanitization in core inference/tokenization prep was rejected. While it offered a micro-optimization in a hot path, the risk to inference correctness outweighed the speculative performance gain, and the close-lean policy strictly avoids subtle behavior changes in these critical paths.
+**Action:** Avoid speculative micro-optimizations in core tokenization, model management, and inference loops unless they are obviously-safe pure additions with a high, proven performance impact.
