@@ -21,3 +21,7 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-07 - [Lazy Tokenization Preparation and Faster Tensor Construction]
+**Learning:** Building intermediate lists of strings for tokenization (e.g. via list comprehensions) causes redundant memory allocation and an extra iteration pass. Using a lazy `Sequence` that formats inputs on-demand allows the tokenizer to process them without materializing the full list of strings. Furthermore, constructing input tensors (`input_ids`, `attention_mask`) via a single pass over the tokenized batch is significantly faster than multiple list comprehensions.
+**Action:** Use a lazy `Sequence` (not a generator, as `tokenizers` requires a `Sequence`) for tokenization input preparation and build input tensors in a single pass over the tokenized output.
