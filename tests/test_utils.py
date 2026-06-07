@@ -437,3 +437,16 @@ class TestInputValidation:
             ValueError, match="Input string exceeds maximum allowed length of 5 characters"
         ):
             next(iterator)
+
+    def test_check_input_length_extremely_long(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Should raise ValueError when input is extremely long (exceeds 1,000,000)."""
+        import qwen3_embed.common.utils
+
+        # Explicitly set to 1,000,000 to avoid interference from other tests
+        monkeypatch.setattr(qwen3_embed.common.utils, "MAX_INPUT_LENGTH", 1000000)
+
+        # Test with the default 1,000,000 limit
+        with pytest.raises(
+            ValueError, match="Input string exceeds maximum allowed length of 1000000 characters"
+        ):
+            check_input_length("a" * 1000001)
