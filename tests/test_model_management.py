@@ -1794,3 +1794,42 @@ class TestValidateTarMember:
                 self._member("link", is_reg=False, is_lnk=True, linkname="../outside.txt"),
                 str(tmp_path),
             )
+
+# ---------------------------------------------------------------------------
+# TestFinalizeHfDownload
+# ---------------------------------------------------------------------------
+
+
+class TestFinalizeHfDownload:
+    """Tests for _finalize_hf_download method."""
+
+    def test_finalize_hf_download_failure_raises_value_error(self, tmp_path):
+        """Verify that ValueError is raised if file verification fails."""
+        snapshot_dir = tmp_path / "snapshots" / "rev123"
+        snapshot_dir.mkdir(parents=True)
+        repo_files = [make_repo_file("config.json")]
+
+        with (
+            patch.object(ModelManagement, "_collect_file_metadata", return_value={}),
+            patch.object(ModelManagement, "_verify_files_from_metadata", return_value=False),
+            pytest.raises(
+                ValueError,
+                match="Files have been corrupted during downloading process. Please check your internet connection and try again.",
+            ),
+        ):
+            ModelManagement._finalize_hf_download(snapshot_dir, repo_files)
+
+    def test_finalize_hf_download_success(self, tmp_path):
+        """Verify that metadata is saved if verification succeeds."""
+        snapshot_dir = tmp_path / "snapshots" / "rev123"
+        snapshot_dir.mkdir(parents=True)
+        repo_files = [make_repo_file("config.json")]
+        dummy_metadata = {"config.json": {"size": 100, "blob_id": "abc123"}}
+
+        with (
+            patch.object(ModelManagement, "_collect_file_metadata", return_value=dummy_metadata),
+            patch.object(ModelManagement, "_verify_files_from_metadata", return_value=True),
+            patch.object(ModelManagement, "_save_file_metadata") as mock_save,
+        ):
+            ModelManagement._finalize_hf_download(snapshot_dir, repo_files)
+            mock_save.assert_called_once_with(snapshot_dir, dummy_metadata)
