@@ -24,7 +24,11 @@ dependencies = [
     "onnxruntime>1.20.0; python_version >= '3.11'",
     "tqdm>=4.68.1",
     "requests>=2.34.2",
-    "tokenizers>=0.23.1,<1.0",
+    # Floor reflects the minimal stable Tokenizer/AddedToken/Encoding/encode_batch
+    # API surface this package actually uses (stable since ~0.13), not "latest".
+    # Keep it low so qwen3-embed stays co-installable with transformers and other
+    # tokenizers consumers (e.g. transformers 5.10.x caps tokenizers<=0.23.0). See #691.
+    "tokenizers>=0.22.0,<1.0",
     "huggingface-hub>=1.18.0,<2.0",
     "loguru>=0.7.3",
 ]
