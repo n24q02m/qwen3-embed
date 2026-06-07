@@ -21,3 +21,8 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-07 - [FIX] Caching for _list_supported_models in TextCrossEncoder
+**Optimization:** Implemented class-level caching for the supported models list in `TextCrossEncoder`.
+**Learning:** Even static-looking registry traversals can become hot paths if called frequently (e.g., during initialization or model discovery). Caching at the class level avoids redundant O(N) list builds where N is the number of registered encoders.
+**Performance Gain:** Avoids repeated extension of lists from the registry.
