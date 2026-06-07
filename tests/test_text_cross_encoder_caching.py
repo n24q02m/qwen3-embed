@@ -11,8 +11,9 @@ for module in mock_modules:
     if module not in sys.modules:
         sys.modules[module] = MagicMock()
 
-from qwen3_embed.rerank.cross_encoder.text_cross_encoder import TextCrossEncoder
-from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import Qwen3CrossEncoder
+from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import Qwen3CrossEncoder  # noqa: E402
+from qwen3_embed.rerank.cross_encoder.text_cross_encoder import TextCrossEncoder  # noqa: E402
+
 
 def test_list_supported_models_caching():
     """Verify that _list_supported_models is cached and clears correctly."""
