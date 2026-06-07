@@ -88,7 +88,7 @@ def _worker(
     try:
         try:
             worker = worker_class.start(**kwargs)
-        except Exception as e:  # pylint: disable=broad-except
+        except (RuntimeError, ValueError, TypeError, OSError, AttributeError, ImportError) as e:
             logging.exception(f"Worker {worker_id} failed to start: {e}")
             output_queue.put(QueueSignals.error)
             return
@@ -96,7 +96,7 @@ def _worker(
         try:
             for processed_item in worker.process(_get_items_from_queue(input_queue)):
                 output_queue.put(processed_item)
-        except Exception as e:  # pylint: disable=broad-except
+        except (RuntimeError, ValueError, TypeError, OSError, AttributeError, ImportError) as e:
             logging.exception(f"Worker {worker_id} failed during processing: {e}")
             output_queue.put(QueueSignals.error)
     finally:
