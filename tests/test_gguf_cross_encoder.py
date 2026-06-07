@@ -351,6 +351,33 @@ class TestScoreText:
 
         assert 0.0 <= score <= 1.0
 
+    def test_score_text_overflow_negative_diff(self):
+        """Test _score_text handles OverflowError for large negative diff."""
+        model = _make_model()
+        # diff = -1000 -> math.exp(1000) overflows
+        logits = np.zeros(10000, dtype=np.float32)
+        logits[TOKEN_YES_ID] = -500.0
+        logits[TOKEN_NO_ID] = 500.0
+        model._llm.scores.__getitem__ = MagicMock(return_value=logits)
+
+        score = model._score_text("some text")
+
+        assert score == 0.0
+
+    def test_score_text_overflow_positive_diff(self):
+        """Test _score_text handles OverflowError for positive diff via mock."""
+        model = _make_model()
+        # diff = 1.0
+        logits = np.zeros(10000, dtype=np.float32)
+        logits[TOKEN_YES_ID] = 2.0
+        logits[TOKEN_NO_ID] = 1.0
+        model._llm.scores.__getitem__ = MagicMock(return_value=logits)
+
+        with patch("math.exp", side_effect=OverflowError):
+            score = model._score_text("some text")
+
+        assert score == 1.0
+
 
 # ---------------------------------------------------------------------------
 # Tests for rerank (lines 204-207)
