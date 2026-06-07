@@ -145,3 +145,11 @@ class TestModelManagementExtra:
             # Verify the log message contains the filename
             args, _ = mock_log_error.call_args
             assert str(tar_path) in args[0]
+
+    @patch("qwen3_embed.common.model_management.model_info")
+    def test_fetch_repo_files_no_sha_raises_value_error(self, mock_model_info):
+        """Verify ValueError is raised if repo revision sha is None (line 289)."""
+        mock_model_info.return_value = MagicMock(sha=None)
+        repo = "org/repo"
+        with pytest.raises(ValueError, match=f"Could not determine revision sha for repo '{repo}'"):
+            ModelManagement._fetch_repo_files(repo)
