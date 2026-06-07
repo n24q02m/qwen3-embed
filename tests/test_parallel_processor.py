@@ -583,3 +583,40 @@ def test_worker_start_exception_handling():
     output_queue.put.assert_called_with(QueueSignals.error)
     # Verify that the worker was cleaned up (num_active_workers decremented)
     assert num_active_workers.value == 0
+
+
+class ProcessFailingWorker(Worker):
+    @classmethod
+    def start(cls, **kwargs: Any) -> "ProcessFailingWorker":
+        return cls()
+
+    def process(self, items: Iterable[tuple[int, Any]]) -> Iterable[tuple[int, Any]]:
+        raise RuntimeError("Processing failed")
+
+
+def test_worker_processing_exception_handling():
+    """Test that _worker handles exceptions during worker.process() gracefully."""
+    input_queue = MagicMock()
+    output_queue = MagicMock()
+    num_active_workers = MagicMock()
+    num_active_workers.get_lock.return_value.__enter__ = MagicMock()
+    num_active_workers.get_lock.return_value.__exit__ = MagicMock()
+    num_active_workers.value = 1
+    worker_id = 0
+
+    # Mock _get_items_from_queue to return a single item then stop
+    # This triggers worker.process() and then the exception.
+    with patch("qwen3_embed.parallel_processor._get_items_from_queue", return_value=[(0, "item")]):
+        _worker(
+            worker_class=ProcessFailingWorker,
+            input_queue=input_queue,
+            output_queue=output_queue,
+            num_active_workers=num_active_workers,
+            worker_id=worker_id,
+            kwargs={},
+        )
+
+    # Verify that QueueSignals.error was put in the output queue
+    output_queue.put.assert_called_with(QueueSignals.error)
+    # Verify that the worker was cleaned up (num_active_workers decremented)
+    assert num_active_workers.value == 0
