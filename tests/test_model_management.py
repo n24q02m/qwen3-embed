@@ -464,7 +464,7 @@ class TestDecompressToCache:
             raise tarfile.TarError("Simulated extraction failure")
 
         with (
-            patch("tarfile.TarFile.extractall", side_effect=mock_extractall),
+            patch("tarfile.TarFile.extract", side_effect=mock_extractall),
             pytest.raises(tarfile.TarError, match="Simulated extraction failure"),
         ):
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
@@ -619,7 +619,7 @@ class TestDecompressToCache:
             raise tarfile.TarError("Mid-extraction error")
 
         with (
-            patch("tarfile.TarFile.extractall", side_effect=fake_extractall),
+            patch("tarfile.TarFile.extract", side_effect=fake_extractall),
             pytest.raises(tarfile.TarError, match="Mid-extraction error"),
         ):
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
