@@ -15,7 +15,7 @@ instead of the typical ``(batch, num_labels)`` from cross-encoders.
 
 import re
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, overload
 
 import numpy as np
 
@@ -121,10 +121,19 @@ class LazyFormattedRerankInput(Sequence[str]):
     def __len__(self) -> int:
         return len(self.documents)
 
-    def __getitem__(self, i: int) -> str:  # type: ignore[override]
+    @overload
+    def __getitem__(self, index: int) -> str: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Sequence[str]: ...
+
+    def __getitem__(self, index: int | slice) -> str | Sequence[str]:
+        if isinstance(index, slice):
+            return [self[idx] for idx in range(*index.indices(len(self)))]
+
         if self.is_query_document:
-            return self.formatter(self.query, self.documents[i], self.instruction)
-        q, d = self.documents[i]  # type: ignore[misc]
+            return self.formatter(self.query, self.documents[index], self.instruction)
+        q, d = self.documents[index]  # type: ignore[misc]
         return self.formatter(q, d, self.instruction)
 
 
