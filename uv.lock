@@ -789,7 +789,7 @@ wheels = [
 
 [[package]]
 name = "qwen3-embed"
-version = "1.10.1"
+version = "1.11.0"
 source = { editable = "." }
 dependencies = [
     { name = "huggingface-hub" },
@@ -824,7 +824,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.4.6" },
     { name = "onnxruntime", marker = "python_full_version >= '3.11'", specifier = ">1.20.0" },
     { name = "requests", specifier = ">=2.34.2" },
-    { name = "tokenizers", specifier = ">=0.23.1,<1.0" },
+    { name = "tokenizers", specifier = ">=0.22.0,<1.0" },
     { name = "tqdm", specifier = ">=4.68.1" },
 ]
 provides-extras = ["gguf"]
