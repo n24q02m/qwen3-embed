@@ -217,6 +217,12 @@ class TestIterBatch:
         with pytest.raises(ValueError, match="Stop argument for islice"):
             list(iter_batch(data, -1))
 
+    def test_tuple_input(self) -> None:
+        """Test with a tuple as input (fast path)."""
+        data = (1, 2, 3, 4, 5)
+        result = list(iter_batch(data, 2))
+        assert result == [[1, 2], [3, 4], [5]]
+
 
 class TestGetAllPunctuation:
     """Tests for get_all_punctuation utility function."""
