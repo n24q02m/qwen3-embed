@@ -59,6 +59,18 @@ def test_check_llama_cpp_present():
         _check_llama_cpp()  # Should not raise
 
 
+def test_check_llama_cpp_exception_chaining():
+    """Test that _check_llama_cpp correctly chains the original ImportError."""
+    original_error = ImportError("Original error")
+    with (
+        patch("builtins.__import__", side_effect=original_error),
+        pytest.raises(ImportError) as excinfo,
+    ):
+        _check_llama_cpp()
+
+    assert excinfo.value.__cause__ is original_error
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
