@@ -21,3 +21,8 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-07 - Redundant List Iteration and NumPy Array Creation
+**Optimization:** Combined multiple attribute extractions from tokenized inputs into a single loop and eliminated redundant NumPy array conversions.
+**Learning:** Iterating over the same list multiple times to extract different attributes increases cache misses and overhead. Immediate conversion to NumPy with the correct dtype avoids unnecessary intermediate allocations.
+**Prevention:** When extracting multiple features from a sequence of objects, use a single loop. Always specify `dtype` in `np.array()` to avoid double conversions.
