@@ -15,7 +15,7 @@ instead of the typical `(batch, num_labels)` from cross-encoders.
 
 import re
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast, overload
 
 import numpy as np
 
@@ -122,11 +122,21 @@ class LazyFormattedRerankInput(Sequence[str]):
     def __len__(self) -> int:
         return len(self.documents)
 
-    def __getitem__(self, i: int) -> str:  # type: ignore[override]
+    @overload
+    def __getitem__(self, i: int) -> str: ...
+
+    @overload
+    def __getitem__(self, i: slice) -> Sequence[str]: ...
+
+    def __getitem__(self, i: int | slice) -> str | Sequence[str]:
+        if isinstance(i, slice):
+            # We don't need slicing for tokenizer.encode_batch
+            raise NotImplementedError("Slicing not supported")
+
         if self._is_query_doc:
-            return self.formatter(self.query, self.documents[i], self.instruction)
-        pair = self.documents[i]
-        return self.formatter(pair[0], pair[1], self.instruction)
+            return cast(str, self.formatter(self.query, self.documents[i], self.instruction))
+        pair = cast(tuple[str, str], self.documents[i])
+        return cast(str, self.formatter(pair[0], pair[1], self.instruction))
 
 
 class Qwen3CrossEncoder(OnnxTextCrossEncoder):
@@ -320,15 +330,15 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
 
         onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
         outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
-        model_output = outputs[0]
+        model_output = cast(NumpyArray, outputs[0])
 
         if getattr(model_output, "dtype", None) == np.float16:
-            model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
+            model_output = model_output.astype(np.float32)
 
         # _compute_yes_no_scores uses attention_mask to pick the last non-pad position
         # per sequence (full-vocab model only; YesNo variant already collapses seq dim).
         attention_mask_arr = onnx_input.get("attention_mask")
-        scores = self._compute_yes_no_scores(model_output, attention_mask_arr)  # type: ignore[invalid-argument-type]
+        scores = self._compute_yes_no_scores(model_output, attention_mask_arr)
 
         return OnnxOutputContext(model_output=scores)
 

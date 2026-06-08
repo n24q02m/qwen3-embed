@@ -1,0 +1,771 @@
+warning[possibly-missing-attribute]: Member `SessionOptions` may be missing on module `onnxruntime`
+   --> qwen3_embed/common/onnx_model.py:124:14
+    |
+124 |         so = ort.SessionOptions()  # type: ignore[possibly-missing-attribute]
+    |              ^^^^^^^^^^^^^^^^^^
+    |
+
+warning[possibly-missing-attribute]: Member `ExecutionMode` may be missing on module `onnxruntime`
+   --> qwen3_embed/common/onnx_model.py:126:33
+    |
+126 |             so.execution_mode = ort.ExecutionMode.ORT_PARALLEL  # type: ignore[possibly-missing-attribute]
+    |                                 ^^^^^^^^^^^^^^^^^
+    |
+
+warning[possibly-missing-attribute]: Member `GraphOptimizationLevel` may be missing on module `onnxruntime`
+   --> qwen3_embed/common/onnx_model.py:127:39
+    |
+127 |         so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL  # type: ignore[possibly-missing-attribute]
+    |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[possibly-missing-attribute]: Member `get_available_providers` may be missing on module `onnxruntime`
+   --> qwen3_embed/common/onnx_model.py:149:31
+    |
+149 |         available_providers = ort.get_available_providers()  # type: ignore[possibly-missing-attribute]
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[possibly-missing-attribute]: Member `SessionOptions` may be missing on module `onnxruntime`
+   --> qwen3_embed/common/onnx_model.py:200:27
+    |
+200 |         session_options: "ort.SessionOptions",
+    |                           ^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Invalid subscript assignment with key of type `Any & str` and value of type `int | None` on object of type `dict[str, int]`
+  --> qwen3_embed/common/preprocessor_utils.py:69:13
+   |
+69 |             special_token_to_id[token] = tokenizer.token_to_id(token)
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------------------------
+   |                                          |
+   |                                          Expected value of type `int`, got `int | None`
+   |
+
+warning[invalid-assignment]: Invalid subscript assignment with key of type `Any` and value of type `int | None` on object of type `dict[str, int]`
+  --> qwen3_embed/common/preprocessor_utils.py:72:13
+   |
+72 |             special_token_to_id[token_str] = tokenizer.token_to_id(token_str)
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------------------------
+   |                                              |
+   |                                              Expected value of type `int`, got `int | None`
+   |
+
+warning[call-non-callable]: Object of type `object` is not callable
+   --> qwen3_embed/parallel_processor.py:151:23
+    |
+151 |               process = self.ctx.Process(  # type: ignore[call-non-callable]
+    |  _______________________^
+152 | |                 target=_worker,
+153 | |                 args=(
+154 | |                     self.worker_class,
+155 | |                     self.input_queue,
+156 | |                     self.output_queue,
+157 | |                     self.num_active_workers,
+158 | |                     worker_id,
+159 | |                     worker_kwargs,
+160 | |                 ),
+161 | |             )
+    | |_____________^
+    |
+
+warning[unresolved-import]: Cannot resolve imported module `llama_cpp`
+  --> qwen3_embed/rerank/cross_encoder/gguf_cross_encoder.py:70:16
+   |
+70 |         import llama_cpp  # type: ignore[unresolved-import] # noqa: F401
+   |                ^^^^^^^^^
+   |
+info: Searched in the following paths during module resolution:
+info:   1. /app (first-party code)
+info:   2. vendored://stdlib (stdlib typeshed stubs vendored by ty)
+info:   3. /app/.venv/lib/python3.12/site-packages (site-packages)
+info:   4. /app/.venv/lib64/python3.12/site-packages (site-packages)
+info: make sure your Python environment is properly configured: https://docs.astral.sh/ty/modules/#python-environment
+
+warning[unresolved-import]: Cannot resolve imported module `llama_cpp`
+   --> qwen3_embed/rerank/cross_encoder/gguf_cross_encoder.py:126:14
+    |
+126 |         from llama_cpp import Llama  # type: ignore[unresolved-import]
+    |              ^^^^^^^^^
+    |
+info: Searched in the following paths during module resolution:
+info:   1. /app (first-party code)
+info:   2. vendored://stdlib (stdlib typeshed stubs vendored by ty)
+info:   3. /app/.venv/lib/python3.12/site-packages (site-packages)
+info:   4. /app/.venv/lib64/python3.12/site-packages (site-packages)
+info: make sure your Python environment is properly configured: https://docs.astral.sh/ty/modules/#python-environment
+
+warning[invalid-argument-type]: Method `__getitem__` of type `Overload[(i: SupportsIndex, /) -> Unknown, (s: slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> list[Unknown]]` cannot be called with key of type `tuple[slice[None, None, None], Literal[0]]` on object of type `list[Unknown]`
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:56:30
+   |
+56 |         scores: NumpyArray = relevant_output[:, 0]  # type: ignore[invalid-argument-type,not-subscriptable]
+   |                              ^^^^^^^^^^^^^^^
+   |
+
+warning[not-subscriptable]: Cannot subscript object of type `SparseTensor` with no `__getitem__` method
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:56:30
+   |
+56 |         scores: NumpyArray = relevant_output[:, 0]  # type: ignore[invalid-argument-type,not-subscriptable]
+   |                              ^^^^^^^^^^^^^^^^^^^^^
+   |
+
+warning[invalid-assignment]: Object of type `list[Iterable[tuple[str, str]] & tuple[object, ...]]` is not assignable to `Iterable[tuple[str, str]]`
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:85:13
+   |
+85 |             pairs = [pairs]  # type: ignore[invalid-assignment]
+   |             -----   ^^^^^^^ Incompatible value of type `list[Iterable[tuple[str, str]] & tuple[object, ...]]`
+   |             |
+   |             Declared type `Iterable[tuple[str, str]]`
+   |
+info: type `list[Iterable[tuple[str, str]] & tuple[object, ...]]` is not assignable to protocol `Iterable[tuple[str, str]]`
+info: └── protocol member `__iter__` is incompatible
+info:     └── incompatible return types: `Iterator[Iterable[tuple[str, str]] & tuple[object, ...]]` is not assignable to `Iterator[tuple[str, str]]`
+info:         └── protocol `Iterator[Iterable[tuple[str, str]] & tuple[object, ...]]` is not assignable to protocol `Iterator[tuple[str, str]]`
+info:             └── protocol member `__next__` is incompatible
+info:                 └── incompatible return types: `Iterable[tuple[str, str]] & tuple[object, ...]` is not assignable to `tuple[str, str]`
+
+error[invalid-method-override]: Invalid override of method `__getitem__`
+    --> qwen3_embed/rerank/cross_encoder/qwen3_cross_encoder.py:125:9
+     |
+ 125 |     def __getitem__(self, i: int) -> str:  # type: ignore[override]
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Definition is incompatible with `Sequence.__getitem__`
+     |
+    ::: stdlib/typing.pyi:1571:9
+     |
+1571 |     def __getitem__(self, index: slice[int | None], /) -> Sequence[_T_co]: ...
+     |         ----------------------------------------------------------------- `Sequence.__getitem__` defined here
+     |
+info: parameter `index` has an incompatible type: `slice[int | None, int | None, int | None]` is not assignable to `int`
+info: This violates the Liskov Substitution Principle
+
+warning[unresolved-attribute]: Attribute `astype` is not defined on `SparseTensor`, `list[Unknown]`, `dict[Unknown, Unknown]` in union `ndarray[tuple[Any, ...], dtype[Any]] | SparseTensor | list[Unknown] | dict[Unknown, Unknown]`
+   --> qwen3_embed/rerank/cross_encoder/qwen3_cross_encoder.py:326:28
+    |
+326 |             model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
+    |                            ^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-argument-type]: Argument to function `Qwen3CrossEncoder._compute_yes_no_scores` is incorrect
+   --> qwen3_embed/rerank/cross_encoder/qwen3_cross_encoder.py:331:46
+    |
+331 |         scores = self._compute_yes_no_scores(model_output, attention_mask_arr)  # type: ignore[invalid-argument-type]
+    |                                              ^^^^^^^^^^^^ Expected `ndarray[tuple[Any, ...], dtype[float64]] | ndarray[tuple[Any, ...], dtype[floating[_32Bit]]] | ndarray[tuple[Any, ...], dtype[floating[_16Bit]]] | ... omitted 3 union elements`, found `ndarray[tuple[Any, ...], dtype[Any]] | SparseTensor | list[Unknown] | dict[Unknown, Unknown] | ndarray[tuple[Any, ...], Unknown]`
+    |
+info: element `SparseTensor` of union `ndarray[tuple[Any, ...], dtype[Any]] | SparseTensor | list[Unknown] | dict[Unknown, Unknown] | ndarray[tuple[Any, ...], Unknown]` is not assignable to `ndarray[tuple[Any, ...], dtype[float64]] | ndarray[tuple[Any, ...], dtype[floating[_32Bit]]] | ndarray[tuple[Any, ...], dtype[floating[_16Bit]]] | ... omitted 3 union elements`
+info: Function defined here
+   --> qwen3_embed/rerank/cross_encoder/qwen3_cross_encoder.py:190:9
+    |
+190 |     def _compute_yes_no_scores(
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+191 |         model_output: NumpyArray,
+    |         ------------------------ Parameter declared here
+    |
+
+warning[unresolved-import]: Cannot resolve imported module `llama_cpp`
+  --> qwen3_embed/text/gguf_embedding.py:52:16
+   |
+52 |         import llama_cpp  # type: ignore[unresolved-import] # noqa: F401
+   |                ^^^^^^^^^
+   |
+info: Searched in the following paths during module resolution:
+info:   1. /app (first-party code)
+info:   2. vendored://stdlib (stdlib typeshed stubs vendored by ty)
+info:   3. /app/.venv/lib/python3.12/site-packages (site-packages)
+info:   4. /app/.venv/lib64/python3.12/site-packages (site-packages)
+info: make sure your Python environment is properly configured: https://docs.astral.sh/ty/modules/#python-environment
+
+warning[unresolved-import]: Cannot resolve imported module `llama_cpp`
+   --> qwen3_embed/text/gguf_embedding.py:123:14
+    |
+123 |         from llama_cpp import Llama  # type: ignore[unresolved-import]
+    |              ^^^^^^^^^
+    |
+info: Searched in the following paths during module resolution:
+info:   1. /app (first-party code)
+info:   2. vendored://stdlib (stdlib typeshed stubs vendored by ty)
+info:   3. /app/.venv/lib/python3.12/site-packages (site-packages)
+info:   4. /app/.venv/lib64/python3.12/site-packages (site-packages)
+info: make sure your Python environment is properly configured: https://docs.astral.sh/ty/modules/#python-environment
+
+warning[unresolved-attribute]: Attribute `astype` is not defined on `SparseTensor`, `list[Unknown]`, `dict[Unknown, Unknown]` in union `ndarray[tuple[Any, ...], dtype[Any]] | SparseTensor | list[Unknown] | dict[Unknown, Unknown]`
+  --> qwen3_embed/text/onnx_text_model.py:77:22
+   |
+77 |             result = result.astype(np.float32)  # type: ignore[unresolved-attribute]
+   |                      ^^^^^^^^^^^^^
+   |
+
+warning[invalid-argument-type]: Argument is incorrect
+  --> qwen3_embed/text/onnx_text_model.py:79:13
+   |
+79 |             model_output=result,  # type: ignore[invalid-argument-type]
+   |             ^^^^^^^^^^^^^^^^^^^ Expected `ndarray[tuple[Any, ...], dtype[float64]] | ndarray[tuple[Any, ...], dtype[floating[_32Bit]]] | ndarray[tuple[Any, ...], dtype[floating[_16Bit]]] | ... omitted 3 union elements`, found `ndarray[tuple[Any, ...], dtype[Any]] | SparseTensor | list[Unknown] | dict[Unknown, Unknown] | ndarray[tuple[Any, ...], Unknown]`
+   |
+info: element `SparseTensor` of union `ndarray[tuple[Any, ...], dtype[Any]] | SparseTensor | list[Unknown] | dict[Unknown, Unknown] | ndarray[tuple[Any, ...], Unknown]` is not assignable to `ndarray[tuple[Any, ...], dtype[float64]] | ndarray[tuple[Any, ...], dtype[floating[_32Bit]]] | ndarray[tuple[Any, ...], dtype[floating[_16Bit]]] | ... omitted 3 union elements`
+
+warning[unresolved-import]: Cannot resolve imported module `onnx`
+  --> scripts/export_optimized_reranker.py:18:8
+   |
+18 | import onnx
+   |        ^^^^
+   |
+info: Searched in the following paths during module resolution:
+info:   1. /app (first-party code)
+info:   2. vendored://stdlib (stdlib typeshed stubs vendored by ty)
+info:   3. /app/.venv/lib/python3.12/site-packages (site-packages)
+info:   4. /app/.venv/lib64/python3.12/site-packages (site-packages)
+info: make sure your Python environment is properly configured: https://docs.astral.sh/ty/modules/#python-environment
+
+warning[unresolved-import]: Cannot resolve imported module `torch`
+  --> scripts/export_optimized_reranker.py:19:8
+   |
+19 | import torch
+   |        ^^^^^
+   |
+info: Searched in the following paths during module resolution:
+info:   1. /app (first-party code)
+info:   2. vendored://stdlib (stdlib typeshed stubs vendored by ty)
+info:   3. /app/.venv/lib/python3.12/site-packages (site-packages)
+info:   4. /app/.venv/lib64/python3.12/site-packages (site-packages)
+info: make sure your Python environment is properly configured: https://docs.astral.sh/ty/modules/#python-environment
+
+warning[unresolved-import]: Cannot resolve imported module `torch.nn`
+  --> scripts/export_optimized_reranker.py:20:8
+   |
+20 | import torch.nn as nn
+   |        ^^^^^^^^^^^^^^
+   |
+info: Searched in the following paths during module resolution:
+info:   1. /app (first-party code)
+info:   2. vendored://stdlib (stdlib typeshed stubs vendored by ty)
+info:   3. /app/.venv/lib/python3.12/site-packages (site-packages)
+info:   4. /app/.venv/lib64/python3.12/site-packages (site-packages)
+info: make sure your Python environment is properly configured: https://docs.astral.sh/ty/modules/#python-environment
+
+warning[unresolved-import]: Cannot resolve imported module `transformers`
+  --> scripts/export_optimized_reranker.py:22:6
+   |
+22 | from transformers import AutoModelForCausalLM, AutoTokenizer
+   |      ^^^^^^^^^^^^
+   |
+info: Searched in the following paths during module resolution:
+info:   1. /app (first-party code)
+info:   2. vendored://stdlib (stdlib typeshed stubs vendored by ty)
+info:   3. /app/.venv/lib/python3.12/site-packages (site-packages)
+info:   4. /app/.venv/lib64/python3.12/site-packages (site-packages)
+info: make sure your Python environment is properly configured: https://docs.astral.sh/ty/modules/#python-environment
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:119:9
+    |
+119 |         m.tokenizer = _make_mock_tokenizer()
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:143:5
+    |
+143 |     m.tokenizer = _make_mock_tokenizer(n_pairs=2)
+    |     ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:157:5
+    |
+157 |     enc.tokenizer = _make_mock_tokenizer(n_pairs=1)
+    |     ^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:195:9
+    |
+195 |         m.tokenizer = _make_mock_tokenizer(n_pairs=2)
+    |         ^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Attribute `encode_batch` is not defined on `None` in union `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:198:9
+    |
+198 |         m.tokenizer.encode_batch.assert_called_once_with(pairs)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Object of type `bound method Tokenizer.encode_batch(input: Sequence[Any], is_pretokenized: bool = False, add_special_tokens: bool = True) -> list[Encoding]` has no attribute `assert_called_once_with`
+   --> tests/test_cross_encoder_onnx.py:198:9
+    |
+198 |         m.tokenizer.encode_batch.assert_called_once_with(pairs)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-argument-type]: Argument to bound method `OnnxCrossEncoderModel._build_onnx_input` is incorrect
+   --> tests/test_cross_encoder_onnx.py:214:38
+    |
+214 |         result = m._build_onnx_input([enc])
+    |                                      ^^^^^ Expected `list[Encoding]`, found `list[Encoding | MagicMock]`
+    |
+info: element `MagicMock` of union `Encoding | MagicMock` is not assignable to `Encoding`
+info: Method defined here
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:31:9
+   |
+31 |     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
+   |         ^^^^^^^^^^^^^^^^^       ------------------------------- Parameter declared here
+   |
+
+warning[invalid-argument-type]: Argument to bound method `OnnxCrossEncoderModel._build_onnx_input` is incorrect
+   --> tests/test_cross_encoder_onnx.py:222:38
+    |
+222 |         result = m._build_onnx_input([enc])
+    |                                      ^^^^^ Expected `list[Encoding]`, found `list[Encoding | MagicMock]`
+    |
+info: element `MagicMock` of union `Encoding | MagicMock` is not assignable to `Encoding`
+info: Method defined here
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:31:9
+   |
+31 |     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
+   |         ^^^^^^^^^^^^^^^^^       ------------------------------- Parameter declared here
+   |
+
+warning[invalid-argument-type]: Argument to bound method `OnnxCrossEncoderModel._build_onnx_input` is incorrect
+   --> tests/test_cross_encoder_onnx.py:230:38
+    |
+230 |         result = m._build_onnx_input([enc])
+    |                                      ^^^^^ Expected `list[Encoding]`, found `list[Encoding | MagicMock]`
+    |
+info: element `MagicMock` of union `Encoding | MagicMock` is not assignable to `Encoding`
+info: Method defined here
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:31:9
+   |
+31 |     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
+   |         ^^^^^^^^^^^^^^^^^       ------------------------------- Parameter declared here
+   |
+
+warning[invalid-argument-type]: Argument to bound method `OnnxCrossEncoderModel._build_onnx_input` is incorrect
+   --> tests/test_cross_encoder_onnx.py:238:38
+    |
+238 |         result = m._build_onnx_input([enc])
+    |                                      ^^^^^ Expected `list[Encoding]`, found `list[Encoding | MagicMock]`
+    |
+info: element `MagicMock` of union `Encoding | MagicMock` is not assignable to `Encoding`
+info: Method defined here
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:31:9
+   |
+31 |     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
+   |         ^^^^^^^^^^^^^^^^^       ------------------------------- Parameter declared here
+   |
+
+warning[invalid-argument-type]: Argument to bound method `OnnxCrossEncoderModel._build_onnx_input` is incorrect
+   --> tests/test_cross_encoder_onnx.py:245:38
+    |
+245 |         result = m._build_onnx_input([enc])
+    |                                      ^^^^^ Expected `list[Encoding]`, found `list[Encoding | MagicMock]`
+    |
+info: element `MagicMock` of union `Encoding | MagicMock` is not assignable to `Encoding`
+info: Method defined here
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:31:9
+   |
+31 |     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
+   |         ^^^^^^^^^^^^^^^^^       ------------------------------- Parameter declared here
+   |
+
+warning[invalid-argument-type]: Argument to bound method `OnnxCrossEncoderModel._build_onnx_input` is incorrect
+   --> tests/test_cross_encoder_onnx.py:252:38
+    |
+252 |         result = m._build_onnx_input([enc])
+    |                                      ^^^^^ Expected `list[Encoding]`, found `list[Encoding | MagicMock]`
+    |
+info: element `MagicMock` of union `Encoding | MagicMock` is not assignable to `Encoding`
+info: Method defined here
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:31:9
+   |
+31 |     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
+   |         ^^^^^^^^^^^^^^^^^       ------------------------------- Parameter declared here
+   |
+
+warning[invalid-argument-type]: Argument to bound method `OnnxCrossEncoderModel._build_onnx_input` is incorrect
+   --> tests/test_cross_encoder_onnx.py:259:38
+    |
+259 |         result = m._build_onnx_input([enc])
+    |                                      ^^^^^ Expected `list[Encoding]`, found `list[Encoding | MagicMock]`
+    |
+info: element `MagicMock` of union `Encoding | MagicMock` is not assignable to `Encoding`
+info: Method defined here
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:31:9
+   |
+31 |     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
+   |         ^^^^^^^^^^^^^^^^^       ------------------------------- Parameter declared here
+   |
+
+warning[invalid-argument-type]: Argument to bound method `OnnxCrossEncoderModel._build_onnx_input` is incorrect
+   --> tests/test_cross_encoder_onnx.py:268:38
+    |
+268 |         result = m._build_onnx_input(encs)  # type: ignore[arg-type]
+    |                                      ^^^^ Expected `list[Encoding]`, found `list[MagicMock]`
+    |
+info: Method defined here
+  --> qwen3_embed/rerank/cross_encoder/onnx_text_model.py:31:9
+   |
+31 |     def _build_onnx_input(self, tokenized_input: list[Encoding]) -> dict[str, NumpyArray]:
+   |         ^^^^^^^^^^^^^^^^^       ------------------------------- Parameter declared here
+   |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:291:9
+    |
+291 |         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=1)
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Attribute `run` is not defined on `None` in union `InferenceSession | None`
+   --> tests/test_cross_encoder_onnx.py:293:9
+    |
+293 |         loaded_model.model.run.assert_called_once()  # type: ignore[union-attr]
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Object of type `bound method InferenceSession.run(output_names, input_feed, run_options=None) -> Sequence[ndarray[tuple[Any, ...], dtype[Any]] | SparseTensor | list[Unknown] | dict[Unknown, Unknown]]` has no attribute `assert_called_once`
+   --> tests/test_cross_encoder_onnx.py:293:9
+    |
+293 |         loaded_model.model.run.assert_called_once()  # type: ignore[union-attr]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:300:9
+    |
+300 |         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=2)
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:321:13
+    |
+321 |             m.tokenizer = _make_mock_tokenizer(n_pairs=1)
+    |             ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `def _fake_load() -> None` is not assignable to attribute `load_onnx_model` of type `def load_onnx_model(self) -> None`
+   --> tests/test_cross_encoder_onnx.py:324:9
+    |
+324 |         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
+    |         ^^^^^^^^^^^^^^^^^
+    |
+info: Implicit shadowing of function `load_onnx_model`. Add an annotation to make it explicit if this is intentional
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:337:9
+    |
+337 |         m.tokenizer = _make_mock_tokenizer(n_pairs=1)
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:351:9
+    |
+351 |         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=2)
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:364:9
+    |
+364 |         loaded_model.tokenizer = _make_mock_tokenizer(n_pairs=5)
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:385:13
+    |
+385 |             m.tokenizer = _make_mock_tokenizer(n_pairs=1)
+    |             ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `def _fake_load() -> None` is not assignable to attribute `load_onnx_model` of type `def load_onnx_model(self) -> None`
+   --> tests/test_cross_encoder_onnx.py:388:9
+    |
+388 |         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
+    |         ^^^^^^^^^^^^^^^^^
+    |
+info: Implicit shadowing of function `load_onnx_model`. Add an annotation to make it explicit if this is intentional
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:497:9
+    |
+497 |         m.tokenizer = tok
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:510:9
+    |
+510 |         m.tokenizer = tok
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:525:13
+    |
+525 |             m.tokenizer = tok
+    |             ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `def _fake_load() -> None` is not assignable to attribute `load_onnx_model` of type `def load_onnx_model(self) -> None`
+   --> tests/test_cross_encoder_onnx.py:528:9
+    |
+528 |         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
+    |         ^^^^^^^^^^^^^^^^^
+    |
+info: Implicit shadowing of function `load_onnx_model`. Add an annotation to make it explicit if this is intentional
+
+warning[unresolved-attribute]: Object of type `bound method OnnxTextCrossEncoder._rerank_documents(query: str, documents: Iterable[str], batch_size: int, **kwargs: Any) -> Iterable[int | float]` has no attribute `assert_called_once`
+   --> tests/test_cross_encoder_onnx.py:704:13
+    |
+704 |             onnx_encoder._rerank_documents.assert_called_once()  # type: ignore[attr-defined]
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:711:9
+    |
+711 |         onnx_encoder.tokenizer = _make_mock_tokenizer(n_pairs=1)
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Attribute `encode_batch` is not defined on `None` in union `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:752:9
+    |
+752 |         onnx_encoder.tokenizer.encode_batch.return_value = [enc]  # type: ignore[unresolved-attribute]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Unresolved attribute `return_value` on type `bound method Tokenizer.encode_batch(input: Sequence[Any], is_pretokenized: bool = False, add_special_tokens: bool = True) -> list[Encoding]`
+   --> tests/test_cross_encoder_onnx.py:752:9
+    |
+752 |         onnx_encoder.tokenizer.encode_batch.return_value = [enc]  # type: ignore[unresolved-attribute]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:798:9
+    |
+798 |         m.tokenizer = _make_mock_tokenizer(n_pairs=1)
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `def spy(onnx_input: dict[Unknown, Unknown], **kwargs: Any) -> dict[Unknown, Unknown]` is not assignable to attribute `_preprocess_onnx_input` of type `def _preprocess_onnx_input(self, onnx_input: dict[str, ndarray[tuple[Any, ...], dtype[float64]] | ndarray[tuple[Any, ...], dtype[floating[_32Bit]]] | ndarray[tuple[Any, ...], dtype[floating[_16Bit]]] | ... omitted 3 union elements], **kwargs: Any) -> dict[str, ndarray[tuple[Any, ...], dtype[float64]] | ndarray[tuple[Any, ...], dtype[floating[_32Bit]]] | ndarray[tuple[Any, ...], dtype[floating[_16Bit]]] | ... omitted 3 union elements]`
+   --> tests/test_cross_encoder_onnx.py:825:9
+    |
+825 |         loaded_model._preprocess_onnx_input = spy  # type: ignore[method-assign]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+info: Implicit shadowing of function `_preprocess_onnx_input`. Add an annotation to make it explicit if this is intentional
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_cross_encoder_onnx.py:845:9
+    |
+845 |         m.tokenizer = _make_mock_tokenizer(n_pairs=1)
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Property `pooling` defined in `PostprocessingConfig` is read-only
+   --> tests/test_custom_text_embedding.py:117:13
+    |
+117 |             cfg.pooling = PoolingType.CLS  # type: ignore[misc]
+    |             ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `embed` of type `def embed(self, documents: Iterable[str], batch_size: int = 256, parallel: int | None = None, **kwargs: Any) -> Iterable[ndarray[tuple[Any, ...], dtype[float64]] | ndarray[tuple[Any, ...], dtype[floating[_32Bit]]] | ndarray[tuple[Any, ...], dtype[floating[_16Bit]]] | ... omitted 3 union elements]`
+   --> tests/test_gguf_embedding.py:400:13
+    |
+400 |             model.embed = MagicMock()  # type: ignore[invalid-assignment]
+    |             ^^^^^^^^^^^
+    |
+info: Implicit shadowing of function `embed`. Add an annotation to make it explicit if this is intentional
+
+warning[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
+   --> tests/test_preprocessor_utils.py:135:12
+    |
+135 |     assert tokenizer.padding["pad_id"] == 99
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
+   --> tests/test_preprocessor_utils.py:136:12
+    |
+136 |     assert tokenizer.padding["pad_token"] == "<unk>"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
+   --> tests/test_preprocessor_utils.py:137:12
+    |
+137 |     assert tokenizer.truncation["max_length"] == 128
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
+   --> tests/test_preprocessor_utils.py:145:12
+    |
+145 |     assert tokenizer.truncation["max_length"] == 100
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
+   --> tests/test_preprocessor_utils.py:150:12
+    |
+150 |     assert tokenizer.truncation["max_length"] == 150
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_qwen3_reranker.py:234:5
+    |
+234 |     encoder.tokenizer = mock_tokenizer
+    |     ^^^^^^^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Object of type `bound method <class 'TextEmbedding'>.get_embedding_size(model_name: str) -> int` has no attribute `reset_mock`
+   --> tests/test_text_embedding.py:129:9
+    |
+129 |         TextEmbedding.get_embedding_size.reset_mock()  # type: ignore[attr-defined]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Object of type `bound method <class 'TextEmbedding'>.get_embedding_size(model_name: str) -> int` has no attribute `assert_not_called`
+   --> tests/test_text_embedding.py:131:9
+    |
+131 |         TextEmbedding.get_embedding_size.assert_not_called()  # type: ignore[attr-defined]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:105:9
+    |
+105 |         m.tokenizer = _make_mock_tokenizer()
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:165:9
+    |
+165 |         m.tokenizer = _make_mock_tokenizer(n_docs=2)
+    |         ^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Attribute `encode_batch` is not defined on `None` in union `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:167:9
+    |
+167 |         m.tokenizer.encode_batch.assert_called_once_with(["hello", "world"])
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[unresolved-attribute]: Object of type `bound method Tokenizer.encode_batch(input: Sequence[Any], is_pretokenized: bool = False, add_special_tokens: bool = True) -> list[Encoding]` has no attribute `assert_called_once_with`
+   --> tests/test_text_onnx_text_model.py:167:9
+    |
+167 |         m.tokenizer.encode_batch.assert_called_once_with(["hello", "world"])
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:183:9
+    |
+183 |         self.m.tokenizer = _make_mock_tokenizer(n_docs=1)
+    |         ^^^^^^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:209:9
+    |
+209 |         m.tokenizer = _make_mock_tokenizer()
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:225:9
+    |
+225 |         m.tokenizer = _make_mock_tokenizer()
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:239:9
+    |
+239 |         m.tokenizer = _make_mock_tokenizer()
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:302:13
+    |
+302 |             m.tokenizer = tok
+    |             ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:316:9
+    |
+316 |         m.tokenizer = tok
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:328:9
+    |
+328 |         m.tokenizer = tok
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:339:9
+    |
+339 |         m.tokenizer = _make_mock_tokenizer(n_docs=n_docs)
+    |         ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:362:13
+    |
+362 |             m.tokenizer = _make_mock_tokenizer()
+    |             ^^^^^^^^^^^
+    |
+
+warning[invalid-assignment]: Object of type `MagicMock` is not assignable to attribute `tokenizer` of type `Tokenizer | None`
+   --> tests/test_text_onnx_text_model.py:524:5
+    |
+524 |     emb.tokenizer = tok
+    |     ^^^^^^^^^^^^^
+    |
+
+warning[invalid-argument-type]: Argument to function `next` is incorrect
+   --> tests/test_utils.py:435:21
+    |
+435 |         assert next(iterator) == "abc"
+    |                     ^^^^^^^^ Expected `SupportsNext[Unknown]`, found `Iterable[str]`
+    |
+info: protocol `Iterable[str]` is not assignable to protocol `SupportsNext[Unknown]`
+info: └── protocol member `__next__` is not defined on type `Iterable[str]`
+info: Matching overload defined here
+    --> stdlib/builtins.pyi:4130:5
+     |
+4130 | def next(i: SupportsNext[_T], /) -> _T:
+     |     ^^^^ ------------------- Parameter declared here
+     |
+info: Non-matching overloads for function `next`:
+info:   [_T, _VT](i: SupportsNext[_T], default: _VT, /) -> _T | _VT
+
+warning[invalid-argument-type]: Argument to function `next` is incorrect
+   --> tests/test_utils.py:439:18
+    |
+439 |             next(iterator)
+    |                  ^^^^^^^^ Expected `SupportsNext[Unknown]`, found `Iterable[str]`
+    |
+info: protocol `Iterable[str]` is not assignable to protocol `SupportsNext[Unknown]`
+info: └── protocol member `__next__` is not defined on type `Iterable[str]`
+info: Matching overload defined here
+    --> stdlib/builtins.pyi:4130:5
+     |
+4130 | def next(i: SupportsNext[_T], /) -> _T:
+     |     ^^^^ ------------------- Parameter declared here
+     |
+info: Non-matching overloads for function `next`:
+info:   [_T, _VT](i: SupportsNext[_T], default: _VT, /) -> _T | _VT
+
+Found 86 diagnostics
