@@ -1,3 +1,4 @@
+import itertools
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
@@ -68,10 +69,11 @@ class TextCrossEncoder(TextCrossEncoderBase):
 
     @classmethod
     def _list_supported_models(cls) -> list[BaseModelDescription]:
-        result: list[BaseModelDescription] = []
-        for encoder in cls.CROSS_ENCODER_REGISTRY:
-            result.extend(encoder._list_supported_models())
-        return result
+        return list(
+            itertools.chain.from_iterable(
+                encoder._list_supported_models() for encoder in cls.CROSS_ENCODER_REGISTRY
+            )
+        )
 
     def __init__(
         self,
