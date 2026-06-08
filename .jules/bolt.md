@@ -21,3 +21,6 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+## 2026-06-08 - Redundant Iteration in Tokenization Preparation
+**Learning:** Using a custom Sequence implementation (LazyFormattedRerankInput) allowed for lazy on-demand formatting of inputs during tokenization, avoiding intermediate list allocations. Additionally, building ONNX input tensors in a single pass over tokenized results significantly reduced iteration overhead.
+**Action:** Refactored Qwen3CrossEncoder to use LazyFormattedRerankInput and optimized the input tensor construction loop in _onnx_embed_texts.
