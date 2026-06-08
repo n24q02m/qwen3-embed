@@ -48,7 +48,7 @@ class TestModelManagementExtra:
         with patch("tarfile.open") as mock_open:
             mock_tar = mock_open.return_value.__enter__.return_value
             mock_tar.__iter__.return_value = iter([mock_member])
-            mock_tar.extractall.side_effect = lambda path, members, filter=None: list(members)
+            mock_tar.extract.side_effect = lambda member, path, filter=None: None
 
             with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
                 ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
@@ -118,7 +118,7 @@ class TestModelManagementExtra:
 
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
-            # Verify extract was called for the member (since extractall is no longer called in fallback)
+            # Verify extract was called for the member (since extract is used throughout in fallback)
             mock_tar.extract.assert_called_once_with(member, path=str(cache_dir))
             # Verify metadata sanitization
             # Since member.mode was a MagicMock, &= operation on it might be tricky to verify this way

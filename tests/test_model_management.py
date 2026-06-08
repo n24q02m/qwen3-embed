@@ -457,14 +457,14 @@ class TestDecompressToCache:
         cache_dir = tmp_path / "cache_dir"
         cache_dir.mkdir()
 
-        # Create a valid tar structure but mock extractall to fail
+        # Create a valid tar structure but mock extract to fail
         tar_path = make_tar_gz(tmp_path, inner_name="model.onnx")
 
-        def mock_extractall(*args, **kwargs):
+        def mock_extract(*args, **kwargs):
             raise tarfile.TarError("Simulated extraction failure")
 
         with (
-            patch("tarfile.TarFile.extractall", side_effect=mock_extractall),
+            patch("tarfile.TarFile.extract", side_effect=mock_extract),
             pytest.raises(tarfile.TarError, match="Simulated extraction failure"),
         ):
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
@@ -585,7 +585,7 @@ class TestDecompressToCache:
         with patch("tarfile.open") as mock_tar_open:
             mock_tar = MagicMock()
             mock_tar.__iter__.return_value = iter([mock_member])
-            mock_tar.extractall.side_effect = lambda path, members, filter=None: list(members)
+            mock_tar.extract.side_effect = lambda member, path, filter=None: None
             mock_tar_open.return_value.__enter__.return_value = mock_tar
 
             with pytest.raises(tarfile.TarError, match="Decompression bomb detected"):
@@ -615,11 +615,11 @@ class TestDecompressToCache:
         cache_dir = tmp_path / "tmp_out"
         cache_dir.mkdir()
 
-        def fake_extractall(*args, **kwargs):
+        def fake_extract(*args, **kwargs):
             raise tarfile.TarError("Mid-extraction error")
 
         with (
-            patch("tarfile.TarFile.extractall", side_effect=fake_extractall),
+            patch("tarfile.TarFile.extract", side_effect=fake_extract),
             pytest.raises(tarfile.TarError, match="Mid-extraction error"),
         ):
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))

@@ -498,12 +498,10 @@ class ModelManagement(Generic[T]):
                             )
                         yield member
 
-                if hasattr(tarfile, "data_filter"):
-                    tar.extractall(
-                        path=cache_dir, members=validate_and_yield_members(), filter="data"
-                    )
-                else:
-                    for member in validate_and_yield_members():
+                for member in validate_and_yield_members():
+                    if hasattr(tarfile, "data_filter"):
+                        tar.extract(member, path=cache_dir, filter="data")
+                    else:
                         # Sanitize metadata to mimic "data" filter
                         member.mode &= 0o777
                         member.uid = 0
