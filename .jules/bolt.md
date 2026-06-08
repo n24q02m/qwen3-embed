@@ -21,3 +21,7 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2024-06-08 - [Avoid Redundant Numpy Array Conversions]
+**Learning:** When converting tokenized outputs (from `tokenizers.Encoding`) into NumPy arrays for model input, the most efficient pattern in Python is to use list comprehensions with the final `dtype` specified directly (e.g., `np.array([e.ids for e in encoded], dtype=np.int64)`). This avoids redundant intermediate array creation and is significantly faster than using manual loops or creating an array of floats just to cast it to `int64`.
+**Action:** Use list comprehensions with explicit `dtype` when converting sequences of object attributes to NumPy arrays to minimize intermediate allocations.
