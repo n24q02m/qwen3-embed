@@ -1859,6 +1859,7 @@ class TestValidateTarMember:
                 str(tmp_path),
             )
 
+
 # ---------------------------------------------------------------------------
 # TestFinalizeHfDownload
 # ---------------------------------------------------------------------------
@@ -1870,9 +1871,7 @@ class TestFinalizeHfDownload:
     @patch.object(ModelManagement, "_collect_file_metadata")
     @patch.object(ModelManagement, "_verify_files_from_metadata")
     @patch.object(ModelManagement, "_save_file_metadata")
-    def test_finalize_hf_download_success(
-        self, mock_save, mock_verify, mock_collect, tmp_path
-    ):
+    def test_finalize_hf_download_success(self, mock_save, mock_verify, mock_collect, tmp_path):
         """Verify success case: metadata is collected, verified, and saved."""
         snapshot_dir = tmp_path / "snapshot"
         repo_files = []
@@ -1888,16 +1887,16 @@ class TestFinalizeHfDownload:
     @patch.object(ModelManagement, "_collect_file_metadata")
     @patch.object(ModelManagement, "_verify_files_from_metadata")
     @patch.object(ModelManagement, "_save_file_metadata")
-    def test_finalize_hf_download_failure(
-        self, mock_save, mock_verify, mock_collect, tmp_path
-    ):
+    def test_finalize_hf_download_failure(self, mock_save, mock_verify, mock_collect, tmp_path):
         """Verify failure case: ValueError is raised if verification fails."""
         snapshot_dir = tmp_path / "snapshot"
         repo_files = []
         mock_collect.return_value = {"file.txt": {"size": 100}}
         mock_verify.return_value = False
 
-        with pytest.raises(ValueError, match="Files have been corrupted during downloading process"):
+        with pytest.raises(
+            ValueError, match="Files have been corrupted during downloading process"
+        ):
             ModelManagement._finalize_hf_download(snapshot_dir, repo_files)
 
         mock_collect.assert_called_once_with(snapshot_dir, repo_files)
