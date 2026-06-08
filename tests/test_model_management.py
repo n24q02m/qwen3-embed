@@ -318,6 +318,82 @@ class TestDownloadFileFromGcs:
         assert output.read_bytes() == chunk
 
     @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
+    def test_sha256_match_succeeds(self, mock_get_session, tmp_path):
+        """Matching SHA256 in x-goog-hash header allows download to complete."""
+
+        mock_session = MagicMock()
+        mock_get = mock_session.get
+        mock_get_session.return_value = mock_session
+        chunk = b"verified sha256 content"
+        correct_sha256 = base64.b64encode(hashlib.sha256(chunk).digest()).decode()
+
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": str(len(chunk)),
+            "x-goog-hash": f"sha256={correct_sha256}",
+        }
+        response.iter_content.return_value = [chunk]
+        mock_get.return_value = response
+
+        output = tmp_path / "model.onnx"
+        result = ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/model.onnx", str(output))
+        assert result == str(output)
+        assert output.read_bytes() == chunk
+
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
+    def test_sha256_mismatch_raises_error(self, mock_get_session, tmp_path):
+        """Mismatched SHA256 in x-goog-hash header raises ValueError."""
+
+        mock_session = MagicMock()
+        mock_get = mock_session.get
+        mock_get_session.return_value = mock_session
+        chunk = b"invalid sha256 content"
+        wrong_sha256 = base64.b64encode(hashlib.sha256(b"something else").digest()).decode()
+
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": str(len(chunk)),
+            "x-goog-hash": f"sha256={wrong_sha256}",
+        }
+        response.iter_content.return_value = [chunk]
+        mock_get.return_value = response
+
+        output = tmp_path / "model.onnx"
+        with pytest.raises(ValueError, match="File integrity check failed: expected SHA256"):
+            ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/model.onnx", str(output))
+        assert not output.exists()
+
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
+    def test_sha256_prioritized_over_md5(self, mock_get_session, tmp_path):
+        """SHA256 is prioritized over MD5 for integrity check."""
+
+        mock_session = MagicMock()
+        mock_get = mock_session.get
+        mock_get_session.return_value = mock_session
+        chunk = b"sha256 prioritized content"
+        correct_sha256 = base64.b64encode(hashlib.sha256(chunk).digest()).decode()
+        wrong_md5 = base64.b64encode(
+            hashlib.md5(b"wrong", usedforsecurity=False).digest()
+        ).decode()
+
+        response = Mock()
+        response.status_code = 200
+        response.headers = {
+            "content-length": str(len(chunk)),
+            "x-goog-hash": f"md5={wrong_md5}, sha256={correct_sha256}",
+        }
+        response.iter_content.return_value = [chunk]
+        mock_get.return_value = response
+
+        output = tmp_path / "model.onnx"
+        # This should succeed because correct SHA256 is provided, even if MD5 is wrong (prioritization)
+        result = ModelManagement.download_file_from_gcs(f"{self.GCS_URL}/model.onnx", str(output))
+        assert result == str(output)
+        assert output.read_bytes() == chunk
+
+    @patch("qwen3_embed.common.model_management.ModelManagement._get_session")
     def test_skips_keepalive_empty_chunks(self, mock_get_session, tmp_path):
         """Empty chunks must be filtered out (keep-alive frames)."""
 
@@ -1668,43 +1744,59 @@ class TestVerifyLocalMetadata:
 
 
 # ---------------------------------------------------------------------------
-# TestGetExpectedMd5
+# TestGetExpectedHashes
 # ---------------------------------------------------------------------------
 
 
-class TestGetExpectedMd5:
-    """Tests for _get_expected_md5 method."""
+class TestGetExpectedHashes:
+    """Tests for _get_expected_hashes method."""
 
-    def test_get_expected_md5_no_header(self):
-        """None should be returned if x-goog-hash header is missing."""
-        assert ModelManagement._get_expected_md5({}) is None
+    def test_get_expected_hashes_no_header(self):
+        """Empty dict should be returned if x-goog-hash header is missing."""
+        assert ModelManagement._get_expected_hashes({}) == {}
 
-    def test_get_expected_md5_no_md5(self):
-        """None should be returned if x-goog-hash header is present but missing md5."""
+    def test_get_expected_hashes_no_hashes(self):
+        """Empty dict should be returned if x-goog-hash header is present but missing hashes."""
         headers = {"x-goog-hash": "crc32c=n9f4Sg=="}
-        assert ModelManagement._get_expected_md5(headers) is None
+        assert ModelManagement._get_expected_hashes(headers) == {}
 
-    def test_get_expected_md5_success(self):
+    def test_get_expected_hashes_success_md5(self):
         """Correct hex MD5 should be returned if md5 is present in x-goog-hash."""
         # "test" md5 is 098f6bcd4621d373cade4e832627b4f6
         # base64 encoded: CY9rzUYh03PK3k6DJie09g==
         headers = {"x-goog-hash": "md5=CY9rzUYh03PK3k6DJie09g=="}
-        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+        assert ModelManagement._get_expected_hashes(headers) == {
+            "md5": "098f6bcd4621d373cade4e832627b4f6"
+        }
 
-    def test_get_expected_md5_multi_part(self):
-        """Correct hex MD5 should be returned if multiple hashes are present."""
-        headers = {"x-goog-hash": "crc32c=n9f4Sg==, md5=CY9rzUYh03PK3k6DJie09g=="}
-        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+    def test_get_expected_hashes_success_sha256(self):
+        """Correct hex SHA256 should be returned if sha256 is present in x-goog-hash."""
+        # "test" sha256 is 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+        # base64 encoded: n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=
+        headers = {"x-goog-hash": "sha256=n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg="}
+        assert ModelManagement._get_expected_hashes(headers) == {
+            "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
 
-    def test_get_expected_md5_whitespace(self):
-        """Correct hex MD5 should be returned even with extra whitespace."""
-        headers = {"x-goog-hash": " crc32c=n9f4Sg== , md5=CY9rzUYh03PK3k6DJie09g== "}
-        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+    def test_get_expected_hashes_multi_part(self):
+        """Correct hex hashes should be returned if multiple hashes are present."""
+        headers = {
+            "x-goog-hash": "crc32c=n9f4Sg==, md5=CY9rzUYh03PK3k6DJie09g==, sha256=n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg="
+        }
+        assert ModelManagement._get_expected_hashes(headers) == {
+            "md5": "098f6bcd4621d373cade4e832627b4f6",
+            "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+        }
 
-
-# ---------------------------------------------------------------------------
-# TestFetchRepoFiles
-# ---------------------------------------------------------------------------
+    def test_get_expected_hashes_whitespace(self):
+        """Correct hex hashes should be returned even with extra whitespace."""
+        headers = {
+            "x-goog-hash": " crc32c=n9f4Sg== , md5=CY9rzUYh03PK3k6DJie09g== , sha256=n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg= "
+        }
+        assert ModelManagement._get_expected_hashes(headers) == {
+            "md5": "098f6bcd4621d373cade4e832627b4f6",
+            "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+        }
 
 
 class TestFetchRepoFiles:
