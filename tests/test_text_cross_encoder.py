@@ -22,3 +22,21 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+def test_list_supported_models_is_cached():
+    """Verify that _list_supported_models caches its result and doesn't re-query the registry."""
+    from unittest.mock import MagicMock, patch
+
+    mock_encoder = MagicMock()
+    mock_encoder._list_supported_models.return_value = []
+
+    with patch.object(TextCrossEncoder, 'CROSS_ENCODER_REGISTRY', [mock_encoder]):
+        TextCrossEncoder._clear_model_cache()
+
+        # First call
+        TextCrossEncoder._list_supported_models()
+        assert mock_encoder._list_supported_models.call_count == 1
+
+        # Second call
+        TextCrossEncoder._list_supported_models()
+        assert mock_encoder._list_supported_models.call_count == 1

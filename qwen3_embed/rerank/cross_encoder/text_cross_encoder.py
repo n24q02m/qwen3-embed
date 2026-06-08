@@ -22,31 +22,36 @@ class TextCrossEncoder(TextCrossEncoderBase):
         CustomTextCrossEncoder,
     ]
     _encoder_type_cache: dict[str, type[TextCrossEncoderBase]] | None = None
+    _supported_models_cache: list[BaseModelDescription] | None = None
 
     @classmethod
     def _clear_model_cache(cls) -> None:
         cls._encoder_type_cache = None
+        cls._supported_models_cache = None
 
     @classmethod
     def _build_caches(cls) -> None:
-        if cls._encoder_type_cache is not None:
+        if cls._encoder_type_cache is not None and cls._supported_models_cache is not None:
             return
 
-        new_cache = {}
+        new_type_cache = {}
+        new_supported_models = []
 
         for CROSS_ENCODER_TYPE in cls.CROSS_ENCODER_REGISTRY:
             for model in CROSS_ENCODER_TYPE._list_supported_models():
                 model_lower = model.model.lower()
-                new_cache[model_lower] = CROSS_ENCODER_TYPE
+                new_type_cache[model_lower] = CROSS_ENCODER_TYPE
+                new_supported_models.append(model)
 
-        cls._encoder_type_cache = new_cache
+        cls._encoder_type_cache = new_type_cache
+        cls._supported_models_cache = new_supported_models
 
     @classmethod
     def list_supported_models(cls) -> list[dict[str, Any]]:
         """Lists the supported models.
 
         Returns:
-            list[BaseModelDescription]: A list of dictionaries containing the model information.
+            list[dict[str, Any]]: A list of dictionaries containing the model information.
 
             Example:
                 ```
@@ -68,10 +73,9 @@ class TextCrossEncoder(TextCrossEncoderBase):
 
     @classmethod
     def _list_supported_models(cls) -> list[BaseModelDescription]:
-        result: list[BaseModelDescription] = []
-        for encoder in cls.CROSS_ENCODER_REGISTRY:
-            result.extend(encoder._list_supported_models())
-        return result
+        cls._build_caches()
+        assert cls._supported_models_cache is not None
+        return cls._supported_models_cache
 
     def __init__(
         self,
