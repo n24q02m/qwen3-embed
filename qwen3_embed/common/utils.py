@@ -141,5 +141,3 @@ def get_all_punctuation() -> frozenset[str]:
     return frozenset(
         chr(i) for i in range(sys.maxunicode + 1) if unicodedata.category(chr(i)).startswith("P")
     )
-
-
