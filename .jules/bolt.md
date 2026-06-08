@@ -21,3 +21,6 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+## 2025-05-14 - O(N) List Iteration for Model Check
+**Learning:** Manual list iteration for membership checks in registries leads to O(N) complexity and redundant computations (like `lower()`). Delegating to a cached lookup method or using a set improves performance to O(1).
+**Action:** Refactored `_check_model_exists` to use `_get_model_description` which leverages an internal dictionary cache.
