@@ -53,7 +53,7 @@ RERANK_TEMPLATE = (
 
 # SECURITY: Pre-compile regex for special token filtering
 FORBIDDEN_RE = re.compile(
-    r"(<\|endoftext\|>|<\|im_start\|>|<\|im_end\|>|<\|object_ref_start\|>|<\|object_ref_end\|>|"
+    r"(<\|im_start\|>|<\|im_end\|>|<\|object_ref_start\|>|<\|object_ref_end\|>|"
     r"<\|box_start\|>|<\|box_end\|>|<\|quad_start\|>|<\|quad_end\|>|<\|vision_start\|>|"
     r"<\|vision_end\|>|<\|vision_pad\|>|<\|image_pad\|>|<\|video_pad\|>)"
 )
@@ -72,18 +72,6 @@ supported_qwen3_reranker_models: list[BaseModelDescription] = [
         size_in_GB=1.2,
         sources=ModelSource(hf="n24q02m/Qwen3-Reranker-0.6B-ONNX"),
         model_file="onnx/model_quantized.onnx",
-    ),
-    BaseModelDescription(
-        model="n24q02m/Qwen3-Reranker-0.6B-ONNX-Q4F16",
-        description=(
-            "Qwen3 reranker (0.6B) using causal LM with yes/no logit scoring. "
-            "INT4 weights + FP16 activations (Q4F16). Multilingual, 32768 input tokens, "
-            "2025 year."
-        ),
-        license="apache-2.0",
-        size_in_GB=0.57,
-        sources=ModelSource(hf="n24q02m/Qwen3-Reranker-0.6B-ONNX"),
-        model_file="onnx/model_q4f16.onnx",
     ),
     BaseModelDescription(
         model="n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo",
@@ -282,7 +270,7 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         # away from the tensor's right edge, and INT8 dynamic quantization computes a single
         # whole-tensor activation scale across the batch — mixed content+padding activations
         # shift that scale and distort per-row logits at position seq_len-1. Left-padding
-        # collapses all last-content positions onto the right edge (position -1 for every
+        # collapse all last-content positions onto the right edge (position -1 for every
         # row), which both simplifies pooling and keeps the quantizer's per-tensor scale
         # dominated by real content rather than pad tokens.
         #
