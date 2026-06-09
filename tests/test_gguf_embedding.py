@@ -61,6 +61,27 @@ def test_check_llama_cpp_import_error_with_mock():
     assert "Mocked import error for llama_cpp" in str(excinfo.value.__cause__)
 
 
+def test_check_llama_cpp_module_not_found_error():
+    """Test that _check_llama_cpp raises ImportError from ModuleNotFoundError."""
+    with (
+        patch("builtins.__import__", side_effect=ModuleNotFoundError("No module named llama_cpp")),
+        pytest.raises(ImportError) as excinfo,
+    ):
+        _check_llama_cpp()
+
+    assert "llama-cpp-python is required for GGUF models" in str(excinfo.value)
+    assert isinstance(excinfo.value.__cause__, ModuleNotFoundError)
+
+
+def test_check_llama_cpp_other_exception():
+    """Test that _check_llama_cpp does not catch non-ImportError exceptions."""
+    with (
+        patch("builtins.__import__", side_effect=RuntimeError("Generic error")),
+        pytest.raises(RuntimeError, match="Generic error"),
+    ):
+        _check_llama_cpp()
+
+
 def test_check_llama_cpp_exact_message():
     """Test that _check_llama_cpp raises ImportError with the exact expected message."""
     expected_msg = (
@@ -119,6 +140,24 @@ def _make_model(embedding_dim: int = 8, **extra_attrs: Any) -> Qwen3TextEmbeddin
 
 
 class TestGGUFEmbeddingInit:
+    def test_init_calls_check_llama_cpp(self, tmp_path: Path):
+        """Test that __init__ explicitly calls _check_llama_cpp."""
+        model_file = tmp_path / "qwen3-embedding-0.6b-q4-k-m.gguf"
+        model_file.touch()
+
+        mock_llama_cls = MagicMock()
+        mock_llama_module = MagicMock()
+        mock_llama_module.Llama = mock_llama_cls
+
+        with (
+            patch("qwen3_embed.text.gguf_embedding._check_llama_cpp") as mock_check,
+            patch.dict(sys.modules, {"llama_cpp": mock_llama_module}),
+            patch.object(Qwen3TextEmbeddingGGUF, "download_model", return_value=str(tmp_path)),
+            patch("qwen3_embed.text.gguf_embedding.define_cache_dir", return_value=Path("/tmp")),
+        ):
+            Qwen3TextEmbeddingGGUF()
+            mock_check.assert_called_once()
+
     def test_init_creates_llm_with_cpu(self, tmp_path: Path):
         """Test __init__ creates Llama with n_gpu_layers=0 for CPU device."""
         from qwen3_embed.common.types import Device
