@@ -28,13 +28,13 @@ dependencies = [
     # API surface this package actually uses (stable since ~0.13), not "latest".
     # Keep it low so qwen3-embed stays co-installable with transformers and other
     # tokenizers consumers (e.g. transformers 5.10.x caps tokenizers<=0.23.0). See #691.
-    "tokenizers>=0.22.0,<1.0",
+    "tokenizers>=0.23.1,<1.0",
     "huggingface-hub>=1.18.0,<2.0",
     "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
-gguf = ["llama-cpp-python>=0.3.26"]
+gguf = ["llama-cpp-python>=0.3.28"]
 
 [project.urls]
 Homepage = "https://github.com/n24q02m/qwen3-embed"
@@ -47,7 +47,7 @@ dev = [
     "pytest-xdist>=3.8.0",
     "syrupy>=5.3.1",
     "ruff>=0.15.16",
-    "ty>=0.0.44",
+    "ty>=0.0.45",
 ]
 
 [build-system]
