@@ -129,27 +129,23 @@ class ModelManagement(Generic[T]):
         raise ValueError(f"Model {model_name} is not supported in {cls.__name__}.")
 
     @staticmethod
-    def _get_expected_hashes(headers: Any) -> dict[str, str]:
-        hashes = {}
+    def _get_expected_md5(headers: Any) -> str | None:
         if "x-goog-hash" in headers:
             x_goog_hash = headers["x-goog-hash"]
             for part in x_goog_hash.split(","):
                 part = part.strip()
                 if part.startswith("md5="):
-                    hashes["md5"] = base64.b64decode(part[4:]).hex()
-                elif part.startswith("sha256="):
-                    hashes["sha256"] = base64.b64decode(part[7:]).hex()
-        return hashes
+                    return base64.b64decode(part[4:]).hex()
+        return None
 
     @staticmethod
     def _download_and_hash_file(
         response: Any, output_path: str, total_size_in_bytes: int, show_progress: bool
-    ) -> dict[str, str]:
+    ) -> str:
         show_progress = bool(total_size_in_bytes and show_progress)
         md5_hash = hashlib.md5(
             usedforsecurity=False
         )  # SECURITY: MD5 is used solely for non-cryptographic file integrity checking (GCS checksums).
-        sha256_hash = hashlib.sha256()
         with (
             tqdm(
                 total=total_size_in_bytes,
@@ -165,11 +161,7 @@ class ModelManagement(Generic[T]):
                     progress_bar.update(len(chunk))
                     file.write(chunk)
                     md5_hash.update(chunk)
-                    sha256_hash.update(chunk)
-        return {
-            "md5": md5_hash.hexdigest(),
-            "sha256": sha256_hash.hexdigest(),
-        }
+        return md5_hash.hexdigest()
 
     @classmethod
     def download_file_from_gcs(cls, url: str, output_path: str, show_progress: bool = True) -> str:
@@ -210,7 +202,7 @@ class ModelManagement(Generic[T]):
             )
         response.raise_for_status()
 
-        expected_hashes = cls._get_expected_hashes(response.headers)
+        expected_md5 = cls._get_expected_md5(response.headers)
 
         total_size_in_bytes = int(response.headers.get("content-length", 0))
         if total_size_in_bytes == 0:
@@ -218,20 +210,14 @@ class ModelManagement(Generic[T]):
 
         tmp_output_path = f"{output_path}.{uuid.uuid4().hex}.tmp"
         try:
-            calculated_hashes = cls._download_and_hash_file(
+            calculated_md5 = cls._download_and_hash_file(
                 response, tmp_output_path, total_size_in_bytes, show_progress
             )
 
-            # Prioritize SHA256 over MD5 for integrity check
-            for hash_algo in ["sha256", "md5"]:
-                if hash_algo in expected_hashes:
-                    expected_hash = expected_hashes[hash_algo]
-                    calculated_hash = calculated_hashes[hash_algo]
-                    if expected_hash != calculated_hash:
-                        raise ValueError(
-                            f"File integrity check failed: expected {hash_algo.upper()} {expected_hash}, got {calculated_hash}"
-                        )
-                    break
+            if expected_md5 and expected_md5 != calculated_md5:
+                raise ValueError(
+                    f"File integrity check failed: expected MD5 {expected_md5}, got {calculated_md5}"
+                )
             os.replace(tmp_output_path, output_path)
         finally:
             if os.path.exists(tmp_output_path):
