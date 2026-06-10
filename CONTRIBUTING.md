@@ -30,7 +30,7 @@ mise run setup    # or: uv sync --group dev
    uv run ruff format --check .                      # Format check
    ```
 
-3. Commit using [Conventional Commits](https://www.conventionalcommits.org/):
+3. Commit using [Conventional Commits](https://www.conventionalcommits.org/). Only `feat:` and `fix:` prefixes are accepted (enforced by the commit-msg hook):
    ```
    feat: add new embedding model support
    fix: correct tokenizer padding behavior
