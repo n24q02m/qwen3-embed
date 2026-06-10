@@ -14,6 +14,7 @@ instead of the typical ``(batch, num_labels)`` from cross-encoders.
 """
 
 import re
+from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
@@ -100,6 +101,46 @@ supported_qwen3_reranker_models: list[BaseModelDescription] = [
 # ---------------------------------------------------------------------------
 # Qwen3 reranker implementation
 # ---------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------
+# Lazy formatting for tokenization
+# ------------------------------------------------------------------
+class LazyFormattedRerankInput(Sequence[str]):
+    """Lazy sequence that formats rerank inputs on-demand.
+
+    Prevents building a full intermediate list of formatted strings in memory
+    before passing them to the tokenizer's batch encoding method.
+    """
+
+    def __init__(
+        self,
+        query: str | None,
+        documents: list[str] | list[tuple[str, str]],
+        instruction: str = DEFAULT_INSTRUCTION,
+    ):
+        self.query = query
+        self.documents = documents
+        self.instruction = instruction
+        self.is_pairs = query is None
+
+    def __len__(self) -> int:
+        return len(self.documents)
+
+    def __getitem__(self, i: int) -> str:  # type: ignore[override]
+        if self.is_pairs:
+            query, doc = self.documents[i]  # type: ignore[misc]
+        else:
+            query = self.query
+            doc = self.documents[i]  # type: ignore[assignment]
+
+        return Qwen3CrossEncoder._format_rerank_input(
+            query,
+            doc,
+            self.instruction,  # type: ignore[arg-type]
+        )
+
+
 class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     """Qwen3 Reranker using causal LM with yes/no logit scoring.
 
@@ -218,16 +259,16 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     def onnx_embed(self, query: str, documents: list[str], **kwargs: Any) -> OnnxOutputContext:
         """Score query-document pairs using the Qwen3 chat template."""
         instruction = kwargs.pop("instruction", DEFAULT_INSTRUCTION)
-        texts = [self._format_rerank_input(query, doc, instruction) for doc in documents]
+        texts = LazyFormattedRerankInput(query, documents, instruction)
         return self._onnx_embed_texts(texts, **kwargs)
 
     def onnx_embed_pairs(self, pairs: list[tuple[str, str]], **kwargs: Any) -> OnnxOutputContext:
         """Score pre-formed (query, document) pairs."""
         instruction = kwargs.pop("instruction", DEFAULT_INSTRUCTION)
-        texts = [self._format_rerank_input(query, doc, instruction) for query, doc in pairs]
+        texts = LazyFormattedRerankInput(None, pairs, instruction)
         return self._onnx_embed_texts(texts, **kwargs)
 
-    def _onnx_embed_texts(self, texts: list[str], **kwargs: Any) -> OnnxOutputContext:
+    def _onnx_embed_texts(self, texts: Sequence[str], **kwargs: Any) -> OnnxOutputContext:
         """Tokenise and run model using batched inference (dynamic batch ONNX graph)."""
         if self.model is None:
             raise ValueError("Model not loaded. Please call load_onnx_model() first.")

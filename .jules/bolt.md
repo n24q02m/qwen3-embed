@@ -21,3 +21,7 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-10 - Redundant Iteration in Tokenization Preparation
+**Learning:** Passing a full list of formatted strings to `tokenizer.encode_batch` causes redundant memory allocations and O(N) iteration overhead. The `tokenizers` library requires a `Sequence` (not a generator), so a lazy `Sequence` implementation using `__len__` and `__getitem__` provides on-demand formatting during the Rust-parallelized tokenization phase, significantly reducing memory pressure.
+**Action:** Implemented `LazyFormattedRerankInput` sequence to format rerank inputs lazily in `Qwen3CrossEncoder`.
