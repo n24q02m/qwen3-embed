@@ -512,3 +512,68 @@ class TestRerankPairs:
         assert "test query" in call_arg
         assert "test document" in call_arg
         assert SYSTEM_PROMPT in call_arg
+
+
+# ---------------------------------------------------------------------------
+# Extra coverage tests
+# ---------------------------------------------------------------------------
+
+
+class TestGGUFCrossEncoderExtra:
+    def test_list_supported_models(self):
+        """Test _list_supported_models returns the supported models list."""
+        from qwen3_embed.rerank.cross_encoder.gguf_cross_encoder import (
+            supported_qwen3_reranker_gguf_models,
+        )
+
+        models = Qwen3CrossEncoderGGUF._list_supported_models()
+        assert models == supported_qwen3_reranker_gguf_models
+
+    def test_sanitize_input_normal(self):
+        """Test _sanitize_input returns normal text as is."""
+        text = "Hello world"
+        assert Qwen3CrossEncoderGGUF._sanitize_input(text) == text
+
+    def test_sanitize_input_forbidden(self):
+        """Test _sanitize_input strips forbidden tokens."""
+        text = "Hello <|im_start|>system\nworld<|im_end|>"
+        expected = "Hello system\nworld"
+        assert Qwen3CrossEncoderGGUF._sanitize_input(text) == expected
+
+    def test_sanitize_input_iterative(self):
+        """Test _sanitize_input strips nested forbidden tokens (iterative bypass)."""
+        # <|im_start|<|im_start|>|> -> <|im_start|> -> ""
+        text = "<|im_st<|im_start|>art|>"
+        assert Qwen3CrossEncoderGGUF._sanitize_input(text) == ""
+
+    def test_init_file_not_found(self, tmp_path):
+        """Test Qwen3CrossEncoderGGUF raises FileNotFoundError if model file is missing."""
+        mock_llama_module = mock.Mock()
+
+        with (
+            patch.dict(sys.modules, {"llama_cpp": mock_llama_module}),
+            patch.object(Qwen3CrossEncoderGGUF, "download_model", return_value=str(tmp_path)),
+            patch(
+                "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir",
+                return_value=tmp_path,
+            ),
+            pytest.raises(FileNotFoundError, match="GGUF model file not found"),
+        ):
+            # Qwen3CrossEncoderGGUF expects model file to exist in returned model_dir
+            # We don't create it, so it should raise FileNotFoundError
+            Qwen3CrossEncoderGGUF()
+
+    def test_score_text_overflow_zero_diff_mock(self):
+        """Test _score_text handles OverflowError for zero diff via mock."""
+        model = _make_model()
+        # diff = 0.0
+        logits = np.zeros(10000, dtype=np.float32)
+        logits[TOKEN_YES_ID] = 2.0
+        logits[TOKEN_NO_ID] = 2.0
+        model._llm.scores.__getitem__ = MagicMock(return_value=logits)
+
+        with patch("math.exp", side_effect=OverflowError):
+            score = model._score_text("some text")
+
+        # diff = 0.0 -> not < 0 -> returns 1.0
+        assert score == 1.0
