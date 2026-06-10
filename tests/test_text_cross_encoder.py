@@ -22,3 +22,35 @@ def test_list_supported_models():
         assert "description" in model
         assert "size_in_GB" in model
         assert "sources" in model
+
+
+def test_list_supported_models_caching(monkeypatch):
+    """Verify that _list_supported_models is cached."""
+    from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import Qwen3CrossEncoder
+
+    TextCrossEncoder._clear_model_cache()
+
+    call_count = 0
+    original_method = Qwen3CrossEncoder._list_supported_models
+
+    def mocked_method(cls):
+        nonlocal call_count
+        call_count += 1
+        return original_method()
+
+    monkeypatch.setattr(Qwen3CrossEncoder, "_list_supported_models", classmethod(mocked_method))
+
+    # First call
+    TextCrossEncoder._list_supported_models()
+    assert call_count == 1
+
+    # Second call - should use cache
+    TextCrossEncoder._list_supported_models()
+    assert call_count == 1
+
+    # Clear cache
+    TextCrossEncoder._clear_model_cache()
+
+    # Third call - should re-compute
+    TextCrossEncoder._list_supported_models()
+    assert call_count == 2
