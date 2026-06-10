@@ -21,3 +21,7 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-10 - Optimized List Extension in Model Listing
+**Learning:** List extension in a loop is a suboptimal pattern in Python when aggregating results from multiple sources. Using `itertools.chain.from_iterable` is more idiomatic and efficient for flattening a sequence of lists.
+**Action:** Replaced manual loop with `list.extend` with `list(itertools.chain.from_iterable(...))` in `TextEmbedding` and `TextCrossEncoder`'s `_list_supported_models` methods.

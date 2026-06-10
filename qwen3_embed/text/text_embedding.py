@@ -1,3 +1,4 @@
+import itertools
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
@@ -58,10 +59,11 @@ class TextEmbedding(TextEmbeddingBase):
 
     @classmethod
     def _list_supported_models(cls) -> list[DenseModelDescription]:
-        result: list[DenseModelDescription] = []
-        for embedding in cls.EMBEDDINGS_REGISTRY:
-            result.extend(embedding._list_supported_models())
-        return result
+        return list(
+            itertools.chain.from_iterable(
+                embedding._list_supported_models() for embedding in cls.EMBEDDINGS_REGISTRY
+            )
+        )
 
     @classmethod
     def add_custom_model(
