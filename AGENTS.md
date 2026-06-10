@@ -1,6 +1,6 @@
 # AGENTS.md - qwen3-embed
 
-Lightweight Qwen3 text embedding & reranking library via ONNX Runtime. Python >= 3.13, uv.
+Lightweight Qwen3 text embedding & reranking library via ONNX Runtime. Python >= 3.11 (tested 3.11-3.14), uv.
 
 ## Build / Lint / Test Commands
 
