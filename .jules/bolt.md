@@ -21,3 +21,7 @@
 ## 2026-05-26 - [Fast logit subtraction without stack]
 **Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
 **Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-09 - [Speculative optimization rejected]
+**Learning:** An optimization to prevent redundant array copies during tokenization by directly specifying `dtype=np.int64` in list comprehensions (e.g., `np.array([e.ids for e in encoded], dtype=np.int64)`) was rejected because it affects the numerical path and is considered a speculative micro-optimization, which violates the repository's close-lean policy.
+**Action:** Do not apply speculative array optimizations in core paths if they risk affecting the numerical path, even if they save memory allocations.
