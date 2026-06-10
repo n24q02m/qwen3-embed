@@ -92,15 +92,22 @@ class ModelManagement(Generic[T]):
             delattr(cls, "_model_description_cache")
 
     @classmethod
+    def _ensure_model_cache(cls) -> dict[str, T]:
+        cache = cls.__dict__.get("_model_description_cache")
+        if cache is None:
+            # ⚡ Bolt: Using dictionary lookup for O(1) model checks and descriptions
+            cache = {model.model.lower(): model for model in cls._list_supported_models()}
+            cls._model_description_cache = cache
+        return cache
+
+    @classmethod
     def _check_model_exists(cls, model: str) -> None:
-        registered_models = cls._list_supported_models()
-        model_lower = model.lower()
-        for registered_model in registered_models:
-            if model_lower == registered_model.model.lower():
-                raise ValueError(
-                    f"Model {model} is already registered in {cls.__name__}, if you still want to add this model, "
-                    f"please use another model name"
-                )
+        cache = cls._ensure_model_cache()
+        if model.lower() in cache:
+            raise ValueError(
+                f"Model {model} is already registered in {cls.__name__}, if you still want to add this model, "
+                f"please use another model name"
+            )
 
     @classmethod
     def _get_model_description(cls, model_name: str) -> T:
@@ -116,10 +123,7 @@ class ModelManagement(Generic[T]):
         Returns:
             T: The model description.
         """
-        cache = cls.__dict__.get("_model_description_cache")
-        if cache is None:
-            cache = {model.model.lower(): model for model in cls._list_supported_models()}
-            cls._model_description_cache = cache
+        cache = cls._ensure_model_cache()
 
         model_name_lower = model_name.lower()
         model = cache.get(model_name_lower)
