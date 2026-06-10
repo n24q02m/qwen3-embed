@@ -127,17 +127,26 @@ class LazyFormattedRerankInput(Sequence[str]):
     def __len__(self) -> int:
         return len(self.documents)
 
-    def __getitem__(self, i: int) -> str:  # type: ignore[override]
+    def __getitem__(self, i: Any) -> Any:
+        if isinstance(i, slice):
+            return [self[idx] for idx in range(*i.indices(len(self)))]
+
         if self.is_pairs:
-            query, doc = self.documents[i]  # type: ignore[misc]
+            # We know documents is list[tuple[str, str]] if is_pairs is True
+            pair = self.documents[i]
+            assert isinstance(pair, (tuple, list))
+            query, doc = pair
         else:
+            # We know query is str and documents is list[str] if is_pairs is False
+            assert self.query is not None
             query = self.query
-            doc = self.documents[i]  # type: ignore[assignment]
+            doc = self.documents[i]
+            assert isinstance(doc, str)
 
         return Qwen3CrossEncoder._format_rerank_input(
             query,
             doc,
-            self.instruction,  # type: ignore[arg-type]
+            self.instruction,
         )
 
 

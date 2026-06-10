@@ -25,3 +25,7 @@
 ## 2026-06-10 - Redundant Iteration in Tokenization Preparation
 **Learning:** Passing a full list of formatted strings to `tokenizer.encode_batch` causes redundant memory allocations and O(N) iteration overhead. The `tokenizers` library requires a `Sequence` (not a generator), so a lazy `Sequence` implementation using `__len__` and `__getitem__` provides on-demand formatting during the Rust-parallelized tokenization phase, significantly reducing memory pressure.
 **Action:** Implemented `LazyFormattedRerankInput` sequence to format rerank inputs lazily in `Qwen3CrossEncoder`.
+
+## 2026-06-10 - ty check: Sequence slice support
+**Learning:** When implementing the `Sequence` protocol to satisfy type checkers like `ty` (Astral ty), the `__getitem__` method must explicitly handle `slice` arguments to maintain the Liskov Substitution Principle, even if slices are not used by the immediate caller. Failure to do so results in an `invalid-method-override` error.
+**Action:** Updated `LazyFormattedRerankInput.__getitem__` to handle `slice` by returning a list of formatted strings.
