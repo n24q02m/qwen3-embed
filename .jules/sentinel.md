@@ -25,3 +25,8 @@
 **Vulnerability:** Even when using `for member in tar:` to avoid `tar.getmembers()`, accumulating the resulting `TarInfo` objects in a list (e.g., `safe_members.append(member)`) still caused Out-Of-Memory (OOM) exhaustion DoS for archives with millions of files.
 **Learning:** Holding millions of object references in memory for pre-validation defeats the purpose of stream-based archive parsing.
 **Prevention:** Use a nested generator function that yields validated members lazily, and pass this generator directly to `tar.extractall(members=generator())` or iterate over it.
+
+## 2026-05-23 - [Insecure Use of tar.extractall()]
+**Vulnerability:** Use of `tar.extractall()` is discouraged as it is inherently more dangerous and harder to audit than extracting members individually. Even with validation filters, it can carry risk if not handled correctly.
+**Learning:** Replacing `tar.extractall()` with an explicit loop over `tar.extract()` provides better visibility and control over the extraction process.
+**Prevention:** Always iterate over tar members and call `tar.extract()` individually, applying necessary sanitization (like "data" filter emulation) to each member.
