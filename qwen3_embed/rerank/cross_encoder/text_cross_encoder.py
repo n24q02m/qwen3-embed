@@ -22,10 +22,12 @@ class TextCrossEncoder(TextCrossEncoderBase):
         CustomTextCrossEncoder,
     ]
     _encoder_type_cache: dict[str, type[TextCrossEncoderBase]] | None = None
+    _supported_models_cache: list[BaseModelDescription] | None = None
 
     @classmethod
     def _clear_model_cache(cls) -> None:
         cls._encoder_type_cache = None
+        cls._supported_models_cache = None
 
     @classmethod
     def _build_caches(cls) -> None:
@@ -68,9 +70,14 @@ class TextCrossEncoder(TextCrossEncoderBase):
 
     @classmethod
     def _list_supported_models(cls) -> list[BaseModelDescription]:
+        if cls._supported_models_cache is not None:
+            return cls._supported_models_cache
+
         result: list[BaseModelDescription] = []
         for encoder in cls.CROSS_ENCODER_REGISTRY:
             result.extend(encoder._list_supported_models())
+
+        cls._supported_models_cache = result
         return result
 
     def __init__(
