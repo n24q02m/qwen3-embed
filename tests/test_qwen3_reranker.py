@@ -269,44 +269,51 @@ class TestQwen3CrossEncoderInference:
         mocked_qwen3_encoder.model.run.assert_called_once()
         mocked_qwen3_encoder.tokenizer.encode_batch.assert_called_once_with(["hello world"])
 
+    def test_onnx_embed_texts_scores_per_row(self, mocked_qwen3_encoder):
+        """Issue #725: each text is scored on its own (batch=1) so a score
+        cannot depend on which other documents share the batch. Three texts
+        therefore produce three model runs, each with batch dimension 1."""
+        ctx = mocked_qwen3_encoder._onnx_embed_texts(["a", "b", "c"])
+        assert ctx.model_output.shape == (3,)
+        assert mocked_qwen3_encoder.model.run.call_count == 3
+        for call in mocked_qwen3_encoder.model.run.call_args_list:
+            onnx_input = call[0][1]
+            assert onnx_input["input_ids"].shape[0] == 1
+
     def test_onnx_embed_texts_multiple(self, mocked_qwen3_encoder):
-        # We verify that _onnx_embed_texts uses batched inference
+        # Per-row scoring: one model run + one tokenisation per text (issue #725).
         ctx = mocked_qwen3_encoder._onnx_embed_texts(["text1", "text2"])
         assert ctx.model_output.shape == (2,)
-        assert mocked_qwen3_encoder.model.run.call_count == 1
-        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 1
+        assert mocked_qwen3_encoder.model.run.call_count == 2
+        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 2
 
     def test_onnx_embed_pairs_success(self, mocked_qwen3_encoder):
         ctx = mocked_qwen3_encoder.onnx_embed_pairs([("Query1", "Doc1"), ("Query2", "Doc2")])
         assert ctx.model_output.shape == (2,)
-        assert mocked_qwen3_encoder.model.run.call_count == 1
-        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 1
+        assert mocked_qwen3_encoder.model.run.call_count == 2
+        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 2
 
-        # Verify chat template formatting
+        # Verify chat template formatting (one encode_batch([text]) call per pair).
         calls = mocked_qwen3_encoder.tokenizer.encode_batch.call_args_list
-        # Call 1 (which processed a batch of 2)
-        batch = calls[0][0][0]
-        text1 = batch[0]
+        text1 = calls[0][0][0][0]
         assert "<Query>: Query1" in text1
         assert "<Document>: Doc1" in text1
-        # Call 2
-        text2 = batch[1]
+        text2 = calls[1][0][0][0]
         assert "<Query>: Query2" in text2
         assert "<Document>: Doc2" in text2
 
     def test_onnx_embed_success(self, mocked_qwen3_encoder):
         ctx = mocked_qwen3_encoder.onnx_embed("Query", ["Doc1", "Doc2"])
         assert ctx.model_output.shape == (2,)
-        assert mocked_qwen3_encoder.model.run.call_count == 1
-        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 1
+        assert mocked_qwen3_encoder.model.run.call_count == 2
+        assert mocked_qwen3_encoder.tokenizer.encode_batch.call_count == 2
 
         calls = mocked_qwen3_encoder.tokenizer.encode_batch.call_args_list
-        batch = calls[0][0][0]
-        text1 = batch[0]
+        text1 = calls[0][0][0][0]
         assert "<Query>: Query" in text1
         assert "<Document>: Doc1" in text1
 
-        text2 = batch[1]
+        text2 = calls[1][0][0][0]
         assert "<Query>: Query" in text2
         assert "<Document>: Doc2" in text2
 

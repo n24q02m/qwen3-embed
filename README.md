@@ -163,6 +163,14 @@ pairs = [
 pair_scores = list(reranker.rerank_pairs(pairs))
 ```
 
+#### Reranker determinism
+
+Reranker scores are **batch-invariant**: the score of a `(query, document)` pair
+does not depend on batch size or the other documents scored in the same call.
+ONNX reranker variants are scored one sequence at a time (no padding), which keeps
+RoPE positions correct regardless of batch composition. See issue
+[#725](https://github.com/n24q02m/qwen3-embed/issues/725).
+
 ## Configuration
 
 ### GPU Acceleration
