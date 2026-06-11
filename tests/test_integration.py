@@ -12,6 +12,12 @@ import numpy as np
 import pytest
 
 from qwen3_embed import TextCrossEncoder, TextEmbedding
+from qwen3_embed.common.model_description import (
+    DenseModelDescription,
+    ModelSource,
+    PoolingType,
+)
+from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 
 # ---------------------------------------------------------------------------
 # Fixtures (shared model instances -- download once, reuse across tests)
@@ -242,6 +248,43 @@ class TestEmbeddingEdgeCases:
                 assert not np.array_equal(embeddings[i], embeddings[j]), (
                     f"Embeddings {i} and {j} are identical"
                 )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Embedding: Custom model under multiprocessing (issue #3/#4)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.integration
+class TestCustomModelParallel:
+    """A runtime-registered custom model must resolve inside spawned workers."""
+
+    def test_custom_model_parallel_mixed_case(self):
+        """Register a custom LAST_TOKEN model under a mixed-case id, embed with
+        parallel=2, and assert no KeyError + correct shapes."""
+        CustomTextEmbedding._SUPPORTED.clear()
+        model_id = "Org/Custom-Qwen"
+        TextEmbedding.add_custom_model(
+            model_description=DenseModelDescription(
+                model=model_id,
+                sources=ModelSource(hf="n24q02m/Qwen3-Embedding-0.6B-ONNX"),
+                model_file="onnx/model_quantized.onnx",
+                dim=1024,
+            ),
+            pooling=PoolingType.LAST_TOKEN,
+            normalization=True,
+        )
+        try:
+            model = TextEmbedding(model_name=model_id)
+            # batch_size=1 forces the multiprocessing worker-pool path (otherwise
+            # 3 docs < default batch_size is treated as "small" and runs in-process).
+            embeddings = list(model.embed(["a", "b", "c"], batch_size=1, parallel=2))
+        finally:
+            CustomTextEmbedding._SUPPORTED.clear()
+
+        assert len(embeddings) == 3
+        for emb in embeddings:
+            assert emb.shape == (1024,)
 
 
 # ═══════════════════════════════════════════════════════════════════════════

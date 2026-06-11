@@ -7,10 +7,15 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from qwen3_embed.common.model_description import DenseModelDescription, ModelSource, PoolingType
+from qwen3_embed.common.model_description import (
+    CustomDenseModelDescription,
+    DenseModelDescription,
+    ModelSource,
+    PoolingType,
+)
 from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
-from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding, PostprocessingConfig
+from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -57,21 +62,18 @@ def _make_attention_mask(batch: int, seq_len: int, pad_from: int = -1) -> np.nda
 @pytest.fixture(autouse=True)
 def _reset_registry():
     """Isolate the class-level registry between tests."""
-    original_models = CustomTextEmbedding.SUPPORTED_MODELS.copy()
-    original_mapping = CustomTextEmbedding.POSTPROCESSING_MAPPING.copy()
+    original = dict(CustomTextEmbedding._SUPPORTED)
     yield
-    CustomTextEmbedding.SUPPORTED_MODELS.clear()
-    CustomTextEmbedding.SUPPORTED_MODELS.extend(original_models)
-    CustomTextEmbedding.POSTPROCESSING_MAPPING.clear()
-    CustomTextEmbedding.POSTPROCESSING_MAPPING.update(original_mapping)
+    CustomTextEmbedding._SUPPORTED.clear()
+    CustomTextEmbedding._SUPPORTED.update(original)
 
 
 def _register(
     model_name: str = _MODEL_NAME,
     pooling: PoolingType = PoolingType.CLS,
     normalization: bool = True,
-) -> DenseModelDescription:
-    desc = DenseModelDescription(
+) -> CustomDenseModelDescription:
+    desc = CustomDenseModelDescription(
         model=model_name,
         sources=ModelSource(hf=model_name),
         model_file="onnx/model.onnx",
@@ -79,8 +81,10 @@ def _register(
         license="MIT",
         size_in_GB=0.1,
         dim=4,
+        pooling=pooling,
+        normalization=normalization,
     )
-    CustomTextEmbedding.add_model(desc, pooling=pooling, normalization=normalization)
+    CustomTextEmbedding._register(desc)
     return desc
 
 
@@ -101,44 +105,56 @@ def _build(
 
 
 # ===========================================================================
-# PostprocessingConfig dataclass
+# CustomDenseModelDescription dataclass
 # ===========================================================================
 
 
-class TestPostprocessingConfig:
+class TestCustomDenseModelDescription:
     def test_frozen_dataclass(self) -> None:
-        cfg = PostprocessingConfig(pooling=PoolingType.CLS, normalization=True)
-        assert cfg.pooling == PoolingType.CLS
-        assert cfg.normalization is True
+        desc = CustomDenseModelDescription(
+            model="org/model",
+            sources=ModelSource(hf="org/model"),
+            dim=4,
+            pooling=PoolingType.CLS,
+            normalization=True,
+        )
+        assert desc.pooling == PoolingType.CLS
+        assert desc.normalization is True
 
     def test_immutable(self) -> None:
-        cfg = PostprocessingConfig(pooling=PoolingType.MEAN, normalization=False)
+        desc = CustomDenseModelDescription(
+            model="org/model",
+            sources=ModelSource(hf="org/model"),
+            dim=4,
+            pooling=PoolingType.MEAN,
+            normalization=False,
+        )
         with pytest.raises((AttributeError, TypeError)):
-            cfg.pooling = PoolingType.CLS  # type: ignore[misc]
+            desc.pooling = PoolingType.CLS  # type: ignore[misc]
 
 
 # ===========================================================================
-# CustomTextEmbedding.add_model — classmethod (lines 95-103)
+# CustomTextEmbedding._register — classmethod
 # ===========================================================================
 
 
-class TestAddModel:
-    def test_adds_to_supported_models(self) -> None:
+class TestRegister:
+    def test_adds_to_supported_registry(self) -> None:
         desc = _register(pooling=PoolingType.CLS)
-        assert desc in CustomTextEmbedding.SUPPORTED_MODELS
+        assert desc in CustomTextEmbedding._SUPPORTED.values()
 
-    def test_adds_to_postprocessing_mapping(self) -> None:
+    def test_carries_pooling_and_normalization(self) -> None:
         _register(pooling=PoolingType.MEAN, normalization=False)
-        cfg = CustomTextEmbedding.POSTPROCESSING_MAPPING[_MODEL_NAME]
-        assert cfg.pooling == PoolingType.MEAN
-        assert cfg.normalization is False
+        resolved = CustomTextEmbedding._resolve_description(_MODEL_NAME)
+        assert resolved.pooling == PoolingType.MEAN
+        assert resolved.normalization is False
 
     def test_multiple_models_independent(self) -> None:
         _register(model_name="org/model-a", pooling=PoolingType.CLS, normalization=True)
         _register(model_name="org/model-b", pooling=PoolingType.LAST_TOKEN, normalization=False)
-        assert CustomTextEmbedding.POSTPROCESSING_MAPPING["org/model-a"].pooling == PoolingType.CLS
+        assert CustomTextEmbedding._resolve_description("org/model-a").pooling == PoolingType.CLS
         assert (
-            CustomTextEmbedding.POSTPROCESSING_MAPPING["org/model-b"].pooling
+            CustomTextEmbedding._resolve_description("org/model-b").pooling
             == PoolingType.LAST_TOKEN
         )
 

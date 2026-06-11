@@ -27,13 +27,37 @@ def test_custom_post_process_honors_dim():
     assert all(v.shape == (4,) for v in truncated)
 
 
+def test_custom_registry_survives_serialization():
+    from qwen3_embed.common.model_description import (
+        CustomDenseModelDescription,
+        ModelSource,
+        PoolingType,
+    )
+
+    CustomTextEmbedding._SUPPORTED.clear()
+    desc = CustomDenseModelDescription(
+        model="Org/My-Embed",
+        dim=384,
+        sources=ModelSource(hf="Org/My-Embed"),
+        pooling=PoolingType.MEAN,
+        normalization=True,
+    )
+    CustomTextEmbedding._register(desc)
+    payload = CustomTextEmbedding._export_registry()
+    CustomTextEmbedding._SUPPORTED.clear()
+    CustomTextEmbedding._import_registry(payload)
+    resolved = CustomTextEmbedding._resolve_description("org/my-embed")  # case-insensitive
+    assert resolved.pooling == PoolingType.MEAN
+    assert resolved.normalization is True
+    assert resolved.dim == 384
+
+
 class TestCustomModelRegistration:
     """Verify custom model registration works for all pooling types."""
 
     def setup_method(self, method):
         """Clear custom model registry between tests."""
-        CustomTextEmbedding.SUPPORTED_MODELS.clear()
-        CustomTextEmbedding.POSTPROCESSING_MAPPING.clear()
+        CustomTextEmbedding._SUPPORTED.clear()
 
     def test_register_cls_pooling_model(self):
         TextEmbedding.add_custom_model(

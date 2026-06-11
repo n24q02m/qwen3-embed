@@ -11,7 +11,7 @@ from qwen3_embed.common.utils import mean_pooling
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
 
 # Base class model list kept empty — mean pooling models can be added
-# at runtime via CustomTextEmbedding.add_model(pooling=PoolingType.MEAN).
+# at runtime via TextEmbedding.add_custom_model(pooling=PoolingType.MEAN).
 supported_pooled_models: list[DenseModelDescription] = []
 
 
