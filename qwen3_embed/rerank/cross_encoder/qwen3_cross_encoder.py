@@ -228,69 +228,57 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         return self._onnx_embed_texts(texts, **kwargs)
 
     def _onnx_embed_texts(self, texts: list[str], **kwargs: Any) -> OnnxOutputContext:
-        """Tokenise and run model using batched inference (dynamic batch ONNX graph)."""
+        """Score each text independently (batch=1, no padding) — issue #725.
+
+        The reranker ONNX graph bakes ``position_ids = arange(seq_len)`` starting at
+        zero. Under batched inference the tokenizer pads every row to the longest
+        sequence, so a row's real content no longer starts at index 0 and its RoPE
+        positions shift by the pad count — which itself depends on the *other* texts
+        sharing the batch. That makes a (query, document) score depend on batch
+        composition. Scoring one text at a time removes padding entirely: every
+        sequence starts at position 0, so scores are invariant to how documents are
+        grouped. A future re-export deriving position_ids from the attention mask
+        (Spec A Part 2) will let us restore single-call batched inference.
+        """
         if self.model is None:
             raise ValueError("Model not loaded. Please call load_onnx_model() first.")
         assert self.tokenizer is not None, "Tokenizer not loaded. Call load_onnx_model() first."
 
         input_names = self.model_input_names or set()
-        assert input_names is not None
 
-        # Causal-LM reranker: the yes/no token lives at the LAST content position of every
-        # row. With the default right-padding, shorter rows push their last-content position
-        # away from the tensor's right edge, and INT8 dynamic quantization computes a single
-        # whole-tensor activation scale across the batch — mixed content+padding activations
-        # shift that scale and distort per-row logits at position seq_len-1. Left-padding
-        # collapses all last-content positions onto the right edge (position -1 for every
-        # row), which both simplifies pooling and keeps the quantizer's per-tensor scale
-        # dominated by real content rather than pad tokens.
-        #
-        # The tokenizer is a shared object across encoders in the process, so we flip the
-        # padding direction for the duration of this batch and restore it afterwards to
-        # avoid leaking the setting into the embedding path (which assumes right-padding).
-        padding = self.tokenizer.padding
-        original_direction: str | None = None
-        if padding is not None and padding.get("direction") != "left":
-            original_direction = padding.get("direction", "right")
-            self.tokenizer.enable_padding(
-                pad_id=padding.get("pad_id", 0),
-                pad_token=padding.get("pad_token", ""),
-                direction="left",
-            )
+        scores_list: list[float] = []
+        for text in texts:
+            # encode_batch([text]) keeps the Rust-tokenizer fast path while tokenising
+            # a single sequence, so no padding is ever introduced.
+            (tokenized,) = self.tokenizer.encode_batch([text])
 
-        try:
-            # ⚡ Bolt: tokenizer.encode_batch(texts) parallelises via the Rust tokenizers lib.
-            all_tokenized = self.tokenizer.encode_batch(texts)
-        finally:
-            if original_direction is not None and padding is not None:
-                self.tokenizer.enable_padding(
-                    pad_id=padding.get("pad_id", 0),
-                    pad_token=padding.get("pad_token", ""),
-                    direction=original_direction,
+            onnx_input: dict[str, NumpyArray] = {
+                "input_ids": np.array([tokenized.ids], dtype=np.int64),
+            }
+            if "attention_mask" in input_names:
+                onnx_input["attention_mask"] = np.array([tokenized.attention_mask], dtype=np.int64)
+            if "token_type_ids" in input_names:
+                onnx_input["token_type_ids"] = np.zeros_like(
+                    onnx_input["input_ids"], dtype=np.int64
                 )
 
-        onnx_input: dict[str, NumpyArray] = {
-            "input_ids": np.array([t.ids for t in all_tokenized], dtype=np.int64),
-        }
-        if "attention_mask" in input_names:
-            onnx_input["attention_mask"] = np.array(
-                [t.attention_mask for t in all_tokenized], dtype=np.int64
+            onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
+            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
+            model_output = outputs[0]
+
+            if getattr(model_output, "dtype", None) == np.float16:
+                model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
+
+            # batch=1 with no padding: the yes/no token is the last position. The mask
+            # (all ones) is passed for the full-vocab variant; the YesNo variant ignores
+            # it (output already collapsed to (1, 2)).
+            row_scores = self._compute_yes_no_scores(
+                model_output,  # type: ignore[invalid-argument-type]
+                onnx_input.get("attention_mask"),
             )
-        if "token_type_ids" in input_names:
-            onnx_input["token_type_ids"] = np.zeros_like(onnx_input["input_ids"], dtype=np.int64)
+            scores_list.append(float(row_scores[0]))
 
-        onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
-        outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
-        model_output = outputs[0]
-
-        if getattr(model_output, "dtype", None) == np.float16:
-            model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
-
-        # _compute_yes_no_scores uses attention_mask to pick the last non-pad position
-        # per sequence (full-vocab model only; YesNo variant already collapses seq dim).
-        attention_mask = onnx_input.get("attention_mask")
-        scores = self._compute_yes_no_scores(model_output, attention_mask)  # type: ignore[invalid-argument-type]
-
+        scores = np.array(scores_list, dtype=np.float32)
         return OnnxOutputContext(model_output=scores)
 
     # ------------------------------------------------------------------

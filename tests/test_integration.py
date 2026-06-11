@@ -31,6 +31,11 @@ def reranker_model():
     return TextCrossEncoder(model_name=RERANKER_MODEL)
 
 
+@pytest.fixture(scope="module")
+def reranker_yesno_model():
+    return TextCrossEncoder(model_name="n24q02m/Qwen3-Reranker-0.6B-ONNX-YesNo")
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Embedding: Basic operations
 # ═══════════════════════════════════════════════════════════════════════════
@@ -286,6 +291,33 @@ class TestRerankerBasic:
         s1 = list(reranker_model.rerank(query, docs))
         s2 = list(reranker_model.rerank(query, docs))
         assert abs(s1[0] - s2[0]) < 1e-6
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Reranker: Batch invariance (issue #725)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.integration
+class TestRerankerBatchInvariance:
+    """Issue #725: a (query, doc) score must be independent of batch composition."""
+
+    QUERY = "Java Developer"
+    DOCS = ["Python Developer", "Senior Java Engineer", "Marketing Manager"]
+
+    def _assert_batch_invariant(self, model):
+        batched = list(model.rerank(self.QUERY, self.DOCS))
+        singles = [list(model.rerank(self.QUERY, [d]))[0] for d in self.DOCS]
+        for i, (b, s) in enumerate(zip(batched, singles)):
+            assert b == pytest.approx(s, abs=1e-4), (
+                f"doc[{i}]={self.DOCS[i]!r}: batched={b} != single={s}"
+            )
+
+    def test_yesno_variant_batch_invariant(self, reranker_yesno_model):
+        self._assert_batch_invariant(reranker_yesno_model)
+
+    def test_standard_variant_batch_invariant(self, reranker_model):
+        self._assert_batch_invariant(reranker_model)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
