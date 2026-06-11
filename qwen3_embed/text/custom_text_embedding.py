@@ -48,7 +48,14 @@ class CustomTextEmbedding(OnnxTextEmbedding):
     def _post_process_onnx_output(
         self, output: OnnxOutputContext, **kwargs: Any
     ) -> Iterable[NumpyArray]:
-        return self._normalize(self._pool(output.model_output, output.attention_mask))
+        embeddings = self._pool(output.model_output, output.attention_mask)
+
+        # MRL: optionally truncate to requested dimension
+        dim: int | None = kwargs.get("dim")
+        if dim is not None:
+            embeddings = embeddings[:, :dim]
+
+        return self._normalize(embeddings)
 
     def _pool(
         self, embeddings: NumpyArray, attention_mask: NDArray[np.int64] | None = None

@@ -43,7 +43,14 @@ class PooledEmbedding(OnnxTextEmbedding):
 
         embeddings = output.model_output
         attn_mask = output.attention_mask
-        return self.mean_pooling(embeddings, attn_mask)
+        pooled = self.mean_pooling(embeddings, attn_mask)
+
+        # MRL: optionally truncate to requested dimension
+        dim: int | None = kwargs.get("dim")
+        if dim is not None:
+            pooled = pooled[:, :dim]
+
+        return pooled
 
 
 class PooledEmbeddingWorker(OnnxTextEmbeddingWorker):

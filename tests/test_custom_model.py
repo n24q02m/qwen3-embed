@@ -1,5 +1,6 @@
 """Tests for custom model registration via TextEmbedding.add_custom_model."""
 
+import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import (
@@ -7,8 +8,23 @@ from qwen3_embed.common.model_description import (
     ModelSource,
     PoolingType,
 )
+from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.text_embedding import TextEmbedding
+
+
+def _ctx(rows: int, dim: int) -> OnnxOutputContext:
+    out = np.ones((rows, 3, dim), dtype=np.float32)
+    mask = np.ones((rows, 3), dtype=np.int64)
+    return OnnxOutputContext(model_output=out, attention_mask=mask)
+
+
+def test_custom_post_process_honors_dim():
+    enc = CustomTextEmbedding.__new__(CustomTextEmbedding)
+    enc._pooling = PoolingType.LAST_TOKEN
+    enc._normalization = True
+    truncated = list(enc._post_process_onnx_output(_ctx(2, 8), dim=4))
+    assert all(v.shape == (4,) for v in truncated)
 
 
 class TestCustomModelRegistration:
