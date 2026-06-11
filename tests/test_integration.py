@@ -308,7 +308,7 @@ class TestRerankerBatchInvariance:
     def _assert_batch_invariant(self, model):
         batched = list(model.rerank(self.QUERY, self.DOCS))
         singles = [list(model.rerank(self.QUERY, [d]))[0] for d in self.DOCS]
-        for i, (b, s) in enumerate(zip(batched, singles)):
+        for i, (b, s) in enumerate(zip(batched, singles, strict=True)):
             assert b == pytest.approx(s, abs=1e-4), (
                 f"doc[{i}]={self.DOCS[i]!r}: batched={b} != single={s}"
             )
