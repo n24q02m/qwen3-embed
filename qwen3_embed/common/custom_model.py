@@ -1,8 +1,14 @@
-"""One-call registration helper for bring-your-own (BYO) ONNX embedding models."""
+"""One-call registration helpers for bring-your-own (BYO) ONNX models.
+
+``CustomModelSpec`` registers an embedding model; ``CustomRerankerSpec`` registers
+a cross-encoder reranker. Both wrap the lower-level ``add_custom_model`` APIs so a
+BYO model can be loaded by id without hand-building a model description.
+"""
 
 from dataclasses import dataclass, field
 
 from qwen3_embed.common.model_description import (
+    BaseModelDescription,
     CustomDenseModelDescription,
     ModelSource,
     PoolingType,
@@ -60,3 +66,53 @@ class CustomModelSpec:
             pooling=PoolingType(self.pooling),
             normalization=self.normalization,
         )
+
+
+@dataclass
+class CustomRerankerSpec:
+    """One-call registration of a BYO ONNX cross-encoder reranker.
+
+    Only standard ONNX cross-encoders are accepted: a single relevance logit per
+    ``(query, document)`` pair (e.g. ``bge-reranker``, ``gte-reranker``, ``ms-marco``,
+    ``jina-reranker``). Higher score = more relevant. Qwen3 causal yes/no rerankers
+    are built in and need no registration; this path is for the bert-cross-encoder
+    output shape, so — unlike :class:`CustomModelSpec` — there is no ``dim``,
+    ``pooling`` or ``normalization``.
+
+    Usage::
+
+        from qwen3_embed import CustomRerankerSpec, TextCrossEncoder
+
+        CustomRerankerSpec(
+            model_id="onnx-community/gte-multilingual-reranker-base",
+            hf="onnx-community/gte-multilingual-reranker-base",
+            model_file="onnx/model_quantized.onnx",
+        ).register()
+
+        encoder = TextCrossEncoder("onnx-community/gte-multilingual-reranker-base")
+        scores = list(encoder.rerank("query", ["doc a", "doc b"]))
+    """
+
+    model_id: str
+    hf: str | None = None
+    url: str | None = None
+    model_file: str = "onnx/model.onnx"
+    description: str = ""
+    license: str = ""
+    size_in_GB: float = 0.0
+    additional_files: list[str] = field(default_factory=list)
+
+    def register(self) -> None:
+        """Register this reranker with :class:`TextCrossEncoder` so it loads by id."""
+        from qwen3_embed import TextCrossEncoder
+
+        model_description = BaseModelDescription(
+            model=self.model_id,
+            sources=ModelSource(hf=self.hf, url=self.url),
+            model_file=self.model_file,
+            description=self.description,
+            license=self.license,
+            size_in_GB=self.size_in_GB,
+            additional_files=self.additional_files,
+        )
+        TextCrossEncoder.add_custom_model(model_description)
