@@ -2,6 +2,55 @@
 
 <!-- version list -->
 
+## v1.12.0-beta.1 (2026-06-12)
+
+### Bug Fixes
+
+- Add NOTICE retaining fastembed (Qdrant) attribution
+  ([#733](https://github.com/n24q02m/qwen3-embed/pull/733),
+  [`5220b34`](https://github.com/n24q02m/qwen3-embed/commit/5220b3494dc89599bdd7b4f115f251d939cf4a94))
+
+- Format test_export.py ([#733](https://github.com/n24q02m/qwen3-embed/pull/733),
+  [`5220b34`](https://github.com/n24q02m/qwen3-embed/commit/5220b3494dc89599bdd7b4f115f251d939cf4a94))
+
+- Honor dim/MRL truncation on custom and pooled embedding paths
+  ([#733](https://github.com/n24q02m/qwen3-embed/pull/733),
+  [`5220b34`](https://github.com/n24q02m/qwen3-embed/commit/5220b3494dc89599bdd7b4f115f251d939cf4a94))
+
+- Make custom embedding models work under multiprocessing and case-insensitive
+  ([#733](https://github.com/n24q02m/qwen3-embed/pull/733),
+  [`5220b34`](https://github.com/n24q02m/qwen3-embed/commit/5220b3494dc89599bdd7b4f115f251d939cf4a94))
+
+- Remove orphaned Qodo pr-agent config ([#731](https://github.com/n24q02m/qwen3-embed/pull/731),
+  [`bb29b63`](https://github.com/n24q02m/qwen3-embed/commit/bb29b63bd602a641d002b6e756b4122e61138e46))
+
+- Restore PSR changelog generation and backfill version history
+  ([#732](https://github.com/n24q02m/qwen3-embed/pull/732),
+  [`d450791`](https://github.com/n24q02m/qwen3-embed/commit/d450791c69f070d23948af1287eda4b67ef93739))
+
+- Skip parallel custom-model integration test on Windows spawn deadlock
+  ([#733](https://github.com/n24q02m/qwen3-embed/pull/733),
+  [`5220b34`](https://github.com/n24q02m/qwen3-embed/commit/5220b3494dc89599bdd7b4f115f251d939cf4a94))
+
+### Features
+
+- Add CustomModelSpec one-call BYO registration helper
+  ([#733](https://github.com/n24q02m/qwen3-embed/pull/733),
+  [`5220b34`](https://github.com/n24q02m/qwen3-embed/commit/5220b3494dc89599bdd7b4f115f251d939cf4a94))
+
+- Add HF-id to ONNX export helper with lazy optional deps
+  ([#733](https://github.com/n24q02m/qwen3-embed/pull/733),
+  [`5220b34`](https://github.com/n24q02m/qwen3-embed/commit/5220b3494dc89599bdd7b4f115f251d939cf4a94))
+
+- Document CustomModelSpec bring-your-own-model usage
+  ([#733](https://github.com/n24q02m/qwen3-embed/pull/733),
+  [`5220b34`](https://github.com/n24q02m/qwen3-embed/commit/5220b3494dc89599bdd7b4f115f251d939cf4a94))
+
+- Production-grade bring-your-own-model (BYO) support
+  ([#733](https://github.com/n24q02m/qwen3-embed/pull/733),
+  [`5220b34`](https://github.com/n24q02m/qwen3-embed/commit/5220b3494dc89599bdd7b4f115f251d939cf4a94))
+
+
 ## v1.11.2-beta.3 (2026-06-11)
 
 ### Bug Fixes
