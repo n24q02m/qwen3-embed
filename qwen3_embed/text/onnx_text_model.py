@@ -20,6 +20,14 @@ class OnnxTextModel(OnnxModel[T]):
     def _get_worker_class(cls) -> type["TextEmbeddingWorker[T]"]:
         raise NotImplementedError("Subclasses must implement this method")
 
+    def _extra_worker_params(self) -> dict[str, Any]:
+        """Extra kwargs injected into each spawned worker's init.
+
+        Subclasses override this to carry state (e.g. a runtime-registered custom
+        model registry) into worker processes that start with a fresh interpreter.
+        """
+        return {}
+
     def _post_process_onnx_output(self, output: OnnxOutputContext, **kwargs: Any) -> Iterable[T]:
         """Post-process the ONNX model output to convert it into a usable format.
 
@@ -128,6 +136,8 @@ class OnnxTextModel(OnnxModel[T]):
 
             if extra_session_options is not None:
                 params.update(extra_session_options)
+
+            params.update(self._extra_worker_params())
 
             pool = ParallelWorkerPool(
                 worker=self._get_worker_class(),

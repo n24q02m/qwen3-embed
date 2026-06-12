@@ -2,7 +2,11 @@ from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
 
-from qwen3_embed.common.model_description import DenseModelDescription, PoolingType
+from qwen3_embed.common.model_description import (
+    CustomDenseModelDescription,
+    DenseModelDescription,
+    PoolingType,
+)
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.gguf_embedding import Qwen3TextEmbeddingGGUF
@@ -81,11 +85,19 @@ class TextEmbedding(TextEmbeddingBase):
             )
 
         cls._clear_model_cache()
-        CustomTextEmbedding.add_model(
-            model_description,
+        carrying = CustomDenseModelDescription(
+            model=model_description.model,
+            dim=model_description.dim,
+            sources=model_description.sources,
+            model_file=model_description.model_file,
+            description=model_description.description,
+            license=model_description.license,
+            size_in_GB=model_description.size_in_GB,
+            additional_files=model_description.additional_files,
             pooling=pooling,
             normalization=normalization,
         )
+        CustomTextEmbedding._register(carrying)
 
     def __init__(
         self,

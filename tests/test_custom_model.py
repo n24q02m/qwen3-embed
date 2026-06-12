@@ -1,5 +1,6 @@
 """Tests for custom model registration via TextEmbedding.add_custom_model."""
 
+import numpy as np
 import pytest
 
 from qwen3_embed.common.model_description import (
@@ -7,8 +8,77 @@ from qwen3_embed.common.model_description import (
     ModelSource,
     PoolingType,
 )
+from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.text_embedding import TextEmbedding
+
+
+def _ctx(rows: int, dim: int) -> OnnxOutputContext:
+    out = np.ones((rows, 3, dim), dtype=np.float32)
+    mask = np.ones((rows, 3), dtype=np.int64)
+    return OnnxOutputContext(model_output=out, attention_mask=mask)
+
+
+def test_custom_post_process_honors_dim():
+    enc = CustomTextEmbedding.__new__(CustomTextEmbedding)
+    enc._pooling = PoolingType.LAST_TOKEN
+    enc._normalization = True
+    truncated = list(enc._post_process_onnx_output(_ctx(2, 8), dim=4))
+    assert all(v.shape == (4,) for v in truncated)
+
+
+def test_custom_model_spec_registers_embedder():
+    from qwen3_embed import CustomModelSpec
+
+    CustomTextEmbedding._SUPPORTED.clear()
+    CustomModelSpec(
+        model_id="Org/gte-multilingual-base-onnx",
+        hf="Org/gte-multilingual-base-onnx",
+        model_file="onnx/model.onnx",
+        dim=768,
+        pooling="CLS",
+        normalization=True,
+    ).register()
+    try:
+        models = [m["model"].lower() for m in TextEmbedding.list_supported_models()]
+        assert "org/gte-multilingual-base-onnx" in models
+        desc = CustomTextEmbedding._resolve_description("Org/gte-multilingual-base-onnx")
+        assert desc.pooling == PoolingType.CLS
+        assert desc.dim == 768
+    finally:
+        CustomTextEmbedding._SUPPORTED.clear()
+
+
+def test_custom_model_spec_requires_dim():
+    from qwen3_embed import CustomModelSpec
+
+    with pytest.raises(ValueError, match="dim is required"):
+        CustomModelSpec(model_id="Org/no-dim", hf="Org/no-dim").register()
+
+
+def test_custom_registry_survives_serialization():
+    from qwen3_embed.common.model_description import (
+        CustomDenseModelDescription,
+        ModelSource,
+        PoolingType,
+    )
+
+    CustomTextEmbedding._SUPPORTED.clear()
+    desc = CustomDenseModelDescription(
+        model="Org/My-Embed",
+        dim=384,
+        sources=ModelSource(hf="Org/My-Embed"),
+        pooling=PoolingType.MEAN,
+        normalization=True,
+    )
+    CustomTextEmbedding._register(desc)
+    payload = CustomTextEmbedding._export_registry()
+    CustomTextEmbedding._SUPPORTED.clear()
+    CustomTextEmbedding._import_registry(payload)
+    resolved = CustomTextEmbedding._resolve_description("org/my-embed")  # case-insensitive
+    assert resolved.pooling == PoolingType.MEAN
+    assert resolved.normalization is True
+    assert resolved.dim == 384
 
 
 class TestCustomModelRegistration:
@@ -16,8 +86,7 @@ class TestCustomModelRegistration:
 
     def setup_method(self, method):
         """Clear custom model registry between tests."""
-        CustomTextEmbedding.SUPPORTED_MODELS.clear()
-        CustomTextEmbedding.POSTPROCESSING_MAPPING.clear()
+        CustomTextEmbedding._SUPPORTED.clear()
 
     def test_register_cls_pooling_model(self):
         TextEmbedding.add_custom_model(

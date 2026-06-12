@@ -8,8 +8,8 @@ from qwen3_embed.common.utils import normalize
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
 from qwen3_embed.text.pooled_embedding import PooledEmbedding
 
-# Base class model list kept empty — mean+normalize pooling models can
-# be added at runtime via CustomTextEmbedding.add_model(pooling=PoolingType.MEAN, normalization=True).
+# Base class model list kept empty — mean+normalize pooling models can be added at runtime
+# via TextEmbedding.add_custom_model(pooling=PoolingType.MEAN, normalization=True).
 supported_pooled_normalized_models: list[DenseModelDescription] = []
 
 
@@ -35,7 +35,14 @@ class PooledNormalizedEmbedding(PooledEmbedding):
 
         embeddings = output.model_output
         attn_mask = output.attention_mask
-        return normalize(self.mean_pooling(embeddings, attn_mask))
+        pooled = self.mean_pooling(embeddings, attn_mask)
+
+        # MRL: optionally truncate to requested dimension
+        dim: int | None = kwargs.get("dim")
+        if dim is not None:
+            pooled = pooled[:, :dim]
+
+        return normalize(pooled)
 
 
 class PooledNormalizedEmbeddingWorker(OnnxTextEmbeddingWorker):

@@ -10,7 +10,7 @@ from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
 # Base class model list kept empty — Qwen3 models are registered
 # in qwen3_embedding.py. Custom models can be added at runtime
-# via CustomTextEmbedding.add_model().
+# via TextEmbedding.add_custom_model().
 supported_onnx_models: list[DenseModelDescription] = []
 
 

@@ -1,11 +1,11 @@
 from collections.abc import Iterable
-from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 
 from qwen3_embed.common.model_description import (
+    CustomDenseModelDescription,
     DenseModelDescription,
     PoolingType,
 )
@@ -15,15 +15,11 @@ from qwen3_embed.common.utils import last_token_pool, mean_pooling, normalize
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
 
 
-@dataclass(frozen=True)
-class PostprocessingConfig:
-    pooling: PoolingType
-    normalization: bool
-
-
 class CustomTextEmbedding(OnnxTextEmbedding):
-    SUPPORTED_MODELS: list[DenseModelDescription] = []
-    POSTPROCESSING_MAPPING: dict[str, PostprocessingConfig] = {}
+    # Single source of truth: model-id (lowercased) -> description carrying
+    # pooling+normalization. The description is a frozen, picklable dataclass so it
+    # survives the deepcopy into spawned worker processes.
+    _SUPPORTED: dict[str, CustomDenseModelDescription] = {}
 
     def __init__(
         self,
@@ -34,21 +30,52 @@ class CustomTextEmbedding(OnnxTextEmbedding):
             model_name=model_name,
             **kwargs,
         )
-        self._pooling = self.POSTPROCESSING_MAPPING[model_name].pooling
-        self._normalization = self.POSTPROCESSING_MAPPING[model_name].normalization
+        desc = self._resolve_description(model_name)
+        self._pooling = desc.pooling
+        self._normalization = desc.normalization
+
+    @classmethod
+    def _register(cls, desc: CustomDenseModelDescription) -> None:
+        cls._clear_model_cache()
+        cls._SUPPORTED[desc.model.lower()] = desc
+
+    @classmethod
+    def _resolve_description(cls, model_name: str) -> CustomDenseModelDescription:
+        return cls._SUPPORTED[model_name.lower()]
+
+    @classmethod
+    def _export_registry(cls) -> list[CustomDenseModelDescription]:
+        return list(cls._SUPPORTED.values())
+
+    @classmethod
+    def _import_registry(cls, payload: list[CustomDenseModelDescription]) -> None:
+        for desc in payload:
+            cls._SUPPORTED[desc.model.lower()] = desc
 
     @classmethod
     def _list_supported_models(cls) -> list[DenseModelDescription]:
-        return cls.SUPPORTED_MODELS
+        return list(cls._SUPPORTED.values())
 
     @classmethod
     def _get_worker_class(cls) -> type["CustomTextEmbeddingWorker"]:
         return CustomTextEmbeddingWorker
 
+    def _extra_worker_params(self) -> dict[str, Any]:
+        # Propagate the runtime registry so spawned workers (fresh interpreters
+        # with an empty _SUPPORTED) can resolve + re-register this custom model.
+        return {"custom_registry": self._export_registry()}
+
     def _post_process_onnx_output(
         self, output: OnnxOutputContext, **kwargs: Any
     ) -> Iterable[NumpyArray]:
-        return self._normalize(self._pool(output.model_output, output.attention_mask))
+        embeddings = self._pool(output.model_output, output.attention_mask)
+
+        # MRL: optionally truncate to requested dimension
+        dim: int | None = kwargs.get("dim")
+        if dim is not None:
+            embeddings = embeddings[:, :dim]
+
+        return self._normalize(embeddings)
 
     def _pool(
         self, embeddings: NumpyArray, attention_mask: NDArray[np.int64] | None = None
@@ -78,19 +105,6 @@ class CustomTextEmbedding(OnnxTextEmbedding):
     def _normalize(self, embeddings: NumpyArray) -> NumpyArray:
         return normalize(embeddings) if self._normalization else embeddings
 
-    @classmethod
-    def add_model(
-        cls,
-        model_description: DenseModelDescription,
-        pooling: PoolingType,
-        normalization: bool,
-    ) -> None:
-        cls._clear_model_cache()
-        cls.SUPPORTED_MODELS.append(model_description)
-        cls.POSTPROCESSING_MAPPING[model_description.model] = PostprocessingConfig(
-            pooling=pooling, normalization=normalization
-        )
-
 
 class CustomTextEmbeddingWorker(OnnxTextEmbeddingWorker):
     def init_embedding(
@@ -99,6 +113,9 @@ class CustomTextEmbeddingWorker(OnnxTextEmbeddingWorker):
         cache_dir: str,
         **kwargs: Any,
     ) -> CustomTextEmbedding:
+        registry = kwargs.pop("custom_registry", None)
+        if registry is not None:
+            CustomTextEmbedding._import_registry(registry)
         return CustomTextEmbedding(
             model_name=model_name,
             cache_dir=cache_dir,

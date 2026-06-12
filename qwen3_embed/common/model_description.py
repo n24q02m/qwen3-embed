@@ -52,3 +52,9 @@ class PoolingType(StrEnum):
     MEAN = "MEAN"
     LAST_TOKEN = "LAST_TOKEN"
     DISABLED = "DISABLED"
+
+
+@dataclass(frozen=True)
+class CustomDenseModelDescription(DenseModelDescription):
+    pooling: PoolingType = PoolingType.MEAN
+    normalization: bool = True
