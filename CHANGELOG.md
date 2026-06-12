@@ -2,6 +2,18 @@
 
 <!-- version list -->
 
+## v1.12.0-beta.2 (2026-06-12)
+
+### Features
+
+- Add CustomRerankerSpec one-call BYO reranker registration
+  ([#736](https://github.com/n24q02m/qwen3-embed/pull/736),
+  [`3520b57`](https://github.com/n24q02m/qwen3-embed/commit/3520b576891b9e46f4d885e668d90c3574803278))
+
+- Sync cross-promo section ([#735](https://github.com/n24q02m/qwen3-embed/pull/735),
+  [`97cdf07`](https://github.com/n24q02m/qwen3-embed/commit/97cdf0768224cee367e8f687b609fe0f1c0bf2dc))
+
+
 ## v1.12.0-beta.1 (2026-06-12)
 
 ### Bug Fixes
