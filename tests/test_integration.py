@@ -8,6 +8,8 @@ they can be skipped during fast CI runs::
     pytest -m integration            # run only integration tests
 """
 
+import sys
+
 import numpy as np
 import pytest
 
@@ -256,6 +258,11 @@ class TestEmbeddingEdgeCases:
 
 
 @pytest.mark.integration
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows multiprocessing spawn deadlocks with onnxruntime under pytest; "
+    "the worker-registry propagation itself is covered by the unit serialization test.",
+)
 class TestCustomModelParallel:
     """A runtime-registered custom model must resolve inside spawned workers."""
 
