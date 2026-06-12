@@ -27,6 +27,35 @@ def test_custom_post_process_honors_dim():
     assert all(v.shape == (4,) for v in truncated)
 
 
+def test_custom_model_spec_registers_embedder():
+    from qwen3_embed import CustomModelSpec
+
+    CustomTextEmbedding._SUPPORTED.clear()
+    CustomModelSpec(
+        model_id="Org/gte-multilingual-base-onnx",
+        hf="Org/gte-multilingual-base-onnx",
+        model_file="onnx/model.onnx",
+        dim=768,
+        pooling="CLS",
+        normalization=True,
+    ).register()
+    try:
+        models = [m["model"].lower() for m in TextEmbedding.list_supported_models()]
+        assert "org/gte-multilingual-base-onnx" in models
+        desc = CustomTextEmbedding._resolve_description("Org/gte-multilingual-base-onnx")
+        assert desc.pooling == PoolingType.CLS
+        assert desc.dim == 768
+    finally:
+        CustomTextEmbedding._SUPPORTED.clear()
+
+
+def test_custom_model_spec_requires_dim():
+    from qwen3_embed import CustomModelSpec
+
+    with pytest.raises(ValueError, match="dim is required"):
+        CustomModelSpec(model_id="Org/no-dim", hf="Org/no-dim").register()
+
+
 def test_custom_registry_survives_serialization():
     from qwen3_embed.common.model_description import (
         CustomDenseModelDescription,
