@@ -9,9 +9,7 @@ from qwen3_embed.export import export_to_onnx
 _HAS_OPTIMUM = importlib.util.find_spec("optimum") is not None
 
 
-@pytest.mark.skipif(
-    _HAS_OPTIMUM, reason="exercises the missing-extra path; optimum is installed"
-)
+@pytest.mark.skipif(_HAS_OPTIMUM, reason="exercises the missing-extra path; optimum is installed")
 def test_export_without_extra_raises_helpful_error(tmp_path):
     with pytest.raises(ImportError, match=r"optimum\[exporters\]"):
         export_to_onnx("sentence-transformers/all-MiniLM-L6-v2", str(tmp_path))
