@@ -171,6 +171,41 @@ ONNX reranker variants are scored one sequence at a time (no padding), which kee
 RoPE positions correct regardless of batch composition. See issue
 [#725](https://github.com/n24q02m/qwen3-embed/issues/725).
 
+### Custom models (bring your own)
+
+Qwen3 is the only built-in model, but any ONNX-able embedding model can be
+registered and then loaded by id. Use `CustomModelSpec` with one of the four
+output shapes: `CLS`/`MEAN` (bert-bi), `LAST_TOKEN` (causal), or `DISABLED` (raw).
+
+```python
+from qwen3_embed import CustomModelSpec, TextEmbedding
+
+# Multilingual (incl. Vietnamese) + code, CLS-pooled, 768-dim
+CustomModelSpec(
+    model_id="onnx-community/gte-multilingual-base",
+    hf="onnx-community/gte-multilingual-base",
+    model_file="onnx/model_quantized.onnx",
+    dim=768, pooling="CLS", normalization=True,
+).register()
+
+model = TextEmbedding("onnx-community/gte-multilingual-base")
+embeddings = list(model.embed(["xin chào", "def add(a, b): return a + b"]))
+```
+
+Other verified examples: `bge-m3` (`pooling="CLS"`, `dim=1024`), `EmbeddingGemma-300m`
+(`pooling="MEAN"`, `dim=768`). MRL truncation (`embed(..., dim=256)`) works for custom
+models whose vectors are Matryoshka-trained. Custom models are scored per-row, so —
+like the built-in INT8 reranker — their scores are batch-invariant by construction.
+
+PyTorch-only models can be converted first (in a throwaway env, since the export
+deps don't co-resolve with the lean runtime pins):
+
+```python
+# pip install "optimum[exporters]" torch transformers onnx
+from qwen3_embed.export import export_to_onnx
+export_to_onnx("intfloat/multilingual-e5-base", "./e5-onnx")
+```
+
 ## Configuration
 
 ### GPU Acceleration
