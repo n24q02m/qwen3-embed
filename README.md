@@ -198,6 +198,23 @@ Other verified examples: `bge-m3` (`pooling="CLS"`, `dim=1024`), `EmbeddingGemma
 models whose vectors are Matryoshka-trained. Custom models are scored per-row, so —
 like the built-in INT8 reranker — their scores are batch-invariant by construction.
 
+A BYO **reranker** registers the same way with `CustomRerankerSpec`. Any standard ONNX
+cross-encoder (a single relevance logit per pair — `bge-reranker`, `gte-reranker`,
+`ms-marco`, `jina-reranker`) works; there is no `dim`/`pooling` to set:
+
+```python
+from qwen3_embed import CustomRerankerSpec, TextCrossEncoder
+
+CustomRerankerSpec(
+    model_id="onnx-community/gte-multilingual-reranker-base",
+    hf="onnx-community/gte-multilingual-reranker-base",
+    model_file="onnx/model_quantized.onnx",
+).register()
+
+encoder = TextCrossEncoder("onnx-community/gte-multilingual-reranker-base")
+scores = list(encoder.rerank("xin chào", ["tài liệu A", "tài liệu B"]))
+```
+
 PyTorch-only models can be converted first (in a throwaway env, since the export
 deps don't co-resolve with the lean runtime pins):
 
