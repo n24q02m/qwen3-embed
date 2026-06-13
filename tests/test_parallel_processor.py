@@ -121,7 +121,7 @@ def test_worker_exception():
     # We need to pass failure_val via kwargs to start()
     # But wait, start() takes **kwargs from ParallelWorkerPool.ordered_map/start
 
-    with pytest.raises(RuntimeError, match="Thread unexpectedly terminated"):
+    with pytest.raises(ValueError, match="A worker failed: Thread unexpectedly terminated"):
         # We need to pass the failure_val. The pool passes its **kwargs to worker.start()
         list(pool.ordered_map(input_data, failure_val=5))
 
@@ -156,7 +156,7 @@ def test_worker_initialization():
     input_data = [1, 2, 3]
     # If failure_val is 2, it should fail.
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError, match="A worker failed: Thread unexpectedly terminated"):
         list(pool.ordered_map(input_data, failure_val=2))
 
     # If failure_val is 10, it should succeed
@@ -339,7 +339,7 @@ def test_semi_ordered_map_error_in_else_branch():
     """
     with patch.object(pp_module, "max_internal_batch_size", 1):
         pool = ParallelWorkerPool(worker=FailingWorker, config=PoolConfig(num_workers=1))
-        with pytest.raises(RuntimeError, match="Thread unexpectedly terminated"):
+        with pytest.raises(ValueError, match="A worker failed: Thread unexpectedly terminated"):
             list(pool.ordered_map(list(range(5)), failure_val=0))
 
 
@@ -546,7 +546,7 @@ def test_worker_multiprocessing_exception_handling():
     # When item '2' is processed by the worker subprocess, it raises an exception (Line 90).
     pool = ParallelWorkerPool(worker=FailingWorker, config=PoolConfig(num_workers=2))
 
-    with pytest.raises(RuntimeError, match="Thread unexpectedly terminated"):
+    with pytest.raises(ValueError, match="A worker failed: Thread unexpectedly terminated"):
         # The list consumption forces the stream through the pool
         list(pool.ordered_map([1, 2, 3], failure_val=2))
 
@@ -620,3 +620,18 @@ def test_worker_processing_exception_handling():
     output_queue.put.assert_called_with(QueueSignals.error)
     # Verify that the worker was cleaned up (num_active_workers decremented)
     assert num_active_workers.value == 0
+
+
+def test_ordered_map_worker_failure_raises_value_error():
+    from unittest.mock import patch
+
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+
+    # Mock semi_ordered_map to raise an exception,
+    # simulating what happens when check_worker_health fails.
+    with patch.object(ParallelWorkerPool, "semi_ordered_map") as mock_semi_map:
+        mock_semi_map.side_effect = RuntimeError("Worker died")
+
+        # We expect ValueError because of the requested change
+        with pytest.raises(ValueError, match="A worker failed: Worker died"):
+            list(pool.ordered_map([1, 2, 3]))

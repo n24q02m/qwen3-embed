@@ -163,6 +163,14 @@ class ParallelWorkerPool:
             self.processes.append(process)
 
     def ordered_map(self, stream: Iterable[Any], *args: Any, **kwargs: Any) -> Iterable[Any]:
+        try:
+            yield from self._ordered_generator(stream, *args, **kwargs)
+        except Exception as e:
+            raise ValueError(f"A worker failed: {e}") from e
+
+    def _ordered_generator(
+        self, stream: Iterable[Any], *args: Any, **kwargs: Any
+    ) -> Iterable[Any]:
         buffer: dict[int, Any] = {}
         next_expected = 0
 
