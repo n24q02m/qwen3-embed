@@ -626,6 +626,73 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
+    def test_decompress_tar_bomb_cumulative(self, tmp_path):
+        """Tar bomb prevention: multiple small files exceeding 20GB limit."""
+        cache_dir = tmp_path / "tmp_cache_dir_bomb_cumulative"
+        cache_dir.mkdir()
+        fake_tar_gz = tmp_path / "fake.tar.gz"
+        fake_tar_gz.write_text("fake tar")
+
+        m1 = MagicMock(spec=tarfile.TarInfo)
+        m1.name = "f1.txt"
+        m1.size = 15 * 1024 * 1024 * 1024
+        m1.issym.return_value = False
+        m1.islnk.return_value = False
+        m1.isdir.return_value = False
+        m1.isreg.return_value = True
+
+        m2 = MagicMock(spec=tarfile.TarInfo)
+        m2.name = "f2.txt"
+        m2.size = 6 * 1024 * 1024 * 1024
+        m2.issym.return_value = False
+        m2.islnk.return_value = False
+        m2.isdir.return_value = False
+        m2.isreg.return_value = True
+
+        with patch("tarfile.open") as mock_tar_open:
+            mock_tar = MagicMock()
+            mock_tar.__iter__.return_value = iter([m1, m2])
+            # Simulate extractall consuming the members generator
+            mock_tar.extractall.side_effect = lambda path, members, filter=None: list(members)
+            mock_tar_open.return_value.__enter__.return_value = mock_tar
+
+            with pytest.raises(tarfile.TarError, match="Decompression bomb detected"):
+                ModelManagement.decompress_to_cache(str(fake_tar_gz), str(cache_dir))
+
+        assert not cache_dir.exists()
+
+    def test_decompress_tar_bomb_fallback_path(self, tmp_path):
+        """Tar bomb prevention in fallback path (no data_filter)."""
+        cache_dir = tmp_path / "tmp_cache_dir_bomb_fallback"
+        cache_dir.mkdir()
+        fake_tar_gz = tmp_path / "fake.tar.gz"
+        fake_tar_gz.write_text("fake tar")
+
+        mock_member = MagicMock(spec=tarfile.TarInfo)
+        mock_member.name = "huge_file.txt"
+        mock_member.size = 21 * 1024 * 1024 * 1024
+        mock_member.issym.return_value = False
+        mock_member.islnk.return_value = False
+        mock_member.isdir.return_value = False
+        mock_member.isreg.return_value = True
+
+        with patch("qwen3_embed.common.model_management.tarfile") as mock_tarfile_mod:
+            # Mock tarfile.TarError since it is used in "except" and "raise"
+            mock_tarfile_mod.TarError = tarfile.TarError
+            # Mock tarfile.open to return a mock_tar
+            mock_tar = MagicMock()
+            mock_tar.__iter__.return_value = iter([mock_member])
+            mock_tarfile_mod.open.return_value.__enter__.return_value = mock_tar
+
+            # Ensure it DOES NOT have data_filter
+            if hasattr(mock_tarfile_mod, "data_filter"):
+                del mock_tarfile_mod.data_filter
+
+            with pytest.raises(tarfile.TarError, match="Decompression bomb detected"):
+                ModelManagement.decompress_to_cache(str(fake_tar_gz), str(cache_dir))
+
+        assert not cache_dir.exists()
+
 
 # ---------------------------------------------------------------------------
 # TestDownloadFilesFromHuggingFace
