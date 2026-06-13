@@ -704,6 +704,63 @@ class TestDownloadFilesFromHuggingFace:
         mock_snap.assert_called_once()
         assert result == str(snapshot_dir)
 
+    @patch("qwen3_embed.common.model_management.disable_progress_bars")
+    @patch("qwen3_embed.common.model_management.snapshot_download")
+    def test_local_files_only_passes_cached_revision(self, mock_snap, mock_disable, tmp_path):
+        """local_files_only resolves the cached SHA and pins ``revision``.
+
+        The online path pins an explicit commit SHA, so HF never writes a
+        ``refs/<branch>`` pointer. Omitting ``revision`` offline would default
+        to ``"main"`` and raise ``LocalEntryNotFoundError`` despite a complete
+        cache; the cached SHA must be passed through instead.
+        """
+        snapshot_dir = tmp_path / "models--org--repo"
+        (snapshot_dir / "snapshots" / "deadbeefsha").mkdir(parents=True)
+        mock_snap.return_value = str(snapshot_dir)
+
+        ModelManagement.download_files_from_huggingface(
+            hf_source_repo="org/repo",
+            cache_dir=str(tmp_path),
+            extra_patterns=["model.onnx"],
+            local_files_only=True,
+        )
+        assert mock_snap.call_args.kwargs["revision"] == "deadbeefsha"
+
+    @patch("qwen3_embed.common.model_management.disable_progress_bars")
+    @patch("qwen3_embed.common.model_management.snapshot_download")
+    def test_local_files_only_explicit_revision_not_overwritten(
+        self, mock_snap, mock_disable, tmp_path
+    ):
+        """An explicit ``revision`` kwarg takes precedence over the cached SHA."""
+        snapshot_dir = tmp_path / "models--org--repo"
+        (snapshot_dir / "snapshots" / "deadbeefsha").mkdir(parents=True)
+        mock_snap.return_value = str(snapshot_dir)
+
+        ModelManagement.download_files_from_huggingface(
+            hf_source_repo="org/repo",
+            cache_dir=str(tmp_path),
+            extra_patterns=["model.onnx"],
+            local_files_only=True,
+            revision="explicit-rev",
+        )
+        assert mock_snap.call_args.kwargs["revision"] == "explicit-rev"
+
+    def test_resolve_cached_revision_returns_newest(self, tmp_path):
+        """Picks the most recently modified snapshot directory."""
+        snapshots = tmp_path / "models--org--repo" / "snapshots"
+        (snapshots / "old").mkdir(parents=True)
+        (snapshots / "new").mkdir(parents=True)
+        os.utime(snapshots / "old", (1000, 1000))
+        os.utime(snapshots / "new", (2000, 2000))
+        assert ModelManagement._resolve_cached_revision(tmp_path / "models--org--repo") == "new"
+
+    def test_resolve_cached_revision_none_when_absent(self, tmp_path):
+        """Returns None when there is no snapshots directory or it is empty."""
+        assert ModelManagement._resolve_cached_revision(tmp_path / "missing") is None
+        empty = tmp_path / "models--org--repo"
+        (empty / "snapshots").mkdir(parents=True)
+        assert ModelManagement._resolve_cached_revision(empty) is None
+
     @patch("qwen3_embed.common.model_management.list_repo_tree")
     @patch("qwen3_embed.common.model_management.model_info")
     @patch("qwen3_embed.common.model_management.snapshot_download")
