@@ -1,6 +1,7 @@
 """Unit tests for last_token_pool and other utility functions."""
 
 import os
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -109,6 +110,25 @@ class TestIterBatch:
         data = [1, 2, 3]
         with pytest.raises(ValueError, match="Stop argument for islice"):
             list(iter_batch(data, -1))
+
+    def test_too_large_batch_size(self) -> None:
+        """Test with batch size larger than sys.maxsize (should raise ValueError)."""
+        data = [1, 2, 3]
+        with pytest.raises(ValueError, match="Stop argument for islice"):
+            list(iter_batch(data, sys.maxsize + 1))
+
+    def test_empty_iterable(self) -> None:
+        """Test with empty iterable."""
+        assert list(iter_batch([], 2)) == []
+        assert list(iter_batch((), 2)) == []
+        assert list(iter_batch(iter([]), 2)) == []
+
+    def test_zero_batch_size_iterator_not_consumed(self) -> None:
+        """Test that size=0 does not consume the iterator."""
+        data = iter([1, 2, 3])
+        result = list(iter_batch(data, 0))
+        assert result == []
+        assert next(data) == 1
 
 
 class TestDefineCacheDir:
