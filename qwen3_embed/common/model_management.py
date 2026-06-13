@@ -306,6 +306,24 @@ class ModelManagement(Generic[T]):
         return repo_revision, repo_files
 
     @classmethod
+    def _resolve_cached_revision(cls, snapshot_dir: Path) -> str | None:
+        """Return a commit SHA present in the local snapshot cache, if any.
+
+        Looks under ``<snapshot_dir>/snapshots/<sha>/`` -- the standard HF cache
+        layout -- and returns the most recently modified revision directory's
+        name. Returns ``None`` when no cached snapshot exists, in which case the
+        caller falls back to HF's default revision resolution.
+        """
+        snapshots = snapshot_dir / "snapshots"
+        if not snapshots.is_dir():
+            return None
+        revision_dirs = [d for d in snapshots.iterdir() if d.is_dir()]
+        if not revision_dirs:
+            return None
+        revision_dirs.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+        return revision_dirs[0].name
+
+    @classmethod
     def _verify_local_metadata(
         cls, snapshot_dir: Path, metadata_file: Path, repo_files: list[RepoFile]
     ) -> bool:
@@ -368,6 +386,18 @@ class ModelManagement(Generic[T]):
         if local_files_only:
             disable_progress_bars()
             cls._verify_local_metadata(snapshot_dir, metadata_file, repo_files=[])
+            # The online path pins ``revision`` to an explicit commit SHA, so HF
+            # never writes a ``refs/<branch>`` pointer into the cache. A
+            # ``local_files_only`` lookup that omits ``revision`` defaults to
+            # ``"main"`` and raises ``LocalEntryNotFoundError`` even when the
+            # snapshot is fully cached -- which forces a needless network round
+            # trip on every load (and stalls/hangs hard when that network call
+            # runs inside a worker thread, e.g. an MCP stdio server). Resolve the
+            # cached SHA directly so the offline lookup hits the cache.
+            if "revision" not in kwargs:
+                cached_revision = cls._resolve_cached_revision(snapshot_dir)
+                if cached_revision is not None:
+                    kwargs["revision"] = cached_revision
             return snapshot_download(  # nosec B615
                 repo_id=hf_source_repo,
                 allow_patterns=allow_patterns,
