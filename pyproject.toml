@@ -34,7 +34,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gguf = ["llama-cpp-python>=0.3.28"]
+gguf = ["llama-cpp-python>=0.3.29"]
 
 [project.urls]
 Homepage = "https://github.com/n24q02m/qwen3-embed"
@@ -42,7 +42,7 @@ Repository = "https://github.com/n24q02m/qwen3-embed"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.3",
+    "pytest>=9.1.0",
     "pytest-cov>=7.1.0",
     "pytest-xdist>=3.8.0",
     "syrupy>=5.3.2",
