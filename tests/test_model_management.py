@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests
+import requests.adapters
 from huggingface_hub.errors import RepositoryNotFoundError
 from huggingface_hub.hf_api import RepoFile
 
@@ -1926,3 +1927,46 @@ class TestValidateTarMember:
                 self._member("link", is_reg=False, is_lnk=True, linkname="../outside.txt"),
                 str(tmp_path),
             )
+
+
+# ---------------------------------------------------------------------------
+# TestGetSession
+# ---------------------------------------------------------------------------
+
+
+class TestGetSession:
+    """Tests for _get_session method."""
+
+    def test_get_session_caching(self):
+        """Verify that _get_session returns the same instance (caching)."""
+        # Save original session and reset
+        original_session = ModelManagement._session
+        ModelManagement._session = None
+        try:
+            session1 = ModelManagement._get_session()
+            session2 = ModelManagement._get_session()
+            assert session1 is session2
+            assert isinstance(session1, requests.Session)
+        finally:
+            # Restore original session
+            ModelManagement._session = original_session
+
+    def test_get_session_configuration(self):
+        """Verify session configuration: trust_env and retries."""
+        # Save original session and reset
+        original_session = ModelManagement._session
+        ModelManagement._session = None
+        try:
+            session = ModelManagement._get_session()
+            assert session.trust_env is False
+
+            # Check adapters for retries (this will fail until implemented)
+            adapter_http = session.adapters["http://"]
+            assert isinstance(adapter_http, requests.adapters.HTTPAdapter)
+            assert adapter_http.max_retries.total == 3
+            adapter_https = session.adapters["https://"]
+            assert isinstance(adapter_https, requests.adapters.HTTPAdapter)
+            assert adapter_https.max_retries.total == 3
+        finally:
+            # Restore original session
+            ModelManagement._session = original_session

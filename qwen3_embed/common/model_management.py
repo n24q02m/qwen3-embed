@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Generic, TypeVar
 
 import requests
+import requests.adapters
 from huggingface_hub import list_repo_tree, model_info, snapshot_download
 from huggingface_hub.hf_api import RepoFile
 from huggingface_hub.utils import (
@@ -44,6 +45,12 @@ class ModelManagement(Generic[T]):
                     session = requests.Session()
                     # SECURITY: Enforce trust_env=False to prevent proxy/CA environment variable injection
                     session.trust_env = False
+
+                    # Setup retries
+                    adapter = requests.adapters.HTTPAdapter(max_retries=3)
+                    session.mount("http://", adapter)
+                    session.mount("https://", adapter)
+
                     cls._session = session
         return cls._session
 
