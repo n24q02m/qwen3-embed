@@ -218,7 +218,22 @@ class OnnxModel(Generic[T]):
             session_options.enable_cpu_mem_arena = extra_options["enable_cpu_mem_arena"]
 
     def load_onnx_model(self) -> None:
-        raise NotImplementedError("Subclasses must implement this method")
+        if not hasattr(self, "_model_dir") or not hasattr(self, "model_description"):
+            raise NotImplementedError(
+                "Subclasses must implement this method or set _model_dir and model_description"
+            )
+        config = OnnxSessionConfig(
+            threads=getattr(self, "threads", None),
+            providers=getattr(self, "providers", None),
+            cuda=getattr(self, "cuda", Device.AUTO),
+            device_id=getattr(self, "device_id", None),
+            extra_session_options=getattr(self, "_extra_session_options", None),
+        )
+        self._load_onnx_model(
+            model_dir=self._model_dir,
+            model_file=self.model_description.model_file,
+            config=config,
+        )
 
     def onnx_embed(self, *args: Any, **kwargs: Any) -> OnnxOutputContext:
         raise NotImplementedError("Subclasses must implement this method")
