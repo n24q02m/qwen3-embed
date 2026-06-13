@@ -18,7 +18,7 @@ from typing import Any
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
 from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
-from qwen3_embed.common.utils import last_token_pool, normalize
+from qwen3_embed.common.utils import last_token_pool, post_process_embeddings
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
 
 # ---------------------------------------------------------------------------
@@ -91,13 +91,7 @@ class Qwen3TextEmbedding(OnnxTextEmbedding):
             raise ValueError("attention_mask must be provided for last-token pooling")
 
         embeddings = last_token_pool(output.model_output, output.attention_mask)
-
-        # MRL: optionally truncate to requested dimension
-        dim: int | None = kwargs.get("dim")
-        if dim is not None:
-            embeddings = embeddings[:, :dim]
-
-        return normalize(embeddings)
+        return post_process_embeddings(embeddings, **kwargs)
 
     # ------------------------------------------------------------------
     # embed / query_embed / passage_embed

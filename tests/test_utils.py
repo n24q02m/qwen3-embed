@@ -15,6 +15,7 @@ from qwen3_embed.common.utils import (
     last_token_pool,
     mean_pooling,
     normalize,
+    post_process_embeddings,
 )
 
 
@@ -225,3 +226,30 @@ class TestInputValidation:
             ValueError, match="Input string exceeds maximum allowed length of 1000000 characters"
         ):
             check_input_length("a" * 1000001)
+
+
+class TestPostProcessEmbeddings:
+    def test_post_process_no_params(self):
+        embeddings = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        # Default is normalize=True
+        output = post_process_embeddings(embeddings)
+        expected = normalize(embeddings)
+        assert np.allclose(output, expected)
+
+    def test_post_process_no_normalize(self):
+        embeddings = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        output = post_process_embeddings(embeddings, normalize_embeddings=False)
+        assert np.allclose(output, embeddings)
+
+    def test_post_process_truncate(self):
+        embeddings = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float32)
+        output = post_process_embeddings(embeddings, normalize_embeddings=False, dim=2)
+        expected = np.array([[1.0, 2.0], [4.0, 5.0]], dtype=np.float32)
+        assert np.allclose(output, expected)
+
+    def test_post_process_truncate_and_normalize(self):
+        embeddings = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float32)
+        output = post_process_embeddings(embeddings, normalize_embeddings=True, dim=2)
+        truncated = np.array([[1.0, 2.0], [4.0, 5.0]], dtype=np.float32)
+        expected = normalize(truncated)
+        assert np.allclose(output, expected)

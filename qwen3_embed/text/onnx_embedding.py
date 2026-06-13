@@ -4,7 +4,7 @@ from typing import Any
 from qwen3_embed.common.model_description import DenseModelDescription
 from qwen3_embed.common.onnx_model import OnnxOutputContext, OnnxSessionConfig
 from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
-from qwen3_embed.common.utils import define_cache_dir, normalize
+from qwen3_embed.common.utils import define_cache_dir, post_process_embeddings
 from qwen3_embed.text.onnx_text_model import OnnxTextModel, TextEmbeddingWorker
 from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
@@ -150,7 +150,7 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
             processed_embeddings = embeddings
         else:
             raise ValueError(f"Unsupported embedding shape: {embeddings.shape}")
-        return normalize(processed_embeddings)
+        return post_process_embeddings(processed_embeddings, **kwargs)
 
     def load_onnx_model(self) -> None:
         config = OnnxSessionConfig(

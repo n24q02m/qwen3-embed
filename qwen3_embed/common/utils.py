@@ -4,7 +4,7 @@ import sys
 from collections.abc import Iterable
 from itertools import islice
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -132,3 +132,26 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
             cache_path.chmod(0o700)
 
     return cache_path
+
+
+def post_process_embeddings(
+    embeddings: NumpyArray, normalize_embeddings: bool = True, **kwargs: Any
+) -> NumpyArray:
+    """Post-process embeddings by optionally truncating and/or normalizing them.
+
+    Args:
+        embeddings: The raw embeddings from the model.
+        normalize_embeddings: Whether to L2-normalize the embeddings. Default is True.
+        **kwargs: Additional keyword arguments, including:
+            - dim (int, optional): The dimension to truncate the embeddings to (MRL).
+
+    Returns:
+        The post-processed embeddings.
+    """
+    dim: int | None = kwargs.get("dim")
+    if dim is not None:
+        embeddings = embeddings[:, :dim]
+
+    if normalize_embeddings:
+        return normalize(embeddings)
+    return embeddings

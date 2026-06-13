@@ -1,0 +1,14 @@
+[FIX] Code Duplication: _post_process_onnx_output
+
+Extracted shared logic for MRL truncation and L2-normalization into a
+new utility function 'post_process_embeddings' in
+'qwen3_embed/common/utils.py'.
+
+Refactored multiple embedding models to use this utility, reducing code
+duplication and improving maintainability.
+
+Removed redundant abstract method declarations in 'OnnxTextModel' and
+'OnnxCrossEncoderModel'.
+
+Updated unit tests to verify the new utility and match the refactored
+code structure.
