@@ -6,8 +6,6 @@ inference from GGUF quantized models (Q4_K_M).
 Requires optional dependency: pip install qwen3-embed[gguf]
 """
 
-from __future__ import annotations
-
 import math
 import re
 from collections.abc import Iterable
