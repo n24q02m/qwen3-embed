@@ -1850,7 +1850,7 @@ class TestValidateTarMember:
         member.islnk.return_value = is_lnk
         return member
 
-    # --- safe members must be ALLOWED (regression for the over-strict bug) ---
+    # --- safe members must be ALLOWED (regression for previous over-strict validation) ---
 
     def test_allows_plain_file(self, tmp_path):
         ModelManagement._validate_tar_member(self._member("file.txt"), str(tmp_path))
