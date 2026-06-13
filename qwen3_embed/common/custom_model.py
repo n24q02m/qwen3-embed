@@ -25,7 +25,8 @@ class CustomModelSpec:
 
     Usage::
 
-        from qwen3_embed import CustomModelSpec, TextEmbedding
+        from qwen3_embed import TextEmbedding
+        from qwen3_embed.common.custom_model import CustomModelSpec
 
         CustomModelSpec(
             model_id="Org/gte-multilingual-base-onnx",
