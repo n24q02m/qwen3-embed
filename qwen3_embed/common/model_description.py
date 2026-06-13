@@ -39,6 +39,9 @@ class DenseModelDescription(BaseModelDescription):
     def __post_init__(self) -> None:
         if self.dim is None:
             raise ValueError("dim is required for dense model description")
+        if isinstance(self.dim, int):
+            # Handle older versions where dim was just an int
+            pass
 
 
 @dataclass(frozen=True)

@@ -67,3 +67,14 @@ def test_model_source_deprecated_tar_struct():
     # Test explicitly set value
     source_deprecated = ModelSource(hf="org/model", _deprecated_tar_struct=True)
     assert source_deprecated.deprecated_tar_struct is True
+
+
+def test_dense_model_description_int_dim():
+    """Test DenseModelDescription with integer dim to cover backward compatibility logic."""
+    desc = DenseModelDescription(
+        model="test-model",
+        sources=ModelSource(hf="org/model"),
+        dim=768,
+    )
+    assert isinstance(desc.dim, int)
+    assert desc.dim == 768
