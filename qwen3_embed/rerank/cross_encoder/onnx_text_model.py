@@ -145,14 +145,22 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         return onnx_input
 
     def _token_count(
-        self, pairs: Iterable[tuple[str, str]], batch_size: int = 1024, **_: Any
+        self, pairs: Iterable[tuple[str, str]], batch_size: int = 10240, **_: Any
     ) -> int:
         if not hasattr(self, "model") or self.model is None:
             self.load_onnx_model()  # loads the tokenizer as well
 
         token_num = 0
         assert self.tokenizer is not None
+        # ⚡ Bolt: Fast path for tuples/lists to maximize parallelism and avoid iter_batch overhead
+        if isinstance(pairs, (list, tuple)):
+            for tokens in self.tokenizer.encode_batch(pairs):
+                token_num += tokens.attention_mask.count(1)
+            return token_num
+
         for batch in iter_batch(pairs, batch_size):
+            # ⚡ Bolt: encode_batch is a high-performance vectorized operation;
+            # processing larger batches minimizes call overhead.
             for tokens in self.tokenizer.encode_batch(batch):
                 # ⚡ Bolt: Fast token counting using .count(1) (~30% faster than sum())
                 token_num += tokens.attention_mask.count(1)
