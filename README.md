@@ -241,16 +241,16 @@ pip install onnxruntime-directml  # Windows AMD/Intel/NVIDIA
 ```
 
 ```python
-from qwen3_embed import TextEmbedding, Device
+from qwen3_embed import TextEmbedding
 
 # Auto-detect GPU (default)
 model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX")
 
 # Force CPU
-model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX", cuda=Device.CPU)
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX", cuda="cpu")
 
 # Force CUDA
-model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX", cuda=Device.CUDA)
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX", cuda="cuda")
 ```
 
 #### GGUF
@@ -263,13 +263,13 @@ CMAKE_ARGS="-DGGML_CUDA=on" pip install qwen3-embed[gguf]
 ```
 
 ```python
-from qwen3_embed import TextEmbedding, Device
+from qwen3_embed import TextEmbedding
 
 # Auto-detect GPU (default, offloads all layers)
 model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-GGUF")
 
 # Force CPU only
-model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-GGUF", cuda=Device.CPU)
+model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-GGUF", cuda="cpu")
 ```
 
 ## Development
