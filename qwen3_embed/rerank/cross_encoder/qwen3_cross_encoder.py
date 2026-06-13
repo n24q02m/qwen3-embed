@@ -13,7 +13,6 @@ This means the ONNX model output has shape ``(batch, seq_len, vocab_size)``
 instead of the typical ``(batch, num_labels)`` from cross-encoders.
 """
 
-import re
 from typing import Any
 
 import numpy as np
@@ -26,33 +25,14 @@ from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import (
     TextCrossEncoderWorker,
 )
 from qwen3_embed.rerank.cross_encoder.onnx_text_model import TextRerankerWorker
-
-# ---------------------------------------------------------------------------
-# Qwen3 reranker constants
-# ---------------------------------------------------------------------------
-# Token IDs in the Qwen3 tokenizer vocabulary
-TOKEN_YES_ID = 9693
-TOKEN_NO_ID = 2152
-
-SYSTEM_PROMPT = (
-    "Judge whether the Document meets the requirements based on the Query "
-    'and the Instruct provided. Note that the answer can only be "yes" or "no".'
+from qwen3_embed.rerank.cross_encoder.qwen3_shared import (
+    DEFAULT_INSTRUCTION,
+    RERANK_TEMPLATE,
+    SYSTEM_PROMPT,
+    TOKEN_NO_ID,
+    TOKEN_YES_ID,
+    sanitize_input,
 )
-
-DEFAULT_INSTRUCTION = (
-    "Given a query and a document, judge whether the document is relevant to the query."
-)
-
-RERANK_TEMPLATE = (
-    "<|im_start|>system\n{system}<|im_end|>\n"
-    "<|im_start|>user\n<Instruct>: {instruction}\n"
-    "<Query>: {query}\n<Document>: {document}<|im_end|>\n"
-    "<|im_start|>assistant\n<think>\n\n</think>\n\n"
-)
-
-# Tokens that must be stripped from user input to prevent prompt injection
-FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
-FORBIDDEN_RE = re.compile("|".join(re.escape(token) for token in FORBIDDEN_TOKENS))
 
 # ---------------------------------------------------------------------------
 # Model registry
@@ -126,16 +106,6 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     # Chat template formatting
     # ------------------------------------------------------------------
     @staticmethod
-    def _sanitize_input(text: str) -> str:
-        """Strip forbidden special tokens from user input."""
-        # SECURITY: Prevent prompt injection bypass via iterative payload construction.
-        while True:
-            text, count = FORBIDDEN_RE.subn("", text)
-            if count == 0:
-                break
-        return text
-
-    @staticmethod
     def _format_rerank_input(
         query: str,
         document: str,
@@ -143,9 +113,9 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     ) -> str:
         """Build the chat-template string for a single query-document pair."""
         # Sanitize inputs to prevent injection
-        query = Qwen3CrossEncoder._sanitize_input(query)
-        document = Qwen3CrossEncoder._sanitize_input(document)
-        instruction = Qwen3CrossEncoder._sanitize_input(instruction)
+        query = sanitize_input(query)
+        document = sanitize_input(document)
+        instruction = sanitize_input(instruction)
 
         return RERANK_TEMPLATE.format(
             system=SYSTEM_PROMPT,

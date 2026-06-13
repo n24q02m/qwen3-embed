@@ -7,6 +7,7 @@ import pytest
 
 from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.rerank.cross_encoder.qwen3_cross_encoder import (
+    sanitize_input,
     DEFAULT_INSTRUCTION,
     SYSTEM_PROMPT,
     TOKEN_NO_ID,
