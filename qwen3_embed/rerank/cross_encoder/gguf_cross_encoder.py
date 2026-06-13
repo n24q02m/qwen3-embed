@@ -88,7 +88,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
 
     Usage::
 
-        from qwen3_embed import TextCrossEncoder
+        from qwen3_embed.rerank.cross_encoder import TextCrossEncoder
 
         reranker = TextCrossEncoder("n24q02m/Qwen3-Reranker-0.6B-GGUF")
         scores = list(reranker.rerank("What is AI?", ["doc1", "doc2"]))
