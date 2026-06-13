@@ -68,7 +68,7 @@ class Qwen3TextEmbedding(OnnxTextEmbedding):
 
     Usage::
 
-        from qwen3_embed import TextEmbedding
+        from qwen3_embed.text import TextEmbedding
 
         model = TextEmbedding("n24q02m/Qwen3-Embedding-0.6B-ONNX")
         embeddings = list(model.embed(["Hello world"]))

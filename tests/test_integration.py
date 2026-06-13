@@ -13,12 +13,13 @@ import sys
 import numpy as np
 import pytest
 
-from qwen3_embed import TextCrossEncoder, TextEmbedding
+from qwen3_embed import TextCrossEncoder
 from qwen3_embed.common.model_description import (
     DenseModelDescription,
     ModelSource,
     PoolingType,
 )
+from qwen3_embed.text import TextEmbedding
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 
 # ---------------------------------------------------------------------------

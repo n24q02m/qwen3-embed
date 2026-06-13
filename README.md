@@ -106,7 +106,7 @@ pip install qwen3-embed[gguf]
 ### Text Embedding
 
 ```python
-from qwen3_embed import TextEmbedding
+from qwen3_embed.text import TextEmbedding
 
 # INT8 (default)
 model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX")
@@ -179,7 +179,8 @@ registered and then loaded by id. Use `CustomModelSpec` with one of the four
 output shapes: `CLS`/`MEAN` (bert-bi), `LAST_TOKEN` (causal), or `DISABLED` (raw).
 
 ```python
-from qwen3_embed import CustomModelSpec, TextEmbedding
+from qwen3_embed import CustomModelSpec
+from qwen3_embed.text import TextEmbedding
 
 # Multilingual (incl. Vietnamese) + code, CLS-pooled, 768-dim
 CustomModelSpec(
@@ -241,7 +242,8 @@ pip install onnxruntime-directml  # Windows AMD/Intel/NVIDIA
 ```
 
 ```python
-from qwen3_embed import TextEmbedding, Device
+from qwen3_embed import Device
+from qwen3_embed.text import TextEmbedding
 
 # Auto-detect GPU (default)
 model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-ONNX")
@@ -263,7 +265,8 @@ CMAKE_ARGS="-DGGML_CUDA=on" pip install qwen3-embed[gguf]
 ```
 
 ```python
-from qwen3_embed import TextEmbedding, Device
+from qwen3_embed import Device
+from qwen3_embed.text import TextEmbedding
 
 # Auto-detect GPU (default, offloads all layers)
 model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-GGUF")
