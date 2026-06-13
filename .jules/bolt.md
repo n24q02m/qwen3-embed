@@ -25,3 +25,11 @@
 ## 2026-06-10 - [Fast NumPy Input Tensor Creation]
 **Learning:** Creating NumPy arrays from a sequence of lists (e.g., tokenized input) with a specified `dtype` (e.g., `dtype=np.int64`) in a single call is more efficient than creating a default array first and then casting it. The latter leads to redundant O(N) memory allocations and copies because `np.array(..., dtype=np.int64)` on an existing array defaults to `copy=True`.
 **Action:** Always specify the final `dtype` when creating input tensors for model inference from Python sequences to avoid intermediate copies.
+
+## 2026-06-13 - [Batched inference with right-padding for RoPE safety]
+**Learning:** For causal LM models using RoPE (like Qwen3), batched inference can be made invariant to batch composition by using right-padding instead of left-padding. This ensures that the content of each sequence always starts at position 0, keeping relative positions consistent regardless of the presence of shorter sequences in the batch.
+**Action:** When enabling batched inference for RoPE-based models that previously relied on batch=1 to avoid padding issues, configure the tokenizer to use right-padding.
+
+## 2026-06-13 - [Lazy input formatting for memory efficiency]
+**Learning:** In reranking tasks with large document sets, pre-formatting all query-document pairs into chat templates can consume significant memory. Implementing a `Sequence` that formats strings lazily on-demand (e.g., inside the tokenizer's `encode_batch`) drastically reduces peak RAM usage.
+**Action:** Use lazy sequence objects (implementing `__len__` and `__getitem__`) when passing large amounts of formatted text to tokenizers.
