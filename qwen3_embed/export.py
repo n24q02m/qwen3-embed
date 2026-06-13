@@ -34,7 +34,7 @@ def export_to_onnx(model_id: str, output_dir: str, *, task: str = "feature-extra
     """
     try:
         from optimum.exporters.onnx import main_export
-    except ImportError as e:  # pragma: no cover - exercised only without the extra
+    except ImportError as e:
         raise ImportError(_MISSING_EXPORT_DEPS) from e
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
