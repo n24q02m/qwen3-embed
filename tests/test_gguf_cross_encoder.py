@@ -71,20 +71,17 @@ def test_gguf_cross_encoder_init_missing_dependency():
         mock.patch(
             "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.TextCrossEncoderBase.__init__"
         ),
+        mock.patch.object(Qwen3CrossEncoderGGUF, "_get_model_description"),
+        mock.patch("qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"),
+        mock.patch.object(Qwen3CrossEncoderGGUF, "download_model"),
+        patch(
+            "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
+            return_value=True,
+        ),
+        patch("llama_cpp.Llama"),
     ):
-        # We need to mock more because __init__ does many things
-        with mock.patch.object(Qwen3CrossEncoderGGUF, "_get_model_description"):
-            with mock.patch(
-                "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"
-            ):
-                with mock.patch.object(Qwen3CrossEncoderGGUF, "download_model"):
-                    with mock.patch(
-                        "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
-                        return_value=True,
-                    ):
-                        with mock.patch("llama_cpp.Llama"):
-                            Qwen3CrossEncoderGGUF()
-                            mock_check.assert_called_once()
+        Qwen3CrossEncoderGGUF()
+        mock_check.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -160,29 +157,29 @@ def test_score_text(mock_llama):
             "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.TextCrossEncoderBase.__init__",
         ),
         patch.object(Qwen3CrossEncoderGGUF, "_get_model_description"),
+        patch("qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"),
+        patch.object(Qwen3CrossEncoderGGUF, "download_model"),
+        patch(
+            "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
+            return_value=True,
+        ),
+        patch("llama_cpp.Llama", return_value=mock_llama),
     ):
-        with patch("qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"):
-            with patch.object(Qwen3CrossEncoderGGUF, "download_model"):
-                with patch(
-                    "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
-                    return_value=True,
-                ):
-                    with patch("llama_cpp.Llama", return_value=mock_llama):
-                        real_encoder = Qwen3CrossEncoderGGUF()
-                        score = real_encoder._score_text("test")
-                        assert score == pytest.approx(0.5)
+        real_encoder = Qwen3CrossEncoderGGUF()
+        score = real_encoder._score_text("test")
+        assert score == pytest.approx(0.5)
 
-                        # Test high P(yes)
-                        mock_llama.scores[2, TOKEN_YES_ID] = 10.0
-                        mock_llama.scores[2, TOKEN_NO_ID] = 0.0
-                        score = real_encoder._score_text("test")
-                        assert score > 0.99
+        # Test high P(yes)
+        mock_llama.scores[2, TOKEN_YES_ID] = 10.0
+        mock_llama.scores[2, TOKEN_NO_ID] = 0.0
+        score = real_encoder._score_text("test")
+        assert score > 0.99
 
-                        # Test high P(no)
-                        mock_llama.scores[2, TOKEN_YES_ID] = 0.0
-                        mock_llama.scores[2, TOKEN_NO_ID] = 10.0
-                        score = real_encoder._score_text("test")
-                        assert score < 0.01
+        # Test high P(no)
+        mock_llama.scores[2, TOKEN_YES_ID] = 0.0
+        mock_llama.scores[2, TOKEN_NO_ID] = 10.0
+        score = real_encoder._score_text("test")
+        assert score < 0.01
 
 
 def test_score_text_overflow(mock_llama):
@@ -215,19 +212,19 @@ def test_rerank(mock_llama):
             "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.TextCrossEncoderBase.__init__",
         ),
         patch.object(Qwen3CrossEncoderGGUF, "_get_model_description"),
+        patch("qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"),
+        patch.object(Qwen3CrossEncoderGGUF, "download_model"),
+        patch(
+            "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
+            return_value=True,
+        ),
+        patch("llama_cpp.Llama", return_value=mock_llama),
     ):
-        with patch("qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"):
-            with patch.object(Qwen3CrossEncoderGGUF, "download_model"):
-                with patch(
-                    "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
-                    return_value=True,
-                ):
-                    with patch("llama_cpp.Llama", return_value=mock_llama):
-                        encoder = Qwen3CrossEncoderGGUF()
-                        # Mock _score_text to return fixed values
-                        with patch.object(encoder, "_score_text", side_effect=[0.1, 0.9]):
-                            scores = list(encoder.rerank("query", ["doc1", "doc2"]))
-                            assert scores == [0.1, 0.9]
+        encoder = Qwen3CrossEncoderGGUF()
+        # Mock _score_text to return fixed values
+        with patch.object(encoder, "_score_text", side_effect=[0.1, 0.9]):
+            scores = list(encoder.rerank("query", ["doc1", "doc2"]))
+            assert scores == [0.1, 0.9]
 
 
 def test_rerank_pairs(mock_llama):
@@ -238,19 +235,19 @@ def test_rerank_pairs(mock_llama):
             "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.TextCrossEncoderBase.__init__",
         ),
         patch.object(Qwen3CrossEncoderGGUF, "_get_model_description"),
+        patch("qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"),
+        patch.object(Qwen3CrossEncoderGGUF, "download_model"),
+        patch(
+            "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
+            return_value=True,
+        ),
+        patch("llama_cpp.Llama", return_value=mock_llama),
     ):
-        with patch("qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"):
-            with patch.object(Qwen3CrossEncoderGGUF, "download_model"):
-                with patch(
-                    "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
-                    return_value=True,
-                ):
-                    with patch("llama_cpp.Llama", return_value=mock_llama):
-                        encoder = Qwen3CrossEncoderGGUF()
-                        with patch.object(encoder, "_score_text", side_effect=[0.4, 0.6]):
-                            pairs = [("q1", "d1"), ("q2", "d2")]
-                            scores = list(encoder.rerank_pairs(pairs))
-                            assert scores == [0.4, 0.6]
+        encoder = Qwen3CrossEncoderGGUF()
+        with patch.object(encoder, "_score_text", side_effect=[0.4, 0.6]):
+            pairs = [("q1", "d1"), ("q2", "d2")]
+            scores = list(encoder.rerank_pairs(pairs))
+            assert scores == [0.4, 0.6]
 
 
 def test_rerank_custom_instruction(mock_llama):
@@ -261,26 +258,26 @@ def test_rerank_custom_instruction(mock_llama):
             "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.TextCrossEncoderBase.__init__",
         ),
         patch.object(Qwen3CrossEncoderGGUF, "_get_model_description"),
+        patch("qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"),
+        patch.object(Qwen3CrossEncoderGGUF, "download_model"),
+        patch(
+            "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
+            return_value=True,
+        ),
+        patch("llama_cpp.Llama", return_value=mock_llama),
     ):
-        with patch("qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.define_cache_dir"):
-            with patch.object(Qwen3CrossEncoderGGUF, "download_model"):
-                with patch(
-                    "qwen3_embed.rerank.cross_encoder.gguf_cross_encoder.Path.exists",
-                    return_value=True,
-                ):
-                    with patch("llama_cpp.Llama", return_value=mock_llama):
-                        encoder = Qwen3CrossEncoderGGUF()
-                        custom_instr = "Custom judge"
-                        with (
-                            patch.object(
-                                encoder,
-                                "_format_rerank_input",
-                                wraps=encoder._format_rerank_input,
-                            ) as mock_format,
-                            patch.object(encoder, "_score_text", return_value=0.5),
-                        ):
-                            list(encoder.rerank("q", ["d"], instruction=custom_instr))
-                            mock_format.assert_called_with("q", "d", custom_instr)
+        encoder = Qwen3CrossEncoderGGUF()
+        custom_instr = "Custom judge"
+        with (
+            patch.object(
+                encoder,
+                "_format_rerank_input",
+                wraps=encoder._format_rerank_input,
+            ) as mock_format,
+            patch.object(encoder, "_score_text", return_value=0.5),
+        ):
+            list(encoder.rerank("q", ["d"], instruction=custom_instr))
+            mock_format.assert_called_with("q", "d", custom_instr)
 
 
 class TestGGUFCrossEncoderExtra:

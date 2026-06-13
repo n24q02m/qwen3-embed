@@ -12,7 +12,7 @@ import pytest
 _mock_llama_module = MagicMock()
 sys.modules["llama_cpp"] = _mock_llama_module
 
-from qwen3_embed.common.utils import _check_llama_cpp
+from qwen3_embed.common.utils import _check_llama_cpp  # noqa: E402
 from qwen3_embed.text.gguf_embedding import (  # noqa: E402
     DEFAULT_TASK,
     QUERY_INSTRUCTION_TEMPLATE,
