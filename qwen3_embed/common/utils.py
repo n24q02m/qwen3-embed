@@ -132,3 +132,15 @@ def define_cache_dir(cache_dir: str | None = None) -> Path:
             cache_path.chmod(0o700)
 
     return cache_path
+
+
+def _check_llama_cpp() -> None:
+    """Check that llama-cpp-python is installed."""
+    try:
+        import llama_cpp  # type: ignore[unresolved-import] # noqa: F401
+    except ImportError as e:
+        msg = (
+            "llama-cpp-python is required for GGUF models. "
+            "Install with: pip install qwen3-embed[gguf]"
+        )
+        raise ImportError(msg) from e
