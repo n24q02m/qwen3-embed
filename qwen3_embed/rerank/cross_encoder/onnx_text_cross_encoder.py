@@ -3,10 +3,9 @@ from typing import Any
 
 from loguru import logger
 
-from qwen3_embed.common import OnnxProvider
 from qwen3_embed.common.model_description import BaseModelDescription
 from qwen3_embed.common.onnx_model import OnnxOutputContext, OnnxSessionConfig
-from qwen3_embed.common.types import Device
+from qwen3_embed.common.types import Device, OnnxProvider
 from qwen3_embed.common.utils import define_cache_dir
 from qwen3_embed.rerank.cross_encoder.onnx_text_model import (
     OnnxCrossEncoderModel,
