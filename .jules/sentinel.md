@@ -25,3 +25,7 @@
 **Vulnerability:** Even when using `for member in tar:` to avoid `tar.getmembers()`, accumulating the resulting `TarInfo` objects in a list (e.g., `safe_members.append(member)`) still caused Out-Of-Memory (OOM) exhaustion DoS for archives with millions of files.
 **Learning:** Holding millions of object references in memory for pre-validation defeats the purpose of stream-based archive parsing.
 **Prevention:** Use a nested generator function that yields validated members lazily, and pass this generator directly to `tar.extractall(members=generator())` or iterate over it.
+## 2026-05-22 - [Multi-hash Integrity Verification]
+**Vulnerability:** File downloads via GCS were originally verified using only MD5 checksums extracted from `x-goog-hash` headers. MD5 is vulnerable to collision attacks and is no longer cryptographically secure for file integrity verification against malicious tampering.
+**Learning:** Cloud providers like Google Cloud Storage often include multiple hash algorithms (e.g., CRC32c, MD5, SHA256) in their metadata headers. Prioritizing the strongest available algorithm significantly hardens the verification process against sophisticated tampering.
+**Prevention:** Always implement multi-hash support for file integrity checks. Parse all available algorithms and use the most cryptographically secure one available (e.g., SHA256) before falling back to weaker algorithms like MD5.

@@ -1725,38 +1725,49 @@ class TestVerifyLocalMetadata:
 
 
 # ---------------------------------------------------------------------------
-# TestGetExpectedMd5
+# TestGetExpectedHashes
 # ---------------------------------------------------------------------------
 
 
-class TestGetExpectedMd5:
-    """Tests for _get_expected_md5 method."""
+class TestGetExpectedHashes:
+    """Tests for _get_expected_hashes method."""
 
     def test_get_expected_md5_no_header(self):
         """None should be returned if x-goog-hash header is missing."""
-        assert ModelManagement._get_expected_md5({}) is None
+        assert ModelManagement._get_expected_hashes({}) == (None, None)
 
     def test_get_expected_md5_no_md5(self):
         """None should be returned if x-goog-hash header is present but missing md5."""
         headers = {"x-goog-hash": "crc32c=n9f4Sg=="}
-        assert ModelManagement._get_expected_md5(headers) is None
+        assert ModelManagement._get_expected_hashes(headers) == (None, None)
 
     def test_get_expected_md5_success(self):
         """Correct hex MD5 should be returned if md5 is present in x-goog-hash."""
         # "test" md5 is 098f6bcd4621d373cade4e832627b4f6
         # base64 encoded: CY9rzUYh03PK3k6DJie09g==
         headers = {"x-goog-hash": "md5=CY9rzUYh03PK3k6DJie09g=="}
-        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+        assert ModelManagement._get_expected_hashes(headers) == (
+            "098f6bcd4621d373cade4e832627b4f6",
+            None,
+        )
 
     def test_get_expected_md5_multi_part(self):
         """Correct hex MD5 should be returned if multiple hashes are present."""
-        headers = {"x-goog-hash": "crc32c=n9f4Sg==, md5=CY9rzUYh03PK3k6DJie09g=="}
-        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+        headers = {
+            "x-goog-hash": "crc32c=n9f4Sg==, md5=CY9rzUYh03PK3k6DJie09g==, sha256=uU0nuZNNPgilLlLX2n2r+sSE7+N6U4DukIj3rOLvzek="
+        }
+        assert ModelManagement._get_expected_hashes(headers) == (
+            "098f6bcd4621d373cade4e832627b4f6",
+            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
+        )
 
     def test_get_expected_md5_whitespace(self):
         """Correct hex MD5 should be returned even with extra whitespace."""
         headers = {"x-goog-hash": " crc32c=n9f4Sg== , md5=CY9rzUYh03PK3k6DJie09g== "}
-        assert ModelManagement._get_expected_md5(headers) == "098f6bcd4621d373cade4e832627b4f6"
+        assert ModelManagement._get_expected_hashes(headers) == (
+            "098f6bcd4621d373cade4e832627b4f6",
+            None,
+        )
 
 
 # ---------------------------------------------------------------------------
