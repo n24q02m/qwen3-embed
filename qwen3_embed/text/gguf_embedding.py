@@ -17,7 +17,7 @@ import numpy as np
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
 from qwen3_embed.common.types import Device, NumpyArray
-from qwen3_embed.common.utils import define_cache_dir
+from qwen3_embed.common.utils import _check_llama_cpp, define_cache_dir
 from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
 # ---------------------------------------------------------------------------
@@ -44,18 +44,6 @@ supported_qwen3_gguf_models: list[DenseModelDescription] = [
 # ---------------------------------------------------------------------------
 DEFAULT_TASK = "Given a query, retrieve relevant documents that answer the query"
 QUERY_INSTRUCTION_TEMPLATE = "Instruct: {task}\nQuery: {text}"
-
-
-def _check_llama_cpp() -> None:
-    """Check that llama-cpp-python is installed."""
-    try:
-        import llama_cpp  # type: ignore[unresolved-import] # noqa: F401
-    except ImportError as e:
-        msg = (
-            "llama-cpp-python is required for GGUF models. "
-            "Install with: pip install qwen3-embed[gguf]"
-        )
-        raise ImportError(msg) from e
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +92,7 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
         """
         _check_llama_cpp()
         super().__init__(model_name, cache_dir, threads, **kwargs)
+        self._local_files_only = kwargs.get("local_files_only", False)
 
         self.model_description = self._get_model_description(model_name)
         self.cache_dir = str(define_cache_dir(cache_dir))
