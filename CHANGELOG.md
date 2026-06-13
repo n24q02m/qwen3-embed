@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v1.12.0-beta.3 (2026-06-13)
+
+### Bug Fixes
+
+- Offline cache lookup fails when revision is unpinned
+  ([#738](https://github.com/n24q02m/qwen3-embed/pull/738),
+  [`e2a3a93`](https://github.com/n24q02m/qwen3-embed/commit/e2a3a93aae11dee25a87a760965db8f801367164))
+
+- **deps**: Update non-major dependencies ([#727](https://github.com/n24q02m/qwen3-embed/pull/727),
+  [`39ca34b`](https://github.com/n24q02m/qwen3-embed/commit/39ca34b25b3657a5548f86d31721136d41ebc3e3))
+
+### Chores
+
+- **deps**: Update step-security/harden-runner digest to 9af89fc
+  ([#726](https://github.com/n24q02m/qwen3-embed/pull/726),
+  [`6c67087`](https://github.com/n24q02m/qwen3-embed/commit/6c67087307a4cfe05b4c39f12fd23b02cc362703))
+
+
 ## v1.12.0-beta.2 (2026-06-12)
 
 ### Features
