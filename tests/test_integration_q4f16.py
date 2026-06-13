@@ -10,7 +10,8 @@ inference.  Marked with ``pytest.mark.integration`` so they can be skipped::
 import numpy as np
 import pytest
 
-from qwen3_embed import TextCrossEncoder, TextEmbedding
+from qwen3_embed import TextEmbedding
+from qwen3_embed.rerank.cross_encoder import TextCrossEncoder
 
 # ---------------------------------------------------------------------------
 # Fixtures

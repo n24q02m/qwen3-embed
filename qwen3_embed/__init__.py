@@ -2,7 +2,6 @@ import importlib.metadata
 
 from qwen3_embed.common.custom_model import CustomModelSpec, CustomRerankerSpec
 from qwen3_embed.common.types import Device
-from qwen3_embed.rerank.cross_encoder import TextCrossEncoder
 from qwen3_embed.text import TextEmbedding
 
 try:
@@ -16,5 +15,4 @@ __all__ = [
     "CustomRerankerSpec",
     "Device",
     "TextEmbedding",
-    "TextCrossEncoder",
 ]
