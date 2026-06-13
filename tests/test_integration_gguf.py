@@ -13,7 +13,8 @@ import pytest
 
 llama_cpp = pytest.importorskip("llama_cpp", reason="llama-cpp-python not installed")
 
-from qwen3_embed import TextCrossEncoder, TextEmbedding  # noqa: E402
+from qwen3_embed import TextCrossEncoder  # noqa: E402
+from qwen3_embed.text import TextEmbedding  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -25,7 +25,8 @@ class CustomModelSpec:
 
     Usage::
 
-        from qwen3_embed import CustomModelSpec, TextEmbedding
+        from qwen3_embed import CustomModelSpec
+        from qwen3_embed.text import TextEmbedding
 
         CustomModelSpec(
             model_id="Org/gte-multilingual-base-onnx",
@@ -49,7 +50,7 @@ class CustomModelSpec:
 
     def register(self) -> None:
         """Register this model with :class:`TextEmbedding` so it can be loaded by id."""
-        from qwen3_embed import TextEmbedding
+        from qwen3_embed.text import TextEmbedding
 
         if self.dim is None:
             raise ValueError("dim is required for an embedding model")
