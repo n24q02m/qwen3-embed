@@ -205,7 +205,7 @@ class TestInputValidation:
         monkeypatch.setattr(qwen3_embed.common.utils, "MAX_INPUT_LENGTH", 5)
 
         texts = ["abc", "abcdef", "valid"]
-        iterator = iter_checked_texts(texts)
+        iterator = iter(iter_checked_texts(texts))
 
         assert next(iterator) == "abc"
         with pytest.raises(
@@ -225,3 +225,19 @@ class TestInputValidation:
             ValueError, match="Input string exceeds maximum allowed length of 1000000 characters"
         ):
             check_input_length("a" * 1000001)
+
+    def test_check_input_length_empty(self) -> None:
+        """Should raise ValueError when input is empty."""
+        with pytest.raises(ValueError, match="Input text cannot be empty."):
+            check_input_length("")
+
+    def test_check_input_length_whitespace(self) -> None:
+        """Should raise ValueError when input contains only whitespace."""
+        with pytest.raises(
+            ValueError, match="Input text cannot contain only whitespace characters."
+        ):
+            check_input_length("   ")
+        with pytest.raises(
+            ValueError, match="Input text cannot contain only whitespace characters."
+        ):
+            check_input_length("\n\t ")
