@@ -203,7 +203,8 @@ cross-encoder (a single relevance logit per pair — `bge-reranker`, `gte-rerank
 `ms-marco`, `jina-reranker`) works; there is no `dim`/`pooling` to set:
 
 ```python
-from qwen3_embed import CustomRerankerSpec, TextCrossEncoder
+from qwen3_embed import TextCrossEncoder
+from qwen3_embed.common.custom_model import CustomRerankerSpec
 
 CustomRerankerSpec(
     model_id="onnx-community/gte-multilingual-reranker-base",
