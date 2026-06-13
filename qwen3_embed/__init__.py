@@ -3,7 +3,7 @@ import importlib.metadata
 from qwen3_embed.common.custom_model import CustomModelSpec, CustomRerankerSpec
 from qwen3_embed.common.types import Device
 from qwen3_embed.rerank.cross_encoder import TextCrossEncoder
-from qwen3_embed.text import TextEmbedding
+from qwen3_embed.text.text_embedding import TextEmbedding
 
 try:
     version = importlib.metadata.version("qwen3-embed")
