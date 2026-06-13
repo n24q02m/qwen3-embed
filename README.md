@@ -179,7 +179,8 @@ registered and then loaded by id. Use `CustomModelSpec` with one of the four
 output shapes: `CLS`/`MEAN` (bert-bi), `LAST_TOKEN` (causal), or `DISABLED` (raw).
 
 ```python
-from qwen3_embed import CustomModelSpec, TextEmbedding
+from qwen3_embed import TextEmbedding
+from qwen3_embed.common.custom_model import CustomModelSpec
 
 # Multilingual (incl. Vietnamese) + code, CLS-pooled, 768-dim
 CustomModelSpec(
