@@ -11,7 +11,7 @@ from qwen3_embed.common.model_description import (
 )
 from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
-from qwen3_embed.common.utils import last_token_pool, mean_pooling, normalize
+from qwen3_embed.common.utils import last_token_pool, mean_pooling, post_process_embeddings
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
 
 
@@ -69,13 +69,9 @@ class CustomTextEmbedding(OnnxTextEmbedding):
         self, output: OnnxOutputContext, **kwargs: Any
     ) -> Iterable[NumpyArray]:
         embeddings = self._pool(output.model_output, output.attention_mask)
-
-        # MRL: optionally truncate to requested dimension
-        dim: int | None = kwargs.get("dim")
-        if dim is not None:
-            embeddings = embeddings[:, :dim]
-
-        return self._normalize(embeddings)
+        return post_process_embeddings(
+            embeddings, normalize_embeddings=self._normalization, **kwargs
+        )
 
     def _pool(
         self, embeddings: NumpyArray, attention_mask: NDArray[np.int64] | None = None
@@ -101,9 +97,6 @@ class CustomTextEmbedding(OnnxTextEmbedding):
             f"Supported types are: {PoolingType.CLS}, {PoolingType.MEAN}, "
             f"{PoolingType.LAST_TOKEN}, {PoolingType.DISABLED}."
         )
-
-    def _normalize(self, embeddings: NumpyArray) -> NumpyArray:
-        return normalize(embeddings) if self._normalization else embeddings
 
 
 class CustomTextEmbeddingWorker(OnnxTextEmbeddingWorker):

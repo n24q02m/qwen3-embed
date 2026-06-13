@@ -4,7 +4,7 @@ from typing import Any
 from qwen3_embed.common.model_description import DenseModelDescription
 from qwen3_embed.common.onnx_model import OnnxOutputContext
 from qwen3_embed.common.types import NumpyArray
-from qwen3_embed.common.utils import normalize
+from qwen3_embed.common.utils import post_process_embeddings
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding, OnnxTextEmbeddingWorker
 from qwen3_embed.text.pooled_embedding import PooledEmbedding
 
@@ -36,13 +36,7 @@ class PooledNormalizedEmbedding(PooledEmbedding):
         embeddings = output.model_output
         attn_mask = output.attention_mask
         pooled = self.mean_pooling(embeddings, attn_mask)
-
-        # MRL: optionally truncate to requested dimension
-        dim: int | None = kwargs.get("dim")
-        if dim is not None:
-            pooled = pooled[:, :dim]
-
-        return normalize(pooled)
+        return post_process_embeddings(pooled, **kwargs)
 
 
 class PooledNormalizedEmbeddingWorker(OnnxTextEmbeddingWorker):

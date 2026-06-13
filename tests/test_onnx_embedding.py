@@ -116,7 +116,7 @@ def test_onnx_text_embedding_preprocess_input(
     assert output_dict is input_dict
 
 
-@patch("qwen3_embed.text.onnx_embedding.normalize")
+@patch("qwen3_embed.text.onnx_embedding.post_process_embeddings")
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding._select_exposed_session_options")
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding._get_model_description")
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding.download_model")
@@ -124,12 +124,12 @@ def test_onnx_text_embedding_postprocess_2d(
     mock_download_model: MagicMock,
     mock_get_model_description: MagicMock,
     mock_select_exposed_session_options: MagicMock,
-    mock_normalize: MagicMock,
+    mock_post_process: MagicMock,
 ) -> None:
     mock_get_model_description.return_value = _MODEL_DESC
     mock_download_model.return_value = Path("/tmp/model")
     mock_select_exposed_session_options.return_value = {}
-    mock_normalize.side_effect = lambda x: x
+    mock_post_process.side_effect = lambda x: x
 
     embedding = OnnxTextEmbedding(model_name=_MODEL_NAME, lazy_load=True)
 
@@ -138,11 +138,11 @@ def test_onnx_text_embedding_postprocess_2d(
 
     embedding._post_process_onnx_output(output_context)
 
-    mock_normalize.assert_called_once()
-    assert np.array_equal(mock_normalize.call_args[0][0], model_output)
+    mock_post_process.assert_called_once()
+    assert np.array_equal(mock_post_process.call_args[0][0], model_output)
 
 
-@patch("qwen3_embed.text.onnx_embedding.normalize")
+@patch("qwen3_embed.text.onnx_embedding.post_process_embeddings")
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding._select_exposed_session_options")
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding._get_model_description")
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding.download_model")
@@ -150,12 +150,12 @@ def test_onnx_text_embedding_postprocess_3d(
     mock_download_model: MagicMock,
     mock_get_model_description: MagicMock,
     mock_select_exposed_session_options: MagicMock,
-    mock_normalize: MagicMock,
+    mock_post_process: MagicMock,
 ) -> None:
     mock_get_model_description.return_value = _MODEL_DESC
     mock_download_model.return_value = Path("/tmp/model")
     mock_select_exposed_session_options.return_value = {}
-    mock_normalize.side_effect = lambda x: x
+    mock_post_process.side_effect = lambda x: x
 
     embedding = OnnxTextEmbedding(model_name=_MODEL_NAME, lazy_load=True)
 
@@ -165,10 +165,10 @@ def test_onnx_text_embedding_postprocess_3d(
 
     embedding._post_process_onnx_output(output_context)
 
-    mock_normalize.assert_called_once()
+    mock_post_process.assert_called_once()
     # It should slice [:, 0]
     expected_slice = np.array([[1.0, 2.0], [3.0, 4.0]])
-    assert np.array_equal(mock_normalize.call_args[0][0], expected_slice)
+    assert np.array_equal(mock_post_process.call_args[0][0], expected_slice)
 
 
 @patch("qwen3_embed.text.onnx_embedding.OnnxTextEmbedding")
