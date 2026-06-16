@@ -165,12 +165,19 @@ class ParallelWorkerPool:
     def ordered_map(self, stream: Iterable[Any], *args: Any, **kwargs: Any) -> Iterable[Any]:
         buffer: dict[int, Any] = {}
         next_expected = 0
+        sentinel = object()
 
         for idx, item in self.semi_ordered_map(stream, *args, **kwargs):
-            buffer[idx] = item
-            while next_expected in buffer:
-                yield buffer.pop(next_expected)
+            # ⚡ Bolt: Fast-path for in-order results that bypasses dictionary buffering
+            if idx == next_expected:
+                yield item
                 next_expected += 1
+                # ⚡ Bolt: Consolidate membership check and removal using dict.pop with sentinel
+                while (next_item := buffer.pop(next_expected, sentinel)) is not sentinel:
+                    yield next_item
+                    next_expected += 1
+            else:
+                buffer[idx] = item
 
     def semi_ordered_map(
         self, stream: Iterable[Any], *args: Any, **kwargs: Any
