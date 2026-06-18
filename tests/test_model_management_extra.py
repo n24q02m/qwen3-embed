@@ -155,3 +155,41 @@ class TestModelManagementExtra:
             ValueError, match=f"Could not determine revision sha for repo '{repo}'"
         ):
             ModelManagement._fetch_repo_files(repo)
+
+    def test_is_within_dir_same_path(self):
+        """Test _is_within_dir with the same path for base and candidate."""
+        path = "/tmp/cache"
+        assert ModelManagement._is_within_dir(path, path) is True
+
+    def test_is_within_dir_value_error(self):
+        """Test _is_within_dir when commonpath raises ValueError."""
+        with patch("os.path.commonpath", side_effect=ValueError):
+            assert ModelManagement._is_within_dir("/tmp/base", "/tmp/candidate") is False
+
+    def test_validate_tar_member_current_dir(self, tmp_path):
+        """Test _validate_tar_member with a member named '.' (current directory)."""
+        member = MagicMock(spec=tarfile.TarInfo)
+        member.name = "."
+        member.isreg.return_value = False
+        member.isdir.return_value = True
+        member.issym.return_value = False
+        member.islnk.return_value = False
+
+        # This should not raise an error and will cover base == candidate in _is_within_dir
+        ModelManagement._validate_tar_member(member, str(tmp_path))
+
+    def test_blocks_sibling_directory_traversal(self, tmp_path):
+        """Test that _validate_tar_member blocks traversal into a sibling directory."""
+        # cache-evil is a sibling of cache
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        member = MagicMock(spec=tarfile.TarInfo)
+        member.name = "../cache-evil/file.txt"
+        member.isreg.return_value = True
+        member.isdir.return_value = False
+        member.issym.return_value = False
+        member.islnk.return_value = False
+
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
+            ModelManagement._validate_tar_member(member, str(cache_dir))
