@@ -19,6 +19,10 @@ MAX_INPUT_LENGTH = int(os.environ.get("QWEN3_EMBED_MAX_INPUT_LENGTH", 1000000))
 
 def check_input_length(text: str) -> None:
     """Limit input length to prevent CPU/memory exhaustion DoS."""
+    if not text:
+        raise ValueError("Input text cannot be empty.")
+    if not text.strip():
+        raise ValueError("Input text cannot contain only whitespace characters.")
     if len(text) > MAX_INPUT_LENGTH:
         raise ValueError(
             f"Input string exceeds maximum allowed length of {MAX_INPUT_LENGTH} characters."
