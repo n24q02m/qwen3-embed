@@ -275,10 +275,14 @@ model = TextEmbedding(model_name="n24q02m/Qwen3-Embedding-0.6B-GGUF", cuda=Devic
 ## Development
 
 ```bash
-mise run setup   # Install deps + pre-commit hooks
-mise run lint    # ruff check + format --check
-mise run test    # pytest
-mise run fix     # ruff auto-fix + format
+uv sync --group dev                              # Install dev dependencies
+uv run ruff check .                              # Lint
+uv run ruff format --check .                     # Format check
+uv run ty check                                  # Type check
+uv run pytest                                    # All tests (integration tests download ~1.2 GB)
+uv run pytest -m "not integration" --tb=short    # Unit tests only (CI default)
+
+# Shortcuts (optional, via mise): mise run setup / lint / test / fix
 ```
 
 ## Related Projects
