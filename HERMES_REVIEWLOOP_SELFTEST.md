@@ -1,1 +1,1 @@
-This files demonstrate teh hermes review-loop self-test.
+This file demonstrates the hermes review-loop self-test.
