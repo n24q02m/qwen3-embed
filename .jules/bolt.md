@@ -25,3 +25,7 @@
 ## 2026-06-10 - [Fast NumPy Input Tensor Creation]
 **Learning:** Creating NumPy arrays from a sequence of lists (e.g., tokenized input) with a specified `dtype` (e.g., `dtype=np.int64`) in a single call is more efficient than creating a default array first and then casting it. The latter leads to redundant O(N) memory allocations and copies because `np.array(..., dtype=np.int64)` on an existing array defaults to `copy=True`.
 **Action:** Always specify the final `dtype` when creating input tensors for model inference from Python sequences to avoid intermediate copies.
+
+## 2024-05-27 - [Fast stream reordering with sentinel pop]
+**Learning:** When reordering items from a concurrent generator stream (where items arrive out-of-order and must be yielded sequentially), implementing a "fast path" that immediately yields items arriving in the correct expected order bypasses the overhead of dictionary insertion. Furthermore, using `dict.pop(key, sentinel)` combined with a `while` loop allows simultaneous existence-checking and extraction, avoiding double lookups (`key in dict` followed by `dict.pop(key)`).
+**Action:** When buffering out-of-order stream results in a dictionary, always check if the item is the `next_expected` one first to bypass buffering entirely, and use `dict.pop` with a sentinel for faster extraction loops.
