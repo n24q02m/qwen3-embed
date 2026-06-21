@@ -179,7 +179,8 @@ class TextEmbedding(TextEmbeddingBase):
     ) -> Iterable[NumpyArray]:
         """
         Encode a list of documents into list of embeddings.
-        We use mean pooling with attention so that the model can handle variable-length inputs.
+        Pooling is model-specific (last-token for Qwen3, configurable for custom models),
+        so the model can handle variable-length inputs.
 
         Args:
             documents: Iterator of documents or single document to embed
@@ -232,7 +233,7 @@ class TextEmbedding(TextEmbeddingBase):
             **kwargs: Additional keyword argument to pass to the embed method.
 
         Yields:
-            Iterable[SparseEmbedding]: The sparse embeddings.
+            Iterable[NumpyArray]: The passage embeddings, one per text.
         """
         # This is model-specific, so that different models can have specialized implementations
         from qwen3_embed.common.utils import iter_checked_texts
