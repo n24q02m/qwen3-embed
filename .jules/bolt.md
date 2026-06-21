@@ -25,3 +25,7 @@
 ## 2026-06-10 - [Fast NumPy Input Tensor Creation]
 **Learning:** Creating NumPy arrays from a sequence of lists (e.g., tokenized input) with a specified `dtype` (e.g., `dtype=np.int64`) in a single call is more efficient than creating a default array first and then casting it. The latter leads to redundant O(N) memory allocations and copies because `np.array(..., dtype=np.int64)` on an existing array defaults to `copy=True`.
 **Action:** Always specify the final `dtype` when creating input tensors for model inference from Python sequences to avoid intermediate copies.
+
+## 2026-06-11 - Optimize last_token_pool using reverse argmax
+**Learning:** Finding the last non-zero token index in a padding mask using `seq_len - 1 - np.argmax(attention_mask[:, ::-1], axis=1)` is significantly (~2.5x) faster than the previous `np.argmax(np.cumsum(attention_mask, axis=1), axis=1)` approach. `cumsum` does unnecessary arithmetic over the entire sequence dimension, whereas `argmax` over the reversed array operates much more efficiently.
+**Action:** Use reverse argmax to find the last occurrence of a condition in numpy arrays rather than cumsum-based strategies when dealing with boolean/binary masks.
