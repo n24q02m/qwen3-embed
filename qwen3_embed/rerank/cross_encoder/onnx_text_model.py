@@ -24,6 +24,14 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
     def _get_worker_class(cls) -> type["TextRerankerWorker"]:
         raise NotImplementedError("Subclasses must implement this method")
 
+    def _extra_worker_params(self) -> dict[str, Any]:
+        """Extra kwargs injected into each spawned worker's init.
+
+        Subclasses override this to carry state (e.g. a runtime-registered custom
+        model registry) into worker processes that start with a fresh interpreter.
+        """
+        return {}
+
     def tokenize(self, pairs: list[tuple[str, str]], **_: Any) -> list[Encoding]:
         assert self.tokenizer is not None
         return self.tokenizer.encode_batch(pairs)
@@ -109,6 +117,11 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
 
             if extra_session_options is not None:
                 params.update(extra_session_options)
+
+            # Carry per-instance worker state (e.g. a runtime custom-model
+            # registry) into the spawned workers, which start with a fresh
+            # interpreter + empty registry. Mirrors the embedding pool path.
+            params.update(self._extra_worker_params())
 
             pool = ParallelWorkerPool(
                 worker=self._get_worker_class(),
