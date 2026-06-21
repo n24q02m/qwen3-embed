@@ -40,6 +40,14 @@
 </details>
 <!-- END: AUTO-GENERATED-CROSS-PROMO -->
 
+## What it is
+
+`qwen3-embed` is a lightweight Python library for **text embedding** and **reranking** with
+Qwen3 0.6B models. It runs on ONNX Runtime or GGUF (`llama-cpp-python`) with **no PyTorch
+dependency**, supports Matryoshka (MRL) truncation, instruction-aware queries, and optional
+GPU acceleration. It is a trimmed fork of [fastembed](https://github.com/qdrant/fastembed)
+that keeps only the Qwen3 models, and any ONNX-able model can be registered as a custom model.
+
 ## Table of contents
 
 - [Features](#features)
@@ -51,10 +59,6 @@
 - [Related Projects](#related-projects)
 - [Contributing](#contributing)
 - [License](#license)
-
-
-
-Trimmed fork of [fastembed](https://github.com/qdrant/fastembed), keeping only Qwen3 models.
 
 ## Features
 
