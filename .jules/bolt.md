@@ -29,3 +29,7 @@
 ## 2026-06-11 - Optimize last_token_pool using reverse argmax
 **Learning:** Finding the last non-zero token index in a padding mask using `seq_len - 1 - np.argmax(attention_mask[:, ::-1], axis=1)` is significantly (~2.5x) faster than the previous `np.argmax(np.cumsum(attention_mask, axis=1), axis=1)` approach. `cumsum` does unnecessary arithmetic over the entire sequence dimension, whereas `argmax` over the reversed array operates much more efficiently.
 **Action:** Use reverse argmax to find the last occurrence of a condition in numpy arrays rather than cumsum-based strategies when dealing with boolean/binary masks.
+
+## 2024-05-27 - [Fast stream reordering with sentinel pop]
+**Learning:** When reordering items from a concurrent generator stream (where items arrive out-of-order and must be yielded sequentially), implementing a "fast path" that immediately yields items arriving in the correct expected order bypasses the overhead of dictionary insertion. Furthermore, using `dict.pop(key, sentinel)` combined with a `while` loop allows simultaneous existence-checking and extraction, avoiding double lookups (`key in dict` followed by `dict.pop(key)`).
+**Action:** When buffering out-of-order stream results in a dictionary, always check if the item is the `next_expected` one first to bypass buffering entirely, and use `dict.pop` with a sentinel for faster extraction loops.
