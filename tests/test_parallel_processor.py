@@ -127,6 +127,14 @@ def test_semi_ordered_map_basic():
     results = set(pool.semi_ordered_map(input_data))
     assert results == expected
 
+def test_semi_ordered_map_empty():
+    """
+    Test semi-ordered map with empty input.
+    """
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
+    results = list(pool.semi_ordered_map([]))
+    assert results == []
+
 
 def test_worker_failure_handling():
     """
