@@ -81,7 +81,8 @@ class CustomRerankerSpec:
 
     Usage::
 
-        from qwen3_embed import CustomRerankerSpec, TextCrossEncoder
+        from qwen3_embed import CustomRerankerSpec
+        from qwen3_embed.rerank import TextCrossEncoder
 
         CustomRerankerSpec(
             model_id="onnx-community/gte-multilingual-reranker-base",
@@ -104,7 +105,7 @@ class CustomRerankerSpec:
 
     def register(self) -> None:
         """Register this reranker with :class:`TextCrossEncoder` so it loads by id."""
-        from qwen3_embed import TextCrossEncoder
+        from qwen3_embed.rerank import TextCrossEncoder
 
         model_description = BaseModelDescription(
             model=self.model_id,

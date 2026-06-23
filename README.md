@@ -143,7 +143,7 @@ queries = list(model.query_embed(
 ### Reranking
 
 ```python
-from qwen3_embed import TextCrossEncoder
+from qwen3_embed.rerank import TextCrossEncoder
 
 reranker = TextCrossEncoder(model_name="n24q02m/Qwen3-Reranker-0.6B-ONNX")
 
@@ -207,7 +207,8 @@ cross-encoder (a single relevance logit per pair — `bge-reranker`, `gte-rerank
 `ms-marco`, `jina-reranker`) works; there is no `dim`/`pooling` to set:
 
 ```python
-from qwen3_embed import CustomRerankerSpec, TextCrossEncoder
+from qwen3_embed import CustomRerankerSpec
+from qwen3_embed.rerank import TextCrossEncoder
 
 CustomRerankerSpec(
     model_id="onnx-community/gte-multilingual-reranker-base",
