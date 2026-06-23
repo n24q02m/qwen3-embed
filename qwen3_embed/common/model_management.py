@@ -650,9 +650,7 @@ class ModelManagement(Generic[T]):
         return None
 
     @classmethod
-    def _download_from_hf(
-        cls, model: T, cache_dir: str, **kwargs: Any
-    ) -> Path | None:
+    def _download_from_hf(cls, model: T, cache_dir: str, **kwargs: Any) -> Path | None:
         local_files_only = kwargs.get("local_files_only", False)
         try:
             extra_patterns = [model.model_file]

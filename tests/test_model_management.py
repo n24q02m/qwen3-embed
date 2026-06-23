@@ -1168,9 +1168,7 @@ class TestDownloadFromHF:
         mock_hf.return_value = str(expected_path)
 
         model = make_model_description(hf="org/repo")
-        result = ModelManagement._download_from_hf(
-            model=model, cache_dir=str(tmp_path)
-        )
+        result = ModelManagement._download_from_hf(model=model, cache_dir=str(tmp_path))
 
         assert result == expected_path
         mock_enable.assert_called_once()
