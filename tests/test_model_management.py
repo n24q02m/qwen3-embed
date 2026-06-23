@@ -1708,6 +1708,33 @@ class TestSaveFileMetadata:
             "Failed to save metadata file. Next load may take longer to verify."
         )
 
+    def test_save_file_metadata_creates_dir(self, tmp_path):
+        """Verify that _save_file_metadata creates the directory if it does not exist."""
+        model_dir = tmp_path / "new_model_dir"
+        meta = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        assert not model_dir.exists()
+        ModelManagement._save_file_metadata(model_dir, meta)
+
+        assert model_dir.exists()
+        metadata_file = model_dir / ModelManagement.METADATA_FILE
+        assert metadata_file.exists()
+        assert json.loads(metadata_file.read_text()) == meta
+
+    @patch("qwen3_embed.common.model_management.logger")
+    def test_save_file_metadata_mkdir_error(self, mock_logger, tmp_path):
+        """Verify that OSError during mkdir is caught and logged."""
+        model_dir = tmp_path / "inaccessible_dir"
+        meta = {"file.txt": {"size": 100, "blob_id": "abc"}}
+
+        with patch("pathlib.Path.mkdir", side_effect=OSError("Permission denied")):
+            ModelManagement._save_file_metadata(model_dir, meta)
+
+        mock_logger.exception.assert_called_once()
+        mock_logger.warning.assert_called_once_with(
+            "Failed to save metadata file. Next load may take longer to verify."
+        )
+
 
 class TestVerifyFilesFromMetadata:
     """Tests for direct verification of the _verify_files_from_metadata method."""
