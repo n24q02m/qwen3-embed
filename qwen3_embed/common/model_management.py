@@ -29,23 +29,27 @@ from qwen3_embed.common.model_description import BaseModelDescription
 T = TypeVar("T", bound=BaseModelDescription)
 
 
+# Module-level session for connection pooling across all ModelManagement subclasses
+_SHARED_SESSION: requests.Session | None = None
+_SESSION_LOCK = threading.Lock()
+
+
 class ModelManagement(Generic[T]):
     METADATA_FILE = "files_metadata.json"
-    _session: requests.Session | None = None
-    _session_lock = threading.Lock()
 
     @classmethod
     def _get_session(cls) -> requests.Session:
+        global _SHARED_SESSION
         # ⚡ Bolt: Use requests.Session for connection pooling (~30% faster for multiple files)
         # Reusing the TCP connection avoids the overhead of repeated TCP/TLS handshakes
-        if cls._session is None:
-            with cls._session_lock:
-                if cls._session is None:
+        if _SHARED_SESSION is None:
+            with _SESSION_LOCK:
+                if _SHARED_SESSION is None:
                     session = requests.Session()
                     # SECURITY: Enforce trust_env=False to prevent proxy/CA environment variable injection
                     session.trust_env = False
-                    cls._session = session
-        return cls._session
+                    _SHARED_SESSION = session
+        return _SHARED_SESSION
 
     @classmethod
     def list_supported_models(cls) -> list[dict[str, Any]]:
