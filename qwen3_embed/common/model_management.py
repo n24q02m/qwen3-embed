@@ -173,6 +173,31 @@ class ModelManagement(Generic[T]):
                     sha256_hash.update(chunk)
         return md5_hash.hexdigest(), sha256_hash.hexdigest()
 
+    @staticmethod
+    def _validate_gcs_url(url: str) -> None:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme != "https" or parsed.netloc != "storage.googleapis.com":
+            raise ValueError(
+                f"Invalid URL: {url}. Only URLs from Google Cloud Storage are allowed."
+            )
+
+    @staticmethod
+    def _verify_file_integrity(
+        expected_md5: str | None,
+        expected_sha256: str | None,
+        calculated_md5: str,
+        calculated_sha256: str,
+    ) -> None:
+        if expected_sha256:
+            if expected_sha256 != calculated_sha256:
+                raise ValueError(
+                    f"File integrity check failed: expected SHA256 {expected_sha256}, got {calculated_sha256}"
+                )
+        elif expected_md5 and expected_md5 != calculated_md5:
+            raise ValueError(
+                f"File integrity check failed: expected MD5 {expected_md5}, got {calculated_md5}"
+            )
+
     @classmethod
     def download_file_from_gcs(cls, url: str, output_path: str, show_progress: bool = True) -> str:
         """
@@ -186,12 +211,7 @@ class ModelManagement(Generic[T]):
         Returns:
             str: The path to the downloaded file.
         """
-
-        parsed = urllib.parse.urlparse(url)
-        if parsed.scheme != "https" or parsed.netloc != "storage.googleapis.com":
-            raise ValueError(
-                f"Invalid URL: {url}. Only URLs from Google Cloud Storage are allowed."
-            )
+        cls._validate_gcs_url(url)
         if os.path.exists(output_path):
             return output_path
         # SECURITY: Explicitly enforce TLS verification to prevent accidental or malicious bypass via environment variables (like REQUESTS_CA_BUNDLE).
@@ -224,15 +244,9 @@ class ModelManagement(Generic[T]):
                 response, tmp_output_path, total_size_in_bytes, show_progress
             )
 
-            if expected_sha256:
-                if expected_sha256 != calculated_sha256:
-                    raise ValueError(
-                        f"File integrity check failed: expected SHA256 {expected_sha256}, got {calculated_sha256}"
-                    )
-            elif expected_md5 and expected_md5 != calculated_md5:
-                raise ValueError(
-                    f"File integrity check failed: expected MD5 {expected_md5}, got {calculated_md5}"
-                )
+            cls._verify_file_integrity(
+                expected_md5, expected_sha256, calculated_md5, calculated_sha256
+            )
             os.replace(tmp_output_path, output_path)
         finally:
             if os.path.exists(tmp_output_path):
@@ -359,6 +373,50 @@ class ModelManagement(Generic[T]):
             )
         cls._save_file_metadata(snapshot_dir, metadata)
 
+    @staticmethod
+    def _get_hf_allow_patterns(extra_patterns: list[str]) -> list[str]:
+        allow_patterns = [
+            "config.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "special_tokens_map.json",
+            "preprocessor_config.json",
+        ]
+        allow_patterns.extend(extra_patterns)
+        return allow_patterns
+
+    @classmethod
+    def _handle_hf_local_files(
+        cls,
+        hf_source_repo: str,
+        cache_dir: str,
+        snapshot_dir: Path,
+        metadata_file: Path,
+        allow_patterns: list[str],
+        **kwargs: Any,
+    ) -> str:
+        disable_progress_bars()
+        cls._verify_local_metadata(snapshot_dir, metadata_file, repo_files=[])
+        # The online path pins ``revision`` to an explicit commit SHA, so HF
+        # never writes a ``refs/<branch>`` pointer into the cache. A
+        # ``local_files_only`` lookup that omits ``revision`` defaults to
+        # ``"main"`` and raises ``LocalEntryNotFoundError`` even when the
+        # snapshot is fully cached -- which forces a needless network round
+        # trip on every load (and stalls/hangs hard when that network call
+        # runs inside a worker thread, e.g. an MCP stdio server). Resolve the
+        # cached SHA directly so the offline lookup hits the cache.
+        if "revision" not in kwargs:
+            cached_revision = cls._resolve_cached_revision(snapshot_dir)
+            if cached_revision is not None:
+                kwargs["revision"] = cached_revision
+        return snapshot_download(  # nosec B615
+            repo_id=hf_source_repo,
+            allow_patterns=allow_patterns,
+            cache_dir=cache_dir,
+            local_files_only=True,
+            **kwargs,
+        )
+
     @classmethod
     def download_files_from_huggingface(
         cls,
@@ -381,40 +439,13 @@ class ModelManagement(Generic[T]):
         Returns:
             Path: The path to the model directory.
         """
-
-        allow_patterns = [
-            "config.json",
-            "tokenizer.json",
-            "tokenizer_config.json",
-            "special_tokens_map.json",
-            "preprocessor_config.json",
-        ]
-        allow_patterns.extend(extra_patterns)
-
+        allow_patterns = cls._get_hf_allow_patterns(extra_patterns)
         snapshot_dir = Path(cache_dir) / f"models--{hf_source_repo.replace('/', '--')}"
         metadata_file = snapshot_dir / cls.METADATA_FILE
 
         if local_files_only:
-            disable_progress_bars()
-            cls._verify_local_metadata(snapshot_dir, metadata_file, repo_files=[])
-            # The online path pins ``revision`` to an explicit commit SHA, so HF
-            # never writes a ``refs/<branch>`` pointer into the cache. A
-            # ``local_files_only`` lookup that omits ``revision`` defaults to
-            # ``"main"`` and raises ``LocalEntryNotFoundError`` even when the
-            # snapshot is fully cached -- which forces a needless network round
-            # trip on every load (and stalls/hangs hard when that network call
-            # runs inside a worker thread, e.g. an MCP stdio server). Resolve the
-            # cached SHA directly so the offline lookup hits the cache.
-            if "revision" not in kwargs:
-                cached_revision = cls._resolve_cached_revision(snapshot_dir)
-                if cached_revision is not None:
-                    kwargs["revision"] = cached_revision
-            return snapshot_download(  # nosec B615
-                repo_id=hf_source_repo,
-                allow_patterns=allow_patterns,
-                cache_dir=cache_dir,
-                local_files_only=local_files_only,
-                **kwargs,
+            return cls._handle_hf_local_files(
+                hf_source_repo, cache_dir, snapshot_dir, metadata_file, allow_patterns, **kwargs
             )
 
         repo_revision, repo_files = cls._fetch_repo_files(hf_source_repo)
@@ -506,6 +537,19 @@ class ModelManagement(Generic[T]):
                 )
 
     @classmethod
+    def _get_validated_members(cls, tar: tarfile.TarFile, target_dir: str):
+        total_size = 0
+        max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
+        for member in tar:
+            cls._validate_tar_member(member, target_dir)
+            total_size += member.size
+            if total_size > max_uncompressed_size:
+                raise tarfile.TarError(
+                    f"Decompression bomb detected: total uncompressed size exceeds {max_uncompressed_size} bytes"
+                )
+            yield member
+
+    @classmethod
     def decompress_to_cache(cls, targz_path: str, cache_dir: str) -> str:
         """
         Decompresses a .tar.gz file to a cache directory.
@@ -530,25 +574,12 @@ class ModelManagement(Generic[T]):
             with tarfile.open(targz_path, "r:gz") as tar:
                 # Extract all files into the cache directory securely
                 target_dir = os.path.abspath(cache_dir)
-
-                def validate_and_yield_members():
-                    total_size = 0
-                    max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
-                    for member in tar:
-                        cls._validate_tar_member(member, target_dir)
-                        total_size += member.size
-                        if total_size > max_uncompressed_size:
-                            raise tarfile.TarError(
-                                f"Decompression bomb detected: total uncompressed size exceeds {max_uncompressed_size} bytes"
-                            )
-                        yield member
+                validated_members = cls._get_validated_members(tar, target_dir)
 
                 if hasattr(tarfile, "data_filter"):
-                    tar.extractall(
-                        path=cache_dir, members=validate_and_yield_members(), filter="data"
-                    )
+                    tar.extractall(path=cache_dir, members=validated_members, filter="data")
                 else:
-                    for member in validate_and_yield_members():
+                    for member in validated_members:
                         # Sanitize metadata to mimic "data" filter
                         member.mode &= 0o777
                         member.uid = 0
@@ -565,23 +596,12 @@ class ModelManagement(Generic[T]):
         return cache_dir
 
     @classmethod
-    def retrieve_model_gcs(
-        cls,
-        model_name: str,
-        source_url: str,
-        cache_dir: str,
-        deprecated_tar_struct: bool = False,
-        local_files_only: bool = False,
-    ) -> Path:
-        fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{model_name.split('/')[-1]}"
+    def _prepare_gcs_cache_dirs(
+        cls, cache_dir: str, fast_model_name: str
+    ) -> tuple[Path, Path, Path]:
         cache_tmp_dir = Path(cache_dir) / "tmp"
         model_tmp_dir = cache_tmp_dir / fast_model_name
         model_dir = Path(cache_dir) / fast_model_name
-
-        # check if the model_dir and the model files are both present for macOS
-        # ⚡ Bolt: Fast directory check avoiding hidden files like .DS_Store (~10x faster than list(glob("*")))
-        if model_dir.exists() and any(not f.name.startswith(".") for f in model_dir.iterdir()):
-            return model_dir
 
         if model_tmp_dir.exists():
             shutil.rmtree(model_tmp_dir)
@@ -591,6 +611,29 @@ class ModelManagement(Generic[T]):
         if not cache_tmp_dir.is_symlink():
             with contextlib.suppress(OSError):
                 cache_tmp_dir.chmod(0o700)
+
+        return cache_tmp_dir, model_tmp_dir, model_dir
+
+    @classmethod
+    def retrieve_model_gcs(
+        cls,
+        model_name: str,
+        source_url: str,
+        cache_dir: str,
+        deprecated_tar_struct: bool = False,
+        local_files_only: bool = False,
+    ) -> Path:
+        fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{model_name.split('/')[-1]}"
+        model_dir = Path(cache_dir) / fast_model_name
+
+        # check if the model_dir and the model files are both present for macOS
+        # ⚡ Bolt: Fast directory check avoiding hidden files like .DS_Store (~10x faster than list(glob("*")))
+        if model_dir.exists() and any(not f.name.startswith(".") for f in model_dir.iterdir()):
+            return model_dir
+
+        cache_tmp_dir, model_tmp_dir, model_dir = cls._prepare_gcs_cache_dirs(
+            cache_dir, fast_model_name
+        )
 
         model_tar_gz = Path(cache_dir) / f"{fast_model_name}.tar.gz"
 
@@ -769,6 +812,38 @@ class ModelManagement(Generic[T]):
         return None
 
     @classmethod
+    def _prepare_download_context(
+        cls, model: T, retries: int, **kwargs: Any
+    ) -> tuple[int, str | None, str | None, list[str]]:
+        local_files_only = kwargs.get("local_files_only", False)
+        retries = 1 if local_files_only else retries
+        hf_source = model.sources.hf
+        url_source = model.sources.url
+
+        extra_patterns = [model.model_file]
+        extra_patterns.extend(model.additional_files)
+        return retries, hf_source, url_source, extra_patterns
+
+    @classmethod
+    def _check_cache_path(
+        cls,
+        model: T,
+        hf_source: str | None,
+        cache_dir: str,
+        extra_patterns: list[str],
+        **kwargs: Any,
+    ) -> Path | None:
+        if hf_source:
+            return cls._check_hf_cache(
+                hf_source=hf_source,
+                cache_dir=cache_dir,
+                extra_patterns=extra_patterns,
+                model_file=model.model_file,
+                **kwargs,
+            )
+        return None
+
+    @classmethod
     def download_model(cls, model: T, cache_dir: str, retries: int = 3, **kwargs: Any) -> Path:
         """
         Downloads a model from HuggingFace Hub or Google Cloud Storage.
@@ -794,28 +869,23 @@ class ModelManagement(Generic[T]):
         Returns:
             Path: The path to the downloaded model directory.
         """
-        local_files_only = kwargs.get("local_files_only", False)
         specific_model_path: str | None = kwargs.pop("specific_model_path", None)
         if specific_model_path:
             return Path(specific_model_path)
 
-        retries = 1 if local_files_only else retries
-        hf_source = model.sources.hf
-        url_source = model.sources.url
+        retries, hf_source, url_source, extra_patterns = cls._prepare_download_context(
+            model, retries, **kwargs
+        )
 
-        extra_patterns = [model.model_file]
-        extra_patterns.extend(model.additional_files)
-
-        if hf_source:
-            cached_path = cls._check_hf_cache(
-                hf_source=hf_source,
-                cache_dir=cache_dir,
-                extra_patterns=extra_patterns,
-                model_file=model.model_file,
-                **kwargs,
-            )
-            if cached_path:
-                return cached_path
+        cached_path = cls._check_cache_path(
+            model=model,
+            hf_source=hf_source,
+            cache_dir=cache_dir,
+            extra_patterns=extra_patterns,
+            **kwargs,
+        )
+        if cached_path:
+            return cached_path
 
         path = cls._download_with_retries(
             model=model,
