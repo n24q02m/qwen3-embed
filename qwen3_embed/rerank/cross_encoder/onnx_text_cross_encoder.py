@@ -69,6 +69,18 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
         self.lazy_load = lazy_load
         self._extra_session_options = self._select_exposed_session_options(kwargs)
 
+        self._setup_device(cuda, device_ids, device_id)
+        self._setup_model_assets(model_name, cache_dir, specific_model_path)
+
+        if not self.lazy_load:
+            self.load_onnx_model()
+
+    def _setup_device(
+        self,
+        cuda: bool | Device,
+        device_ids: list[int] | None,
+        device_id: int | None,
+    ) -> None:
         # List of device ids, that can be used for data parallel processing in workers
         self.device_ids = device_ids
         self.cuda = cuda
@@ -80,12 +92,18 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
             )
 
         # This device_id will be used if we need to load model in current process
-        self.device_id: int | None = None
+        self.device_id = None
         if device_id is not None:
             self.device_id = device_id
         elif self.device_ids is not None:
             self.device_id = self.device_ids[0]
 
+    def _setup_model_assets(
+        self,
+        model_name: str,
+        cache_dir: str | None,
+        specific_model_path: str | None,
+    ) -> None:
         self.model_description = self._get_model_description(model_name)
         self.cache_dir = str(define_cache_dir(cache_dir))
         self._specific_model_path = specific_model_path
@@ -95,9 +113,6 @@ class OnnxTextCrossEncoder(TextCrossEncoderBase, OnnxCrossEncoderModel):
             local_files_only=self._local_files_only,
             specific_model_path=self._specific_model_path,
         )
-
-        if not self.lazy_load:
-            self.load_onnx_model()
 
     def load_onnx_model(self) -> None:
         config = OnnxSessionConfig(
