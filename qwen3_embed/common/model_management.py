@@ -360,6 +360,68 @@ class ModelManagement(Generic[T]):
         cls._save_file_metadata(snapshot_dir, metadata)
 
     @classmethod
+    def _handle_local_hf_download(
+        cls,
+        hf_source_repo: str,
+        cache_dir: str,
+        snapshot_dir: Path,
+        metadata_file: Path,
+        allow_patterns: list[str],
+        **kwargs: Any,
+    ) -> str:
+        disable_progress_bars()
+        cls._verify_local_metadata(snapshot_dir, metadata_file, repo_files=[])
+        # The online path pins ``revision`` to an explicit commit SHA, so HF
+        # never writes a ``refs/<branch>`` pointer into the cache. A
+        # ``local_files_only`` lookup that omits ``revision`` defaults to
+        # ``"main"`` and raises ``LocalEntryNotFoundError`` even when the
+        # snapshot is fully cached -- which forces a needless network round
+        # trip on every load (and stalls/hangs hard when that network call
+        # runs inside a worker thread, e.g. an MCP stdio server). Resolve the
+        # cached SHA directly so the offline lookup hits the cache.
+        if "revision" not in kwargs:
+            cached_revision = cls._resolve_cached_revision(snapshot_dir)
+            if cached_revision is not None:
+                kwargs["revision"] = cached_revision
+        return snapshot_download(  # nosec B615
+            repo_id=hf_source_repo,
+            allow_patterns=allow_patterns,
+            cache_dir=cache_dir,
+            local_files_only=True,
+            **kwargs,
+        )
+
+    @classmethod
+    def _handle_remote_hf_download(
+        cls,
+        hf_source_repo: str,
+        cache_dir: str,
+        snapshot_dir: Path,
+        metadata_file: Path,
+        allow_patterns: list[str],
+        **kwargs: Any,
+    ) -> str:
+        repo_revision, repo_files = cls._fetch_repo_files(hf_source_repo)
+        verified_metadata = cls._verify_local_metadata(snapshot_dir, metadata_file, repo_files)
+
+        if verified_metadata:
+            disable_progress_bars()
+
+        result = snapshot_download(
+            repo_id=hf_source_repo,
+            allow_patterns=allow_patterns,
+            cache_dir=cache_dir,
+            local_files_only=False,
+            revision=repo_revision,
+            **kwargs,
+        )
+
+        if not verified_metadata:
+            cls._finalize_hf_download(snapshot_dir, repo_files)
+
+        return result
+
+    @classmethod
     def download_files_from_huggingface(
         cls,
         hf_source_repo: str,
@@ -395,47 +457,23 @@ class ModelManagement(Generic[T]):
         metadata_file = snapshot_dir / cls.METADATA_FILE
 
         if local_files_only:
-            disable_progress_bars()
-            cls._verify_local_metadata(snapshot_dir, metadata_file, repo_files=[])
-            # The online path pins ``revision`` to an explicit commit SHA, so HF
-            # never writes a ``refs/<branch>`` pointer into the cache. A
-            # ``local_files_only`` lookup that omits ``revision`` defaults to
-            # ``"main"`` and raises ``LocalEntryNotFoundError`` even when the
-            # snapshot is fully cached -- which forces a needless network round
-            # trip on every load (and stalls/hangs hard when that network call
-            # runs inside a worker thread, e.g. an MCP stdio server). Resolve the
-            # cached SHA directly so the offline lookup hits the cache.
-            if "revision" not in kwargs:
-                cached_revision = cls._resolve_cached_revision(snapshot_dir)
-                if cached_revision is not None:
-                    kwargs["revision"] = cached_revision
-            return snapshot_download(  # nosec B615
-                repo_id=hf_source_repo,
-                allow_patterns=allow_patterns,
+            return cls._handle_local_hf_download(
+                hf_source_repo=hf_source_repo,
                 cache_dir=cache_dir,
-                local_files_only=local_files_only,
+                snapshot_dir=snapshot_dir,
+                metadata_file=metadata_file,
+                allow_patterns=allow_patterns,
                 **kwargs,
             )
 
-        repo_revision, repo_files = cls._fetch_repo_files(hf_source_repo)
-        verified_metadata = cls._verify_local_metadata(snapshot_dir, metadata_file, repo_files)
-
-        if verified_metadata:
-            disable_progress_bars()
-
-        result = snapshot_download(
-            repo_id=hf_source_repo,
-            allow_patterns=allow_patterns,
+        return cls._handle_remote_hf_download(
+            hf_source_repo=hf_source_repo,
             cache_dir=cache_dir,
-            local_files_only=local_files_only,
-            revision=repo_revision,
+            snapshot_dir=snapshot_dir,
+            metadata_file=metadata_file,
+            allow_patterns=allow_patterns,
             **kwargs,
         )
-
-        if not verified_metadata:
-            cls._finalize_hf_download(snapshot_dir, repo_files)
-
-        return result
 
     @staticmethod
     def _is_within_dir(base: str, candidate: str) -> bool:
