@@ -540,7 +540,15 @@ class ModelManagement(Generic[T]):
                     total_size = 0
                     max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
                     for member in tar:
-                        total_size += member.size
+                        # Perform security checks in the generator to ensure they trigger
+                        # even when extractall is mocked in tests to ignore filters.
+                        cls._validate_tar_member(member, target_dir)
+
+                        # Decompression bomb protection
+                        member_size = getattr(member, "size", 0)
+                        if isinstance(member_size, (int, float)):
+                            total_size += int(member_size)
+
                         if total_size > max_uncompressed_size:
                             raise tarfile.TarError(
                                 f"Decompression bomb detected: total uncompressed size exceeds {max_uncompressed_size} bytes"
@@ -548,11 +556,6 @@ class ModelManagement(Generic[T]):
                         yield member
 
                 def security_filter(member: tarfile.TarInfo, path: str) -> tarfile.TarInfo | None:
-                    # Maintain strictness by calling our custom validation.
-                    # This ensures that absolute paths and unsupported types raise TarError
-                    # as expected by the test suite.
-                    cls._validate_tar_member(member, path)
-
                     if hasattr(tarfile, "data_filter"):
                         # On Python 3.12+, delegate metadata sanitization to the built-in filter.
                         return tarfile.data_filter(member, path)
@@ -566,7 +569,9 @@ class ModelManagement(Generic[T]):
                 if hasattr(tarfile, "data_filter"):
                     # Python 3.12+ supports the filter argument in extractall.
                     tar.extractall(
-                        path=cache_dir, members=validate_and_yield_members(), filter=security_filter
+                        path=cache_dir,
+                        members=validate_and_yield_members(),
+                        filter=security_filter,
                     )
                 else:
                     # Fallback for Python 3.11
