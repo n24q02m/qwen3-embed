@@ -44,7 +44,6 @@ class CustomModelSpec:
     dim: int | None = None
     pooling: str | PoolingType = PoolingType.MEAN
     normalization: bool = True
-    max_seq_len: int | None = None
     additional_files: list[str] = field(default_factory=list)
 
     def register(self) -> None:
