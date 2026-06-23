@@ -565,24 +565,27 @@ class ModelManagement(Generic[T]):
         return cache_dir
 
     @classmethod
-    def retrieve_model_gcs(
-        cls,
-        model_name: str,
-        source_url: str,
-        cache_dir: str,
-        deprecated_tar_struct: bool = False,
-        local_files_only: bool = False,
-    ) -> Path:
+    def _get_gcs_model_paths(
+        cls, model_name: str, cache_dir: str, deprecated_tar_struct: bool
+    ) -> tuple[Path, Path, Path, Path]:
         fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{model_name.split('/')[-1]}"
-        cache_tmp_dir = Path(cache_dir) / "tmp"
+        cache_path = Path(cache_dir)
+        cache_tmp_dir = cache_path / "tmp"
         model_tmp_dir = cache_tmp_dir / fast_model_name
-        model_dir = Path(cache_dir) / fast_model_name
+        model_dir = cache_path / fast_model_name
+        model_tar_gz = cache_path / f"{fast_model_name}.tar.gz"
+        return model_dir, model_tmp_dir, cache_tmp_dir, model_tar_gz
 
+    @classmethod
+    def _is_model_cached(cls, model_dir: Path) -> bool:
         # check if the model_dir and the model files are both present for macOS
         # ⚡ Bolt: Fast directory check avoiding hidden files like .DS_Store (~10x faster than list(glob("*")))
-        if model_dir.exists() and any(not f.name.startswith(".") for f in model_dir.iterdir()):
-            return model_dir
+        return model_dir.exists() and any(not f.name.startswith(".") for f in model_dir.iterdir())
 
+    @classmethod
+    def _prepare_gcs_cache(
+        cls, cache_tmp_dir: Path, model_tmp_dir: Path, model_tar_gz: Path
+    ) -> None:
         if model_tmp_dir.exists():
             shutil.rmtree(model_tmp_dir)
 
@@ -592,24 +595,52 @@ class ModelManagement(Generic[T]):
             with contextlib.suppress(OSError):
                 cache_tmp_dir.chmod(0o700)
 
-        model_tar_gz = Path(cache_dir) / f"{fast_model_name}.tar.gz"
-
         if model_tar_gz.exists():
             model_tar_gz.unlink()
 
+    @classmethod
+    def _download_and_extract_gcs_model(
+        cls,
+        source_url: str,
+        model_tar_gz: Path,
+        cache_tmp_dir: Path,
+        model_tmp_dir: Path,
+        model_dir: Path,
+    ) -> None:
+        cls.download_file_from_gcs(
+            source_url,
+            output_path=str(model_tar_gz),
+        )
+
+        cls.decompress_to_cache(targz_path=str(model_tar_gz), cache_dir=str(cache_tmp_dir))
+        if not model_tmp_dir.exists():
+            raise ValueError(f"Could not find {model_tmp_dir} in {cache_tmp_dir}")
+
+        model_tar_gz.unlink()
+        # Rename from tmp to final name is atomic
+        model_tmp_dir.rename(model_dir)
+
+    @classmethod
+    def retrieve_model_gcs(
+        cls,
+        model_name: str,
+        source_url: str,
+        cache_dir: str,
+        deprecated_tar_struct: bool = False,
+        local_files_only: bool = False,
+    ) -> Path:
+        model_dir, model_tmp_dir, cache_tmp_dir, model_tar_gz = cls._get_gcs_model_paths(
+            model_name, cache_dir, deprecated_tar_struct
+        )
+
+        if cls._is_model_cached(model_dir):
+            return model_dir
+
         if not local_files_only:
-            cls.download_file_from_gcs(
-                source_url,
-                output_path=str(model_tar_gz),
+            cls._prepare_gcs_cache(cache_tmp_dir, model_tmp_dir, model_tar_gz)
+            cls._download_and_extract_gcs_model(
+                source_url, model_tar_gz, cache_tmp_dir, model_tmp_dir, model_dir
             )
-
-            cls.decompress_to_cache(targz_path=str(model_tar_gz), cache_dir=str(cache_tmp_dir))
-            if not model_tmp_dir.exists():
-                raise ValueError(f"Could not find {model_tmp_dir} in {cache_tmp_dir}")
-
-            model_tar_gz.unlink()
-            # Rename from tmp to final name is atomic
-            model_tmp_dir.rename(model_dir)
         else:
             logger.error(
                 f"Could not find the model tar.gz file at {model_dir} and local_files_only=True."
