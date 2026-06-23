@@ -560,3 +560,36 @@ def test_process_stream_error_signal():
         list(pool._process_stream([1]))
 
     pool.join_or_terminate.assert_called_once()
+
+
+def test_cleanup_worker_error_handling():
+    """Test that _cleanup_worker handles exceptions during queue cleanup gracefully."""
+    input_queue = MagicMock()
+    output_queue = MagicMock()
+    num_active_workers = MagicMock()
+    num_active_workers.get_lock.return_value.__enter__ = MagicMock()
+    num_active_workers.get_lock.return_value.__exit__ = MagicMock()
+    num_active_workers.value = 5
+    worker_id = 1
+
+    # Mock input_queue.close to raise an exception
+    input_queue.close.side_effect = Exception("Cleanup failed")
+
+    with patch("logging.exception") as mock_log_exception:
+        _cleanup_worker(input_queue, output_queue, num_active_workers, worker_id)
+
+    # Verify that the exception was logged
+    mock_log_exception.assert_called_once()
+    assert "failed to cleanup queues" in mock_log_exception.call_args[0][0]
+
+    # Verify that num_active_workers was still decremented despite the error
+    assert num_active_workers.value == 4
+
+
+def test_get_items_from_queue_error_handling():
+    """Test that _get_items_from_queue propagates exceptions from queue.get()."""
+    mock_queue = MagicMock()
+    mock_queue.get.side_effect = Exception("Queue error")
+
+    with pytest.raises(Exception, match="Queue error"):
+        list(_get_items_from_queue(mock_queue))
