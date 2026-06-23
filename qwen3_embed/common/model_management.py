@@ -623,25 +623,25 @@ class ModelManagement(Generic[T]):
     @classmethod
     def _check_hf_cache(
         cls,
-        hf_source: str,
+        model: T,
         cache_dir: str,
-        extra_patterns: list[str],
-        model_file: str,
         **kwargs: Any,
     ) -> Path | None:
         try:
             cache_kwargs = deepcopy(kwargs)
             cache_kwargs["local_files_only"] = True
+            extra_patterns = [model.model_file]
+            extra_patterns.extend(model.additional_files)
             cached_path = Path(
                 cls.download_files_from_huggingface(
-                    hf_source,
+                    model.sources.hf,
                     cache_dir=cache_dir,
                     extra_patterns=extra_patterns,
                     **cache_kwargs,
                 )
             )
             # Verify the required model file actually exists in the cached snapshot
-            if (cached_path / model_file).exists():
+            if (cached_path / model.model_file).exists():
                 return cached_path
         except (OSError, ValueError, RepositoryNotFoundError):
             logger.debug("Model not found in cache, will attempt download")
@@ -650,14 +650,14 @@ class ModelManagement(Generic[T]):
         return None
 
     @classmethod
-    def _download_from_hf(
-        cls, hf_source: str, cache_dir: str, extra_patterns: list[str], **kwargs: Any
-    ) -> Path | None:
+    def _download_from_hf(cls, model: T, cache_dir: str, **kwargs: Any) -> Path | None:
         local_files_only = kwargs.get("local_files_only", False)
         try:
+            extra_patterns = [model.model_file]
+            extra_patterns.extend(model.additional_files)
             return Path(
                 cls.download_files_from_huggingface(
-                    hf_source,
+                    model.sources.hf,
                     cache_dir=cache_dir,
                     extra_patterns=extra_patterns,
                     **kwargs,
@@ -700,18 +700,17 @@ class ModelManagement(Generic[T]):
         cls,
         model: T,
         cache_dir: str,
-        extra_patterns: list[str],
-        hf_source: str | None,
-        url_source: str | None,
         **kwargs: Any,
     ) -> Path | None:
         """Attempts to download the model from available sources once."""
         local_files_only = kwargs.get("local_files_only", False)
+        hf_source = model.sources.hf
+        url_source = model.sources.url
+
         if hf_source and not local_files_only:
             hf_path = cls._download_from_hf(
-                hf_source=hf_source,
+                model=model,
                 cache_dir=cache_dir,
-                extra_patterns=extra_patterns,
                 **kwargs,
             )
             if hf_path:
@@ -734,9 +733,6 @@ class ModelManagement(Generic[T]):
         model: T,
         cache_dir: str,
         retries: int,
-        extra_patterns: list[str],
-        hf_source: str | None,
-        url_source: str | None,
         **kwargs: Any,
     ) -> Path | None:
         """Manages the retry loop and exponential backoff for model downloading."""
@@ -748,9 +744,6 @@ class ModelManagement(Generic[T]):
             path = cls._attempt_download(
                 model=model,
                 cache_dir=cache_dir,
-                extra_patterns=extra_patterns,
-                hf_source=hf_source,
-                url_source=url_source,
                 **kwargs,
             )
             if path:
@@ -801,17 +794,11 @@ class ModelManagement(Generic[T]):
 
         retries = 1 if local_files_only else retries
         hf_source = model.sources.hf
-        url_source = model.sources.url
-
-        extra_patterns = [model.model_file]
-        extra_patterns.extend(model.additional_files)
 
         if hf_source:
             cached_path = cls._check_hf_cache(
-                hf_source=hf_source,
+                model=model,
                 cache_dir=cache_dir,
-                extra_patterns=extra_patterns,
-                model_file=model.model_file,
                 **kwargs,
             )
             if cached_path:
@@ -821,9 +808,6 @@ class ModelManagement(Generic[T]):
             model=model,
             cache_dir=cache_dir,
             retries=retries,
-            extra_patterns=extra_patterns,
-            hf_source=hf_source,
-            url_source=url_source,
             **kwargs,
         )
 
