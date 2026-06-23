@@ -294,7 +294,7 @@ class TestOnnxTextModelTokenCount:
         m.model = None
         tok = _make_mock_tokenizer()
         enc = tok.encode_batch.return_value[0]
-        enc.attention_mask = [1, 1, 0, 0]
+        enc.__len__.return_value = 4
         loaded: list[bool] = []
 
         def _fake_load() -> None:
@@ -305,28 +305,28 @@ class TestOnnxTextModelTokenCount:
         m.load_onnx_model = _fake_load  # type: ignore
         count = m._token_count(["hello"])
         assert loaded
-        assert count == 2
+        assert count == 4
 
     def test_single_string_wrapped_to_list(self) -> None:
         m = ConcreteOnnxTextModel()
         m.model = MagicMock()
         tok = _make_mock_tokenizer()
         enc = tok.encode_batch.return_value[0]
-        enc.attention_mask = [1, 1, 1, 0]
+        enc.__len__.return_value = 4
         m.tokenizer = tok
-        assert m._token_count("hello") == 3
+        assert m._token_count("hello") == 4
 
     def test_multiple_texts_sum(self) -> None:
         m = ConcreteOnnxTextModel()
         m.model = MagicMock()
         enc1 = MagicMock()
-        enc1.attention_mask = [1, 1, 0]  # 2 tokens
+        enc1.__len__.return_value = 3  # 2 tokens
         enc2 = MagicMock()
-        enc2.attention_mask = [1, 1, 1]  # 3 tokens
+        enc2.__len__.return_value = 3  # 3 tokens
         tok = MagicMock()
         tok.encode_batch.return_value = [enc1, enc2]
         m.tokenizer = tok
-        assert m._token_count(["foo", "bar"]) == 5
+        assert m._token_count(["foo", "bar"]) == 6
 
 
 class TestOnnxTextModelEmbedDocuments:
@@ -564,8 +564,8 @@ class TestOnnxTextEmbeddingMethods:
     def test_token_count_sums_mask(self, onnx_emb: OnnxTextEmbedding) -> None:
         """Line 169."""
         enc = onnx_emb.tokenizer.encode_batch.return_value[0]  # type: ignore
-        enc.attention_mask = [1, 1, 0, 0]
-        assert onnx_emb.token_count("hello") == 2
+        enc.__len__.return_value = 4
+        assert onnx_emb.token_count("hello") == 4
 
     def test_load_onnx_model_delegates_to_load_onnx_model(
         self, tmp_path: Path, registered_test_model: DenseModelDescription

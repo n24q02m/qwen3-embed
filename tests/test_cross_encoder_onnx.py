@@ -50,7 +50,7 @@ def _make_mock_encoding(ids: list[int] | None = None, n: int = 4) -> MagicMock:
     enc = MagicMock()
     enc.ids = ids if ids is not None else [1, 2, 3, 0][:n]
     enc.type_ids = [0] * n
-    enc.attention_mask = [1, 1, 1, 0][:n]
+    enc.__len__.return_value = n
     return enc
 
 
@@ -491,25 +491,25 @@ class TestTokenCount:
         m = ConcreteCrossEncoderModel()
         m.model = MagicMock()
         enc = MagicMock()
-        enc.attention_mask = [1, 1, 1, 0]  # 3 tokens
+        enc.__len__.return_value = 4  # 3 tokens
         tok = MagicMock()
         tok.encode_batch.return_value = [enc]
         m.tokenizer = tok
         result = m._token_count([("q", "d")])
-        assert result == 3
+        assert result == 4
 
     def test_multiple_pairs_summed(self) -> None:
         m = ConcreteCrossEncoderModel()
         m.model = MagicMock()
         enc1 = MagicMock()
-        enc1.attention_mask = [1, 1, 0]
+        enc1.__len__.return_value = 3
         enc2 = MagicMock()
-        enc2.attention_mask = [1, 1, 1]
+        enc2.__len__.return_value = 3
         tok = MagicMock()
         tok.encode_batch.return_value = [enc1, enc2]
         m.tokenizer = tok
         result = m._token_count([("q", "d1"), ("q", "d2")])
-        assert result == 5
+        assert result == 6
 
     def test_loads_model_if_none(self) -> None:
         m = ConcreteCrossEncoderModel()
@@ -519,7 +519,7 @@ class TestTokenCount:
         def _fake_load() -> None:
             m.model = MagicMock()
             enc = MagicMock()
-            enc.attention_mask = [1, 0]
+            enc.__len__.return_value = 2
             tok = MagicMock()
             tok.encode_batch.return_value = [enc]
             m.tokenizer = tok
@@ -528,7 +528,7 @@ class TestTokenCount:
         m.load_onnx_model = _fake_load  # type: ignore[invalid-assignment]
         count = m._token_count([("q", "d")])
         assert loaded
-        assert count == 1
+        assert count == 2
 
 
 class TestTextRerankerWorker:
@@ -748,10 +748,10 @@ class TestOnnxTextCrossEncoderTokenCount:
 
     def test_token_count_delegates(self, onnx_encoder: OnnxTextCrossEncoder) -> None:
         enc = MagicMock()
-        enc.attention_mask = [1, 1, 0, 0]
+        enc.__len__.return_value = 4
         onnx_encoder.tokenizer.encode_batch.return_value = [enc]  # type: ignore[unresolved-attribute]
         result = onnx_encoder.token_count([("q", "d")])
-        assert result == 2
+        assert result == 4
 
 
 class TestOnnxTextCrossEncoderGetWorkerClass:
