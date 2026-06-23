@@ -15,6 +15,7 @@ class TestModelManagementExtra:
     def test_get_session_init(self):
         """Test that _get_session initializes the session if it's None."""
         from qwen3_embed.common import model_management
+
         # Save original session
         old_shared = model_management._SHARED_SESSION
         model_management._SHARED_SESSION = None
@@ -29,6 +30,7 @@ class TestModelManagementExtra:
             assert session2 is session
         finally:
             model_management._SHARED_SESSION = old_shared
+
     def test_decompress_absolute_path_mock(self, tmp_path):
         """Mock getmembers to return an absolute path to trigger line 371."""
         tar_path = tmp_path / "test.tar.gz"
