@@ -1167,8 +1167,9 @@ class TestDownloadFromHF:
         expected_path = tmp_path / "model_dir"
         mock_hf.return_value = str(expected_path)
 
+        model = make_model_description(hf="org/repo")
         result = ModelManagement._download_from_hf(
-            hf_source="org/repo", cache_dir=str(tmp_path), extra_patterns=["*.onnx"]
+            model=model, cache_dir=str(tmp_path)
         )
 
         assert result == expected_path
@@ -1187,10 +1188,10 @@ class TestDownloadFromHF:
         else:
             mock_hf.side_effect = exception_cls("Error message")
 
+        model = make_model_description(hf="org/repo")
         result = ModelManagement._download_from_hf(
-            hf_source="org/repo",
+            model=model,
             cache_dir=str(tmp_path),
-            extra_patterns=["*.onnx"],
             local_files_only=False,
         )
 
@@ -1208,10 +1209,10 @@ class TestDownloadFromHF:
         """Verify exceptions return None without logging when local_files_only is True."""
         mock_hf.side_effect = OSError("Error message")
 
+        model = make_model_description(hf="org/repo")
         result = ModelManagement._download_from_hf(
-            hf_source="org/repo",
+            model=model,
             cache_dir=str(tmp_path),
-            extra_patterns=["*.onnx"],
             local_files_only=True,
         )
 
@@ -1605,11 +1606,10 @@ class TestCheckHFCache:
 
         mock_download.return_value = str(snapshot_dir)
 
+        model = make_model_description(hf="org/repo")
         result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+            model=model,
             cache_dir=str(cache_dir),
-            extra_patterns=[model_file],
-            model_file=model_file,
         )
 
         assert result == snapshot_dir
@@ -1628,15 +1628,13 @@ class TestCheckHFCache:
         snapshot_dir.mkdir()
 
         # We purposely do not create the model file
-        model_file = "model.onnx"
 
         mock_download.return_value = str(snapshot_dir)
 
+        model = make_model_description(hf="org/repo")
         result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+            model=model,
             cache_dir=str(cache_dir),
-            extra_patterns=[model_file],
-            model_file=model_file,
         )
 
         assert result is None
@@ -1651,13 +1649,11 @@ class TestCheckHFCache:
         cache_dir.mkdir()
 
         mock_download.side_effect = OSError("Not found in cache")
-        model_file = "model.onnx"
 
+        model = make_model_description(hf="org/repo")
         result = ModelManagement._check_hf_cache(
-            hf_source="org/repo",
+            model=model,
             cache_dir=str(cache_dir),
-            extra_patterns=[model_file],
-            model_file=model_file,
         )
 
         assert result is None
