@@ -109,7 +109,7 @@ from qwen3_embed.common.types import PathInput, Device
 
 ```
 qwen3_embed/                      # Main package (not src layout)
-  __init__.py                     # Public API: TextEmbedding, TextCrossEncoder
+  __init__.py                     # Public API: TextEmbedding
   py.typed                        # PEP 561 marker
   parallel_processor.py           # Multiprocessing worker pool
   common/                         # Shared utilities
