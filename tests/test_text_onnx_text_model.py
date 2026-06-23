@@ -606,3 +606,66 @@ class TestOnnxTextEmbeddingWorkerInit:
             )
         assert isinstance(worker.model, OnnxTextEmbedding)
         assert worker.model.model_name == _MODEL_NAME
+
+
+# ===========================================================================
+# Robustness tests for OnnxTextModel
+# ===========================================================================
+
+
+class TestOnnxTextModelRobustness:
+    def test_token_count_empty_generator(self) -> None:
+        m = ConcreteOnnxTextModel()
+        m.model = MagicMock()
+        m.tokenizer = _make_mock_tokenizer()  # type: ignore[invalid-assignment]
+
+        def empty_gen():
+            yield from []
+
+        assert m._token_count(empty_gen()) == 0
+
+    def test_onnx_embed_empty_list_raises_or_empty(self) -> None:
+        m = ConcreteOnnxTextModel()
+        m.model = _make_mock_session((0, 4))
+        m.model_input_names = {"input_ids"}
+        tok = MagicMock()
+        tok.encode_batch.return_value = []
+        m.tokenizer = tok  # type: ignore[invalid-assignment]
+
+        ctx = m.onnx_embed([])
+        assert ctx.model_output.shape[0] == 0
+
+    def test_embed_documents_parallel_small_input_stays_single_process(self) -> None:
+        m = ConcreteOnnxTextModel()
+        m.model = _make_mock_session((1, 4))
+        m.model_input_names = {"input_ids"}
+        m.tokenizer = _make_mock_tokenizer()  # type: ignore[invalid-assignment]
+
+        # parallel=2 but only 1 document, batch_size=256
+        with patch("qwen3_embed.text.onnx_text_model.ParallelWorkerPool") as mock_pool:
+            results = list(m._embed_documents("t", "/tmp", documents=["hi"], parallel=2))
+            assert len(results) == 1
+            mock_pool.assert_not_called()
+
+    def test_extra_worker_params_propagation(self) -> None:
+        class CustomModel(ConcreteOnnxTextModel):
+            def _extra_worker_params(self):
+                return {"custom_key": "custom_val"}
+
+        m = CustomModel()
+        m.model = _make_mock_session()
+        m.tokenizer = _make_mock_tokenizer()  # type: ignore[invalid-assignment]
+
+        out = OnnxOutputContext(model_output=np.ones((1, 4)))
+        with patch("qwen3_embed.text.onnx_text_model.ParallelWorkerPool") as mock_cls:
+            pool = MagicMock()
+            pool.ordered_map.return_value = [out]
+            mock_cls.return_value = pool
+
+            # documents length must be >= batch_size to trigger parallel if parallel is not small
+            list(m._embed_documents("t", "/tmp", documents=["a", "b"], batch_size=1, parallel=2))
+
+        # Verify params passed to ordered_map or constructor?
+        # Params are merged into 'params' dict passed to pool.ordered_map
+        _, kwargs = pool.ordered_map.call_args
+        assert kwargs["custom_key"] == "custom_val"
