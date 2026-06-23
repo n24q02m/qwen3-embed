@@ -561,6 +561,7 @@ def test_process_stream_error_signal():
 
     pool.join_or_terminate.assert_called_once()
 
+
 def test_join_or_terminate_mixed_states():
     """Test join_or_terminate with multiple processes in different states."""
     pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=3))
