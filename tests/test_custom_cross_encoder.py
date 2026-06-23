@@ -55,7 +55,7 @@ class TestCustomRerankerSpec:
         CustomTextCrossEncoder.SUPPORTED_MODELS.clear()
 
     def test_spec_registers_reranker(self):
-        from qwen3_embed import CustomRerankerSpec
+        from qwen3_embed.common.custom_model import CustomRerankerSpec
 
         CustomRerankerSpec(
             model_id="Org/gte-multilingual-reranker-base",
@@ -67,7 +67,7 @@ class TestCustomRerankerSpec:
         assert "org/gte-multilingual-reranker-base" in models
 
     def test_spec_passes_through_metadata(self):
-        from qwen3_embed import CustomRerankerSpec
+        from qwen3_embed.common.custom_model import CustomRerankerSpec
 
         CustomRerankerSpec(
             model_id="Org/full-meta-reranker",
@@ -89,7 +89,7 @@ class TestCustomRerankerSpec:
         assert target["additional_files"] == ["config.json"]
 
     def test_spec_accepts_url_source(self):
-        from qwen3_embed import CustomRerankerSpec
+        from qwen3_embed.common.custom_model import CustomRerankerSpec
 
         CustomRerankerSpec(
             model_id="local/url-reranker",
@@ -100,7 +100,7 @@ class TestCustomRerankerSpec:
         assert "local/url-reranker" in models
 
     def test_spec_duplicate_raises(self):
-        from qwen3_embed import CustomRerankerSpec
+        from qwen3_embed.common.custom_model import CustomRerankerSpec
 
         CustomRerankerSpec(
             model_id="Org/dup-reranker",

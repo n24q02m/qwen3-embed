@@ -25,7 +25,8 @@ class CustomModelSpec:
 
     Usage::
 
-        from qwen3_embed import CustomModelSpec, TextEmbedding
+        from qwen3_embed.common.custom_model import CustomModelSpec
+        from qwen3_embed.text import TextEmbedding
 
         CustomModelSpec(
             model_id="Org/gte-multilingual-base-onnx",
@@ -49,7 +50,7 @@ class CustomModelSpec:
 
     def register(self) -> None:
         """Register this model with :class:`TextEmbedding` so it can be loaded by id."""
-        from qwen3_embed import TextEmbedding
+        from qwen3_embed.text import TextEmbedding
 
         if self.dim is None:
             raise ValueError("dim is required for an embedding model")
@@ -81,7 +82,8 @@ class CustomRerankerSpec:
 
     Usage::
 
-        from qwen3_embed import CustomRerankerSpec, TextCrossEncoder
+        from qwen3_embed.common.custom_model import CustomRerankerSpec
+        from qwen3_embed.rerank import TextCrossEncoder
 
         CustomRerankerSpec(
             model_id="onnx-community/gte-multilingual-reranker-base",
@@ -104,7 +106,7 @@ class CustomRerankerSpec:
 
     def register(self) -> None:
         """Register this reranker with :class:`TextCrossEncoder` so it loads by id."""
-        from qwen3_embed import TextCrossEncoder
+        from qwen3_embed.rerank import TextCrossEncoder
 
         model_description = BaseModelDescription(
             model=self.model_id,

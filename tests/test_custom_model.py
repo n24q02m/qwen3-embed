@@ -28,7 +28,7 @@ def test_custom_post_process_honors_dim():
 
 
 def test_custom_model_spec_registers_embedder():
-    from qwen3_embed import CustomModelSpec
+    from qwen3_embed.common.custom_model import CustomModelSpec
 
     CustomTextEmbedding._SUPPORTED.clear()
     CustomModelSpec(
@@ -50,7 +50,7 @@ def test_custom_model_spec_registers_embedder():
 
 
 def test_custom_model_spec_requires_dim():
-    from qwen3_embed import CustomModelSpec
+    from qwen3_embed.common.custom_model import CustomModelSpec
 
     with pytest.raises(ValueError, match="dim is required"):
         CustomModelSpec(model_id="Org/no-dim", hf="Org/no-dim").register()
