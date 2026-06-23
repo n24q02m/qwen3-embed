@@ -226,7 +226,8 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         """Score pre-formed (query, document) pairs."""
         instruction = self._sanitize_input(kwargs.pop("instruction", DEFAULT_INSTRUCTION))
         texts = [
-            self._format_rerank_input(self._sanitize_input(q), doc, instruction) for q, doc in pairs
+            self._format_rerank_input(self._sanitize_input(q), doc, instruction)
+            for q, doc in pairs
         ]
         return self._onnx_embed_texts(texts, **kwargs)
 
