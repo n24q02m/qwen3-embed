@@ -14,6 +14,7 @@ instead of the typical ``(batch, num_labels)`` from cross-encoders.
 """
 
 import re
+from collections.abc import Iterable
 from typing import Any
 
 import numpy as np
@@ -215,19 +216,19 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     # ------------------------------------------------------------------
     # Override ONNX inference to use chat-template + CausalLM scoring
     # ------------------------------------------------------------------
-    def onnx_embed(self, query: str, documents: list[str], **kwargs: Any) -> OnnxOutputContext:
+    def onnx_embed(self, query: str, documents: Iterable[str], **kwargs: Any) -> OnnxOutputContext:
         """Score query-document pairs using the Qwen3 chat template."""
         instruction = kwargs.pop("instruction", DEFAULT_INSTRUCTION)
-        texts = [self._format_rerank_input(query, doc, instruction) for doc in documents]
+        texts = (self._format_rerank_input(query, doc, instruction) for doc in documents)
         return self._onnx_embed_texts(texts, **kwargs)
 
-    def onnx_embed_pairs(self, pairs: list[tuple[str, str]], **kwargs: Any) -> OnnxOutputContext:
+    def onnx_embed_pairs(self, pairs: Iterable[tuple[str, str]], **kwargs: Any) -> OnnxOutputContext:
         """Score pre-formed (query, document) pairs."""
         instruction = kwargs.pop("instruction", DEFAULT_INSTRUCTION)
-        texts = [self._format_rerank_input(query, doc, instruction) for query, doc in pairs]
+        texts = (self._format_rerank_input(query, doc, instruction) for query, doc in pairs)
         return self._onnx_embed_texts(texts, **kwargs)
 
-    def _onnx_embed_texts(self, texts: list[str], **kwargs: Any) -> OnnxOutputContext:
+    def _onnx_embed_texts(self, texts: Iterable[str], **kwargs: Any) -> OnnxOutputContext:
         """Score each text independently (batch=1, no padding) — issue #725.
 
         The reranker ONNX graph bakes ``position_ids = arange(seq_len)`` starting at
