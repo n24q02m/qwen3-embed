@@ -458,13 +458,16 @@ class ModelManagement(Generic[T]):
             return False
 
     @classmethod
-    def _validate_tar_member(cls, member: tarfile.TarInfo, cache_dir: str) -> None:
+    def _validate_tar_member(cls, member: tarfile.TarInfo, cache_dir: str) -> tarfile.TarInfo:
         """
         Validates a tar member to prevent path traversal attacks.
 
         Args:
             member (tarfile.TarInfo): The tar member to validate.
             cache_dir (str): The absolute path to the extraction directory.
+
+        Returns:
+            tarfile.TarInfo: The validated tar member.
 
         Raises:
             tarfile.TarError: If a path traversal attempt is detected.
@@ -505,6 +508,8 @@ class ModelManagement(Generic[T]):
                     f"Attempted path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
                 )
 
+        return member
+
     @classmethod
     def decompress_to_cache(cls, targz_path: str, cache_dir: str) -> str:
         """
@@ -535,27 +540,45 @@ class ModelManagement(Generic[T]):
                     total_size = 0
                     max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
                     for member in tar:
+                        # Perform security checks in the generator to ensure they trigger
+                        # even when extractall is mocked in tests to ignore filters.
                         cls._validate_tar_member(member, target_dir)
-                        total_size += member.size
+
+                        # Decompression bomb protection
+                        member_size = getattr(member, "size", 0)
+                        if isinstance(member_size, (int, float)):
+                            total_size += int(member_size)
+
                         if total_size > max_uncompressed_size:
                             raise tarfile.TarError(
                                 f"Decompression bomb detected: total uncompressed size exceeds {max_uncompressed_size} bytes"
                             )
                         yield member
 
+                def security_filter(member: tarfile.TarInfo, path: str) -> tarfile.TarInfo | None:
+                    if hasattr(tarfile, "data_filter"):
+                        # On Python 3.12+, delegate metadata sanitization to the built-in filter.
+                        return tarfile.data_filter(member, path)
+
+                    # On Python 3.11, perform manual metadata sanitization
+                    member.mode &= 0o777
+                    member.uid = member.gid = 0
+                    member.uname = member.gname = ""
+                    return member
+
                 if hasattr(tarfile, "data_filter"):
+                    # Python 3.12+ supports the filter argument in extractall.
                     tar.extractall(
-                        path=cache_dir, members=validate_and_yield_members(), filter="data"
+                        path=cache_dir,
+                        members=validate_and_yield_members(),
+                        filter=security_filter,
                     )
                 else:
+                    # Fallback for Python 3.11
                     for member in validate_and_yield_members():
-                        # Sanitize metadata to mimic "data" filter
-                        member.mode &= 0o777
-                        member.uid = 0
-                        member.gid = 0
-                        member.uname = ""
-                        member.gname = ""
-                        tar.extract(member, path=cache_dir)
+                        safe_member = security_filter(member, target_dir)
+                        if safe_member is not None:
+                            tar.extract(safe_member, path=cache_dir)
         except tarfile.TarError as e:
             # If decompression fails, remove the partially extracted directory
             shutil.rmtree(cache_dir, ignore_errors=True)
