@@ -14,6 +14,7 @@ import pytest
 import requests
 from huggingface_hub.errors import RepositoryNotFoundError
 from huggingface_hub.hf_api import RepoFile
+from loguru import logger
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
 from qwen3_embed.common.model_management import ModelManagement
@@ -82,6 +83,30 @@ class ConcreteModelManagement(ModelManagement):
 
 # ---------------------------------------------------------------------------
 # TestAbstractMethods
+# ---------------------------------------------------------------------------
+
+
+class TestGetSession:
+    """Tests for _get_session initialization."""
+
+    def test_get_session_init(self):
+        """Test that _get_session initializes the session if it is None."""
+        # Save original session to restore it later
+        original_session = ModelManagement._session
+        ModelManagement._session = None
+        try:
+            session = ModelManagement._get_session()
+            assert isinstance(session, requests.Session)
+            assert ModelManagement._session is session
+            assert session.trust_env is False
+
+            # Second call should return the same session
+            session2 = ModelManagement._get_session()
+            assert session2 is session
+        finally:
+            ModelManagement._session = original_session
+
+
 # ---------------------------------------------------------------------------
 
 
@@ -693,10 +718,67 @@ class TestDecompressToCache:
 
         assert not cache_dir.exists()
 
+    # ---------------------------------------------------------------------------
+    # TestDownloadFilesFromHuggingFace
+    # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# TestDownloadFilesFromHuggingFace
-# ---------------------------------------------------------------------------
+    def test_decompress_no_data_filter(self, tmp_path):
+        """Cover fallback by mocking tarfile to lack data_filter and verify manual extraction loop."""
+        tar_path = tmp_path / "test.tar.gz"
+        with tarfile.open(tar_path, "w:gz") as tar:
+            info = tarfile.TarInfo(name="file.txt")
+            info.size = 0
+            tar.addfile(info, io.BytesIO(b""))
+
+        cache_dir = tmp_path / "cache_no_filter"
+        cache_dir.mkdir()
+
+        # We patch the tarfile module in the model_management namespace
+        with patch("qwen3_embed.common.model_management.tarfile") as mock_tarfile_mod:
+            # Setup mock_tar
+            mock_tar = MagicMock()
+            mock_tarfile_mod.open.return_value.__enter__.return_value = mock_tar
+
+            # Mock getmembers to return a list of members
+            member = MagicMock()
+            member.name = "file.txt"
+            member.isreg.return_value = True
+            member.isdir.return_value = False
+            member.issym.return_value = False
+            member.islnk.return_value = False
+            member.size = 0
+            mock_tar.__iter__.return_value = iter([member])
+            mock_tarfile_mod.TarError = tarfile.TarError
+
+            # Ensure hasattr(tarfile, "data_filter") returns False
+            del mock_tarfile_mod.data_filter
+
+            ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
+            # Verify extract was called for the member (since extractall is no longer called in fallback)
+            mock_tar.extract.assert_called_once_with(member, path=str(cache_dir))
+            # Verify metadata sanitization
+            assert member.uid == 0
+            assert member.gid == 0
+            assert member.uname == ""
+            assert member.gname == ""
+
+    def test_decompress_logging_on_error(self, tmp_path):
+        """Verify logger.error is called on TarError."""
+        tar_path = tmp_path / "corrupt.tar.gz"
+        tar_path.write_text("not a tar file")
+
+        cache_dir = tmp_path / "cache_err"
+        cache_dir.mkdir()
+
+        with patch.object(logger, "error") as mock_log_error:
+            with pytest.raises(tarfile.TarError):
+                ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
+            mock_log_error.assert_called()
+            # Verify the log message contains the filename
+            args, _ = mock_log_error.call_args
+            assert str(tar_path) in args[0]
 
 
 class TestDownloadFilesFromHuggingFace:
@@ -1894,6 +1976,35 @@ class TestFetchRepoFiles:
         assert repo_files == []
 
 
+class TestIsWithinDir:
+    """Tests for _is_within_dir static method."""
+
+    def test_is_within_dir_same_path(self):
+        """Test _is_within_dir with the same path for base and candidate."""
+        path = "/tmp/cache"
+        assert ModelManagement._is_within_dir(path, path) is True
+
+    def test_is_within_dir_value_error(self):
+        """Test _is_within_dir when commonpath raises ValueError (e.g. cross-drive on Windows)."""
+        with patch("os.path.commonpath", side_effect=ValueError):
+            assert ModelManagement._is_within_dir("/tmp/base", "/tmp/candidate") is False
+
+    def test_is_within_dir_relative(self):
+        """Test _is_within_dir with various relative path combinations."""
+        assert ModelManagement._is_within_dir(".", "foo") is True
+        assert ModelManagement._is_within_dir(".", "..") is False
+        assert ModelManagement._is_within_dir("a", "a/b") is True
+        assert ModelManagement._is_within_dir("a", "b") is False
+
+    def test_is_within_dir_sibling_prefix(self):
+        """Test _is_within_dir avoids false positives with sibling prefixes."""
+        # "cache-evil" starts with "cache" but is not inside it
+        assert ModelManagement._is_within_dir("cache", "cache-evil") is False
+
+
+# ---------------------------------------------------------------------------
+
+
 class TestValidateTarMember:
     """Tests for _validate_tar_member: must allow safe relative members while
     blocking absolute paths and ``..`` traversal (cross-platform)."""
@@ -1993,3 +2104,20 @@ class TestValidateTarMember:
                 self._member("link", is_reg=False, is_lnk=True, linkname="../outside.txt"),
                 str(tmp_path),
             )
+
+    def test_validate_tar_member_current_dir(self, tmp_path):
+        """Test _validate_tar_member with a member named "." (current directory)."""
+        member = self._member(".", is_reg=False, is_dir=True)
+        # This should not raise an error and will cover base == candidate in _is_within_dir
+        ModelManagement._validate_tar_member(member, str(tmp_path))
+
+    def test_blocks_sibling_directory_traversal(self, tmp_path):
+        """Test that _validate_tar_member blocks traversal into a sibling directory."""
+        # cache-evil is a sibling of cache
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        member = self._member("../cache-evil/file.txt")
+
+        with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
+            ModelManagement._validate_tar_member(member, str(cache_dir))
