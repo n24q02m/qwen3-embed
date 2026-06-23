@@ -1231,8 +1231,10 @@ class TestRetrieveModelGcs:
 
         with patch.object(ModelManagement, "download_file_from_gcs") as mock_dl:
             result = ModelManagement.retrieve_model_gcs(
-                model_name="model/name",
-                source_url="http://example.com/model.tar.gz",
+                model=BaseModelDescription(
+                    model="model/name",
+                    sources=ModelSource(url="http://example.com/model.tar.gz"),
+                ),
                 cache_dir=str(tmp_path),
             )
         mock_dl.assert_not_called()
@@ -1242,8 +1244,10 @@ class TestRetrieveModelGcs:
         """local_files_only=True when model dir is absent raises ValueError."""
         with pytest.raises(ValueError, match="local_files_only=True"):
             ModelManagement.retrieve_model_gcs(
-                model_name="test/model",
-                source_url="http://example.com/model.tar.gz",
+                model=BaseModelDescription(
+                    model="test/model",
+                    sources=ModelSource(url="http://example.com/model.tar.gz"),
+                ),
                 cache_dir=str(tmp_path),
                 local_files_only=True,
             )
@@ -1270,8 +1274,10 @@ class TestRetrieveModelGcs:
             patch.object(ModelManagement, "decompress_to_cache", side_effect=fake_decompress),
         ):
             result = ModelManagement.retrieve_model_gcs(
-                model_name="model",
-                source_url="http://example.com/model.tar.gz",
+                model=BaseModelDescription(
+                    model="model",
+                    sources=ModelSource(url="http://example.com/model.tar.gz"),
+                ),
                 cache_dir=str(tmp_path),
             )
         assert result == tmp_path / "model"
@@ -1295,8 +1301,10 @@ class TestRetrieveModelGcs:
             patch.object(ModelManagement, "decompress_to_cache", side_effect=fake_decompress),
         ):
             result = ModelManagement.retrieve_model_gcs(
-                model_name=model_name,
-                source_url="http://example.com/mymodel.tar.gz",
+                model=BaseModelDescription(
+                    model=model_name,
+                    sources=ModelSource(url="http://example.com/mymodel.tar.gz"),
+                ),
                 cache_dir=str(tmp_path),
             )
         tar_gz = tmp_path / f"{model_name}.tar.gz"
@@ -1313,8 +1321,10 @@ class TestRetrieveModelGcs:
             pytest.raises(ValueError, match="Could not find"),
         ):
             ModelManagement.retrieve_model_gcs(
-                model_name="missing",
-                source_url="http://example.com/missing.tar.gz",
+                model=BaseModelDescription(
+                    model="missing",
+                    sources=ModelSource(url="http://example.com/missing.tar.gz"),
+                ),
                 cache_dir=str(tmp_path),
             )
 
@@ -1337,10 +1347,13 @@ class TestRetrieveModelGcs:
             patch.object(ModelManagement, "decompress_to_cache", side_effect=fake_decompress),
         ):
             result = ModelManagement.retrieve_model_gcs(
-                model_name=model_name,
-                source_url="http://example.com/fast-mymodel.tar.gz",
+                model=BaseModelDescription(
+                    model=model_name,
+                    sources=ModelSource(
+                        url="http://example.com/fast-mymodel.tar.gz", _deprecated_tar_struct=True
+                    ),
+                ),
                 cache_dir=str(tmp_path),
-                deprecated_tar_struct=True,
             )
         assert result.name == "fast-mymodel"
 

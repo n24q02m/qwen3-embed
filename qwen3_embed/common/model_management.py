@@ -565,18 +565,30 @@ class ModelManagement(Generic[T]):
         return cache_dir
 
     @classmethod
-    def retrieve_model_gcs(
-        cls,
-        model_name: str,
-        source_url: str,
-        cache_dir: str,
-        deprecated_tar_struct: bool = False,
-        local_files_only: bool = False,
-    ) -> Path:
+    def _get_gcs_model_paths(
+        cls, model_name: str, cache_dir: str | Path, deprecated_tar_struct: bool
+    ) -> tuple[Path, Path, Path, Path]:
         fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{model_name.split('/')[-1]}"
         cache_tmp_dir = Path(cache_dir) / "tmp"
         model_tmp_dir = cache_tmp_dir / fast_model_name
         model_dir = Path(cache_dir) / fast_model_name
+        model_tar_gz = Path(cache_dir) / f"{fast_model_name}.tar.gz"
+        return cache_tmp_dir, model_tmp_dir, model_dir, model_tar_gz
+
+    @classmethod
+    def retrieve_model_gcs(
+        cls,
+        model: T,
+        cache_dir: str | Path,
+        local_files_only: bool = False,
+    ) -> Path:
+        model_name = model.model
+        source_url = str(model.sources.url)
+        deprecated_tar_struct = model.sources.deprecated_tar_struct
+
+        cache_tmp_dir, model_tmp_dir, model_dir, model_tar_gz = cls._get_gcs_model_paths(
+            model_name, cache_dir, deprecated_tar_struct
+        )
 
         # check if the model_dir and the model files are both present for macOS
         # ⚡ Bolt: Fast directory check avoiding hidden files like .DS_Store (~10x faster than list(glob("*")))
@@ -591,8 +603,6 @@ class ModelManagement(Generic[T]):
         if not cache_tmp_dir.is_symlink():
             with contextlib.suppress(OSError):
                 cache_tmp_dir.chmod(0o700)
-
-        model_tar_gz = Path(cache_dir) / f"{fast_model_name}.tar.gz"
 
         if model_tar_gz.exists():
             model_tar_gz.unlink()
@@ -684,10 +694,8 @@ class ModelManagement(Generic[T]):
         local_files_only = kwargs.get("local_files_only", False)
         try:
             return cls.retrieve_model_gcs(
-                model.model,
-                str(url_source),
-                str(cache_dir),
-                deprecated_tar_struct=model.sources.deprecated_tar_struct,
+                model,
+                cache_dir,
                 local_files_only=local_files_only,
             )
         except (OSError, ValueError, requests.RequestException, tarfile.TarError):
