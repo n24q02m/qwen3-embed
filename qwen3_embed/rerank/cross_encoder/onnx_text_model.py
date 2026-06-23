@@ -1,5 +1,5 @@
 import os
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from multiprocessing import get_all_start_methods
 from typing import Any
 
@@ -10,7 +10,6 @@ from qwen3_embed.common.onnx_model import (
     EmbeddingWorker,
     OnnxModel,
     OnnxOutputContext,
-    OnnxProvider,
 )
 from qwen3_embed.common.types import Device, NumpyArray
 from qwen3_embed.common.utils import iter_batch
@@ -79,14 +78,28 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         pairs: Iterable[tuple[str, str]],
         batch_size: int,
         parallel: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        local_files_only: bool = False,
-        specific_model_path: str | None = None,
-        extra_session_options: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Iterable[float]:
+        pairs, is_small = self._prepare_pairs(pairs, batch_size)
+
+        if parallel is None or is_small:
+            if not hasattr(self, "model") or self.model is None:
+                self.load_onnx_model()
+            for batch in iter_batch(pairs, batch_size):
+                yield from self._post_process_onnx_output(self.onnx_embed_pairs(batch, **kwargs))
+        else:
+            yield from self._rerank_pairs_parallel(
+                model_name=model_name,
+                cache_dir=cache_dir,
+                pairs=pairs,
+                batch_size=batch_size,
+                parallel=parallel,
+                **kwargs,
+            )
+
+    def _prepare_pairs(
+        self, pairs: Iterable[tuple[str, str]], batch_size: int
+    ) -> tuple[Iterable[tuple[str, str]], bool]:
         is_small = False
 
         if isinstance(pairs, tuple):
@@ -96,44 +109,52 @@ class OnnxCrossEncoderModel(OnnxModel[float]):
         if isinstance(pairs, list) and len(pairs) < batch_size:
             is_small = True
 
-        if parallel is None or is_small:
-            if not hasattr(self, "model") or self.model is None:
-                self.load_onnx_model()
-            for batch in iter_batch(pairs, batch_size):
-                yield from self._post_process_onnx_output(self.onnx_embed_pairs(batch, **kwargs))
-        else:
-            if parallel == 0:
-                parallel = os.cpu_count()
+        return pairs, is_small
 
-            start_method = "forkserver" if "forkserver" in get_all_start_methods() else "spawn"
-            params = {
-                "model_name": model_name,
-                "cache_dir": cache_dir,
-                "providers": providers,
-                "local_files_only": local_files_only,
-                "specific_model_path": specific_model_path,
-                **kwargs,
-            }
+    def _rerank_pairs_parallel(
+        self,
+        model_name: str,
+        cache_dir: str,
+        pairs: Iterable[tuple[str, str]],
+        batch_size: int,
+        parallel: int,
+        **kwargs: Any,
+    ) -> Iterable[float]:
+        if parallel == 0:
+            parallel = os.cpu_count() or 1
 
-            if extra_session_options is not None:
-                params.update(extra_session_options)
+        start_method = "forkserver" if "forkserver" in get_all_start_methods() else "spawn"
 
-            # Carry per-instance worker state (e.g. a runtime custom-model
-            # registry) into the spawned workers, which start with a fresh
-            # interpreter + empty registry. Mirrors the embedding pool path.
-            params.update(self._extra_worker_params())
+        # Extract parallel-specific arguments from kwargs
+        cuda = kwargs.pop("cuda", Device.AUTO)
+        device_ids = kwargs.pop("device_ids", None)
+        extra_session_options = kwargs.pop("extra_session_options", None)
 
-            pool = ParallelWorkerPool(
-                worker=self._get_worker_class(),
-                config=PoolConfig(
-                    num_workers=parallel or 1,
-                    cuda=cuda,
-                    device_ids=device_ids,
-                    start_method=start_method,
-                ),
-            )
-            for batch in pool.ordered_map(iter_batch(pairs, batch_size), **params):
-                yield from self._post_process_onnx_output(batch)
+        params = {
+            "model_name": model_name,
+            "cache_dir": cache_dir,
+            **kwargs,
+        }
+
+        if extra_session_options is not None:
+            params.update(extra_session_options)
+
+        # Carry per-instance worker state (e.g. a runtime custom-model
+        # registry) into the spawned workers, which start with a fresh
+        # interpreter + empty registry. Mirrors the embedding pool path.
+        params.update(self._extra_worker_params())
+
+        pool = ParallelWorkerPool(
+            worker=self._get_worker_class(),
+            config=PoolConfig(
+                num_workers=parallel,
+                cuda=cuda,
+                device_ids=device_ids,
+                start_method=start_method,
+            ),
+        )
+        for batch in pool.ordered_map(iter_batch(pairs, batch_size), **params):
+            yield from self._post_process_onnx_output(batch)
 
     def _post_process_onnx_output(
         self, output: OnnxOutputContext, **kwargs: Any
