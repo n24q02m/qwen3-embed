@@ -700,13 +700,15 @@ class ModelManagement(Generic[T]):
         cls,
         model: T,
         cache_dir: str,
-        extra_patterns: list[str],
-        hf_source: str | None,
-        url_source: str | None,
         **kwargs: Any,
     ) -> Path | None:
         """Attempts to download the model from available sources once."""
         local_files_only = kwargs.get("local_files_only", False)
+        hf_source = model.sources.hf
+        url_source = model.sources.url
+        extra_patterns = [model.model_file]
+        extra_patterns.extend(model.additional_files)
+
         if hf_source and not local_files_only:
             hf_path = cls._download_from_hf(
                 hf_source=hf_source,
@@ -734,9 +736,6 @@ class ModelManagement(Generic[T]):
         model: T,
         cache_dir: str,
         retries: int,
-        extra_patterns: list[str],
-        hf_source: str | None,
-        url_source: str | None,
         **kwargs: Any,
     ) -> Path | None:
         """Manages the retry loop and exponential backoff for model downloading."""
@@ -748,9 +747,6 @@ class ModelManagement(Generic[T]):
             path = cls._attempt_download(
                 model=model,
                 cache_dir=cache_dir,
-                extra_patterns=extra_patterns,
-                hf_source=hf_source,
-                url_source=url_source,
                 **kwargs,
             )
             if path:
@@ -821,9 +817,6 @@ class ModelManagement(Generic[T]):
             model=model,
             cache_dir=cache_dir,
             retries=retries,
-            extra_patterns=extra_patterns,
-            hf_source=hf_source,
-            url_source=url_source,
             **kwargs,
         )
 
