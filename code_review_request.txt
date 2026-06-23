@@ -1,0 +1,8 @@
+I have refactored the `_rerank_pairs` method in `qwen3_embed/rerank/cross_encoder/onnx_text_model.py` by extracting its logic into two new helper methods: `_rerank_pairs_serial` and `_rerank_pairs_parallel`.
+
+Changes:
+- `_rerank_pairs`: Now handles argument pre-processing (detecting small inputs) and delegates to the appropriate helper.
+- `_rerank_pairs_serial`: Handles the non-parallelized execution path.
+- `_rerank_pairs_parallel`: Handles the multi-process execution path using `ParallelWorkerPool`.
+
+This reduces the complexity and line count of the main `_rerank_pairs` entry point, improving maintainability. All existing tests pass.
