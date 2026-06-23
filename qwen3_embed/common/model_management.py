@@ -165,6 +165,7 @@ class ModelManagement(Generic[T]):
                     file.write(chunk)
                     sha256_hash.update(chunk)
         return sha256_hash.hexdigest()
+
     @classmethod
     def download_file_from_gcs(cls, url: str, output_path: str, show_progress: bool = True) -> str:
         """
