@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from dataclasses import asdict
 from typing import Any
 
@@ -7,7 +7,7 @@ from qwen3_embed.common.model_description import (
     DenseModelDescription,
     PoolingType,
 )
-from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
+from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.gguf_embedding import Qwen3TextEmbeddingGGUF
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding
@@ -104,31 +104,43 @@ class TextEmbedding(TextEmbeddingBase):
         model_name: str = "n24q02m/Qwen3-Embedding-0.6B-ONNX",
         cache_dir: str | None = None,
         threads: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        lazy_load: bool = False,
         **kwargs: Any,
     ):
+        """
+        Args:
+            model_name (str): The name of the model to use.
+            cache_dir (str, optional): The path to the cache directory.
+            threads (int, optional): The number of threads to use. Defaults to None.
+            **kwargs: Additional arguments to pass to the underlying embedding model.
+                Supported kwargs:
+                - providers (Sequence[OnnxProvider], optional): The list of onnxruntime providers to use.
+                - cuda (bool | Device, optional): Whether to use cuda for inference.
+                - device_ids (list[int], optional): The list of device ids to use.
+                - lazy_load (bool, optional): Whether to load the model during class initialization or on demand.
+        """
         super().__init__(model_name, cache_dir, threads, **kwargs)
         self._build_caches()
+        self.model = self._instantiate_model(model_name, cache_dir, threads, **kwargs)
+
+    def _instantiate_model(
+        self,
+        model_name: str,
+        cache_dir: str | None = None,
+        threads: int | None = None,
+        **kwargs: Any,
+    ) -> TextEmbeddingBase:
         assert self._embedding_type_cache is not None
 
         model_name_lower = model_name.lower()
-        EMBEDDING_MODEL_TYPE = self._embedding_type_cache.get(model_name_lower)
+        embedding_model_type = self._embedding_type_cache.get(model_name_lower)
 
-        if EMBEDDING_MODEL_TYPE is not None:
-            self.model = EMBEDDING_MODEL_TYPE(
+        if embedding_model_type is not None:
+            return embedding_model_type(
                 model_name=model_name,
                 cache_dir=cache_dir,
                 threads=threads,
-                providers=providers,
-                cuda=cuda,
-                device_ids=device_ids,
-                lazy_load=lazy_load,
                 **kwargs,
             )
-            return
 
         raise ValueError(
             f"Model {model_name} is not supported in TextEmbedding. "
