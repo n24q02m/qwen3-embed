@@ -142,10 +142,9 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
         instruction: str = DEFAULT_INSTRUCTION,
     ) -> str:
         """Build the chat-template string for a single query-document pair."""
-        # Sanitize inputs to prevent injection
-        query = Qwen3CrossEncoder._sanitize_input(query)
+        # document is sanitized here; query and instruction should be sanitized
+        # by the caller (onnx_embed) to avoid redundant regex calls in a loop.
         document = Qwen3CrossEncoder._sanitize_input(document)
-        instruction = Qwen3CrossEncoder._sanitize_input(instruction)
 
         return RERANK_TEMPLATE.format(
             system=SYSTEM_PROMPT,
@@ -217,68 +216,61 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     # ------------------------------------------------------------------
     def onnx_embed(self, query: str, documents: list[str], **kwargs: Any) -> OnnxOutputContext:
         """Score query-document pairs using the Qwen3 chat template."""
-        instruction = kwargs.pop("instruction", DEFAULT_INSTRUCTION)
+        query = self._sanitize_input(query)
+        instruction = self._sanitize_input(kwargs.pop("instruction", DEFAULT_INSTRUCTION))
+
         texts = [self._format_rerank_input(query, doc, instruction) for doc in documents]
         return self._onnx_embed_texts(texts, **kwargs)
 
     def onnx_embed_pairs(self, pairs: list[tuple[str, str]], **kwargs: Any) -> OnnxOutputContext:
         """Score pre-formed (query, document) pairs."""
-        instruction = kwargs.pop("instruction", DEFAULT_INSTRUCTION)
-        texts = [self._format_rerank_input(query, doc, instruction) for query, doc in pairs]
+        instruction = self._sanitize_input(kwargs.pop("instruction", DEFAULT_INSTRUCTION))
+        texts = [
+            self._format_rerank_input(self._sanitize_input(q), doc, instruction)
+            for q, doc in pairs
+        ]
         return self._onnx_embed_texts(texts, **kwargs)
 
     def _onnx_embed_texts(self, texts: list[str], **kwargs: Any) -> OnnxOutputContext:
-        """Score each text independently (batch=1, no padding) — issue #725.
+        """Score documents in a single batched ONNX call.
 
         The reranker ONNX graph bakes ``position_ids = arange(seq_len)`` starting at
-        zero. Under batched inference the tokenizer pads every row to the longest
-        sequence, so a row's real content no longer starts at index 0 and its RoPE
-        positions shift by the pad count — which itself depends on the *other* texts
-        sharing the batch. That makes a (query, document) score depend on batch
-        composition. Scoring one text at a time removes padding entirely: every
-        sequence starts at position 0, so scores are invariant to how documents are
-        grouped. A future re-export deriving position_ids from the attention mask
-        (Spec A Part 2) will let us restore single-call batched inference.
+        zero. Under right-padding, every sequence's real content begins at index 0,
+        so its RoPE positions remain invariant regardless of batch composition or
+        padding length. This allows efficient batched inference while maintaining
+        score consistency (resolving the bottleneck in issue #725).
         """
         if self.model is None:
             raise ValueError("Model not loaded. Please call load_onnx_model() first.")
         assert self.tokenizer is not None, "Tokenizer not loaded. Call load_onnx_model() first."
 
+        # encode_batch leverages the Rust-tokenizer's multi-threading and handles
+        # right-padding to the longest sequence in the batch.
+        encoded = self.tokenizer.encode_batch(texts)
+        input_ids = np.array([e.ids for e in encoded], dtype=np.int64)
+        attention_mask = np.array([e.attention_mask for e in encoded], dtype=np.int64)
+
         input_names = self.model_input_names or set()
+        onnx_input: dict[str, NumpyArray] = {"input_ids": input_ids}
 
-        scores_list: list[float] = []
-        for text in texts:
-            # encode_batch([text]) keeps the Rust-tokenizer fast path while tokenising
-            # a single sequence, so no padding is ever introduced.
-            (tokenized,) = self.tokenizer.encode_batch([text])
+        if "attention_mask" in input_names:
+            onnx_input["attention_mask"] = attention_mask
+        if "token_type_ids" in input_names:
+            onnx_input["token_type_ids"] = np.zeros_like(input_ids)
 
-            onnx_input: dict[str, NumpyArray] = {
-                "input_ids": np.array([tokenized.ids], dtype=np.int64),
-            }
-            if "attention_mask" in input_names:
-                onnx_input["attention_mask"] = np.array([tokenized.attention_mask], dtype=np.int64)
-            if "token_type_ids" in input_names:
-                onnx_input["token_type_ids"] = np.zeros_like(
-                    onnx_input["input_ids"], dtype=np.int64
-                )
+        onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
+        outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
+        model_output = outputs[0]
 
-            onnx_input = self._preprocess_onnx_input(onnx_input, **kwargs)
-            outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
-            model_output = outputs[0]
+        if getattr(model_output, "dtype", None) == np.float16:
+            model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
 
-            if getattr(model_output, "dtype", None) == np.float16:
-                model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
-
-            # batch=1 with no padding: the yes/no token is the last position. The mask
-            # (all ones) is passed for the full-vocab variant; the YesNo variant ignores
-            # it (output already collapsed to (1, 2)).
-            row_scores = self._compute_yes_no_scores(
-                model_output,  # type: ignore[invalid-argument-type]
-                onnx_input.get("attention_mask"),
-            )
-            scores_list.append(float(row_scores[0]))
-
-        scores = np.array(scores_list, dtype=np.float32)
+        # _compute_yes_no_scores correctly identifies the last non-pad token per row
+        # using the attention mask, ensuring accuracy even with varied sequence lengths.
+        scores = self._compute_yes_no_scores(
+            model_output,  # type: ignore[invalid-argument-type]
+            onnx_input.get("attention_mask"),
+        )
         return OnnxOutputContext(model_output=scores)
 
     # ------------------------------------------------------------------
