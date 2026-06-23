@@ -9,6 +9,7 @@ import threading
 import time
 import urllib.parse
 import uuid
+from collections.abc import Generator, Iterable
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Generic, TypeVar
@@ -506,6 +507,34 @@ class ModelManagement(Generic[T]):
                 )
 
     @classmethod
+    def _get_safe_members(
+        cls, tar: tarfile.TarFile, target_dir: str
+    ) -> Generator[tarfile.TarInfo, None, None]:
+        total_size = 0
+        max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
+        for member in tar:
+            cls._validate_tar_member(member, target_dir)
+            total_size += member.size
+            if total_size > max_uncompressed_size:
+                raise tarfile.TarError(
+                    f"Decompression bomb detected: total uncompressed size exceeds {max_uncompressed_size} bytes"
+                )
+            yield member
+
+    @classmethod
+    def _manual_extract(
+        cls, tar: tarfile.TarFile, cache_dir: str, members: Iterable[tarfile.TarInfo]
+    ) -> None:
+        for member in members:
+            # Sanitize metadata to mimic "data" filter
+            member.mode &= 0o777
+            member.uid = 0
+            member.gid = 0
+            member.uname = ""
+            member.gname = ""
+            tar.extract(member, path=cache_dir)
+
+    @classmethod
     def decompress_to_cache(cls, targz_path: str, cache_dir: str) -> str:
         """
         Decompresses a .tar.gz file to a cache directory.
@@ -530,32 +559,12 @@ class ModelManagement(Generic[T]):
             with tarfile.open(targz_path, "r:gz") as tar:
                 # Extract all files into the cache directory securely
                 target_dir = os.path.abspath(cache_dir)
-
-                def validate_and_yield_members():
-                    total_size = 0
-                    max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
-                    for member in tar:
-                        cls._validate_tar_member(member, target_dir)
-                        total_size += member.size
-                        if total_size > max_uncompressed_size:
-                            raise tarfile.TarError(
-                                f"Decompression bomb detected: total uncompressed size exceeds {max_uncompressed_size} bytes"
-                            )
-                        yield member
+                safe_members = cls._get_safe_members(tar, target_dir)
 
                 if hasattr(tarfile, "data_filter"):
-                    tar.extractall(
-                        path=cache_dir, members=validate_and_yield_members(), filter="data"
-                    )
+                    tar.extractall(path=cache_dir, members=safe_members, filter="data")
                 else:
-                    for member in validate_and_yield_members():
-                        # Sanitize metadata to mimic "data" filter
-                        member.mode &= 0o777
-                        member.uid = 0
-                        member.gid = 0
-                        member.uname = ""
-                        member.gname = ""
-                        tar.extract(member, path=cache_dir)
+                    cls._manual_extract(tar, cache_dir, safe_members)
         except tarfile.TarError as e:
             # If decompression fails, remove the partially extracted directory
             shutil.rmtree(cache_dir, ignore_errors=True)
