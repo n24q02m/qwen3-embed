@@ -33,3 +33,7 @@
 ## 2024-05-27 - [Fast stream reordering with sentinel pop]
 **Learning:** When reordering items from a concurrent generator stream (where items arrive out-of-order and must be yielded sequentially), implementing a "fast path" that immediately yields items arriving in the correct expected order bypasses the overhead of dictionary insertion. Furthermore, using `dict.pop(key, sentinel)` combined with a `while` loop allows simultaneous existence-checking and extraction, avoiding double lookups (`key in dict` followed by `dict.pop(key)`).
 **Action:** When buffering out-of-order stream results in a dictionary, always check if the item is the `next_expected` one first to bypass buffering entirely, and use `dict.pop` with a sentinel for faster extraction loops.
+
+## 2026-06-25 - [Fast all-zero row check with direct boolean indexing]
+**Learning:** When checking for all-zero rows in an attention mask (e.g., when determining if pooling should be skipped or zeroed out for specific samples), using `attention_mask.any(axis=1)` is an O(N) operation over the sequence length that can be slow. If the last token indices have already been computed, using direct boolean indexing `attention_mask[batch_indices, last_token_indices] != 0` is O(1) per row and significantly faster (~30x).
+**Action:** Use direct boolean indexing to check for all-zero rows in padding masks instead of `.any(axis=1)` when target indices like the last valid token are known.
