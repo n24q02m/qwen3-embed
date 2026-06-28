@@ -33,3 +33,7 @@
 ## 2024-05-27 - [Fast stream reordering with sentinel pop]
 **Learning:** When reordering items from a concurrent generator stream (where items arrive out-of-order and must be yielded sequentially), implementing a "fast path" that immediately yields items arriving in the correct expected order bypasses the overhead of dictionary insertion. Furthermore, using `dict.pop(key, sentinel)` combined with a `while` loop allows simultaneous existence-checking and extraction, avoiding double lookups (`key in dict` followed by `dict.pop(key)`).
 **Action:** When buffering out-of-order stream results in a dictionary, always check if the item is the `next_expected` one first to bypass buffering entirely, and use `dict.pop` with a sentinel for faster extraction loops.
+
+## 2026-06-12 - [Fast 3D Numpy Array Slicing]
+**Learning:** When extracting specific elements from the last dimension of a 3D numpy array (e.g., getting specific token logits from causal LM output `(batch, seq_len, vocab_size)`), directly indexing the target elements `model_output[:, -1, TOKEN_ID]` is significantly faster than first slicing the 2D array `last_logits = model_output[:, -1, :]` and then indexing it. The latter creates a large intermediate array (e.g. `(batch, vocab_size)`), which can cause massive allocation overhead or even OOM errors if the vocabulary size and batch size are large.
+**Action:** Always slice exactly the required elements across all dimensions simultaneously when working with large numpy arrays to avoid unnecessary intermediate allocations.
