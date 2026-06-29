@@ -1141,7 +1141,7 @@ class TestDownloadFilesFromHuggingFace:
         assert "model.onnx" in metadata
         assert metadata["model.onnx"] == {"size": 500, "blob_id": "aaa"}
 
-        sub_key = os.path.join("sub", "config.json")
+        sub_key = "sub/config.json"
         assert sub_key in metadata
         assert metadata[sub_key] == {"size": 100, "blob_id": "bbb"}
 

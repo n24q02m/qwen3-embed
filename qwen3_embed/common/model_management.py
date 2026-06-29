@@ -279,7 +279,7 @@ class ModelManagement(Generic[T]):
         file_info_map = {f.path: f for f in repo_files}
         for file_path in model_dir.rglob("*"):
             if file_path.is_file() and file_path.name != cls.METADATA_FILE:
-                rel_path = str(file_path.relative_to(model_dir))
+                rel_path = file_path.relative_to(model_dir).as_posix()
                 repo_file = file_info_map.get(rel_path)
                 if repo_file:
                     meta[rel_path] = {
