@@ -185,12 +185,19 @@ class ParallelWorkerPool:
         self, stream: Iterable[Any], *args: Any, **kwargs: Any
     ) -> Iterable[tuple[int, Any]]:
         try:
-            self.start(**kwargs)
-            yield from self._process_stream(stream)
+            try:
+                self.start(**kwargs)
+                yield from self._process_stream(stream)
+            except Exception:
+                self.emergency_shutdown = True
+                raise
         finally:
             assert self.input_queue is not None, "Input queue is None"
             assert self.output_queue is not None, "Output queue is None"
-            self.join()
+            if self.emergency_shutdown:
+                self.join_or_terminate()
+            else:
+                self.join()
             self.input_queue.close()
             self.output_queue.close()
             if self.emergency_shutdown:

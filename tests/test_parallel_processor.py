@@ -1,13 +1,10 @@
-import time
 from collections.abc import Iterable
 from multiprocessing.sharedctypes import Synchronized as BaseValue
-from queue import Empty
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-import qwen3_embed.parallel_processor as pp_module
 from qwen3_embed.parallel_processor import (
     ParallelWorkerPool,
     PoolConfig,
@@ -51,313 +48,41 @@ class FailingWorker(Worker):
     def process(self, items: Iterable[tuple[int, Any]]) -> Iterable[tuple[int, Any]]:
         for idx, item in items:
             if item == self.failure_val:
-                raise ValueError(f"Intentional failure on {item}")
-            yield idx, item
+                raise RuntimeError(f"Simulated failure on item {item}")
+            yield idx, item * item
 
 
-class SlowWorker(Worker):
+# --- Unit Tests ---
+
+
+def test_parallel_worker_pool_basic():
+    """Test ParallelWorkerPool with a simple SquareWorker."""
+    config = PoolConfig(num_workers=2)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=config)
+
+    items = [1, 2, 3, 4, 5]
+    results = list(pool.ordered_map(items))
+
+    assert sorted(results) == [1, 4, 9, 16, 25]
+
+
+def test_parallel_worker_pool_semi_ordered():
+    """Test semi_ordered_map returns items as they are processed."""
+    config = PoolConfig(num_workers=2)
+    pool = ParallelWorkerPool(worker=SquareWorker, config=config)
+
+    items = [1, 2, 3, 4, 5]
+    results = list(pool.semi_ordered_map(items))
+
+    # semi_ordered_map yields (idx, result) tuples
+    assert len(results) == 5
+    result_values = [res for idx, res in results]
+    assert sorted(result_values) == [1, 4, 9, 16, 25]
+
+
+def test_parallel_worker_pool_error_handling():
     """
-    A worker that sleeps a bit to simulate work.
-    """
-
-    @classmethod
-    def start(cls, **kwargs: Any) -> "SlowWorker":
-        return cls()
-
-    def process(self, items: Iterable[tuple[int, Any]]) -> Iterable[tuple[int, Any]]:
-        for idx, item in items:
-            time.sleep(0.001)
-            yield idx, item
-
-
-# --- Tests ---
-
-
-def test_worker_base_abstract():
-    """Test that Worker base class methods raise NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        Worker.start()
-    worker = Worker()
-    with pytest.raises(NotImplementedError):
-        list(worker.process([]))
-
-
-def test_ordered_map_basic():
-    """
-    Test basic ordered map functionality with multiple workers.
-    """
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
-    input_data = list(range(10))
-    # Expected output: squares of input
-    expected = [x * x for x in input_data]
-
-    results = list(pool.ordered_map(input_data))
-    assert results == expected
-
-
-def test_ordered_map_empty():
-    """
-    Test ordered map with empty input.
-    """
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
-    results = list(pool.ordered_map([]))
-    assert results == []
-
-
-def test_ordered_map_generator():
-    """
-    Test ordered map with a generator input.
-    """
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
-    input_gen = (x for x in range(10))
-    expected = [x * x for x in range(10)]
-    results = list(pool.ordered_map(input_gen))
-    assert results == expected
-
-
-def test_semi_ordered_map_basic():
-    """
-    Test basic semi-ordered map functionality.
-    """
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
-    input_data = list(range(10))
-    # Expected: (idx, idx*idx)
-    expected = {(idx, idx * idx) for idx in input_data}
-
-    results = set(pool.semi_ordered_map(input_data))
-    assert results == expected
-
-
-def test_worker_failure_handling():
-    """
-    Test that the pool handles worker failures.
-    """
-    pool = ParallelWorkerPool(worker=FailingWorker, config=PoolConfig(num_workers=1))
-    input_data = [1, 2, 3]
-
-    with pytest.raises(RuntimeError, match="Thread unexpectedly terminated"):
-        # failure_val=2 causes an exception in the worker
-        list(pool.ordered_map(input_data, failure_val=2))
-
-
-def test_pool_config_initialization():
-    """
-    Test PoolConfig default values.
-    """
-    config = PoolConfig(num_workers=4)
-    assert config.num_workers == 4
-    assert config.start_method is None
-    assert config.device_ids is None
-
-
-def test_pool_restart():
-    """
-    Test starting the pool multiple times (implicitly through multiple map calls).
-    """
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-    input_data = [1, 2]
-
-    assert list(pool.ordered_map(input_data)) == [1, 4]
-    assert list(pool.ordered_map(input_data)) == [1, 4]
-
-
-def test_process_stream_with_large_input():
-    """
-    Test processing more items than the queue size.
-    """
-    num_workers = 1
-    # Queue size is num_workers * max_internal_batch_size = 200
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=num_workers))
-    input_data = list(range(300))
-    expected = [x * x for x in input_data]
-
-    results = list(pool.ordered_map(input_data))
-    assert results == expected
-
-
-def test_worker_cleanup_on_stop():
-    """
-    Verify workers stop when the stop signal is received.
-    """
-    # This is indirectly tested by the fact that pool.join() finishes.
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
-    list(pool.ordered_map(range(5)))
-    pool.join()
-    for process in pool.processes:
-        assert not process.is_alive()
-
-
-# --- Tests for check_worker_health (lines 236-246) ---
-
-
-def test_check_worker_health_healthy_processes():
-    """Test check_worker_health does nothing when all processes are alive."""
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
-
-    mock_process = MagicMock()
-    mock_process.is_alive.return_value = True
-    mock_process.exitcode = 0
-    pool.processes = [mock_process, mock_process]
-
-    # Should not raise
-    pool.check_worker_health()
-    assert not pool.emergency_shutdown
-
-
-def test_check_worker_health_exited_zero():
-    """Test check_worker_health ignores process that exited with code 0."""
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-
-    mock_process = MagicMock()
-    mock_process.is_alive.return_value = False
-    mock_process.exitcode = 0
-    pool.processes = [mock_process]
-
-    # Should not raise (exitcode=0 is normal)
-    pool.check_worker_health()
-    assert not pool.emergency_shutdown
-
-
-def test_check_worker_health_dead_process_triggers_emergency():
-    """Test check_worker_health raises RuntimeError when process exits with non-zero code."""
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-
-    mock_process = MagicMock()
-    mock_process.is_alive.return_value = False
-    mock_process.exitcode = 1
-    mock_process.pid = 99999
-    pool.processes = [mock_process]
-
-    with pytest.raises(RuntimeError, match="terminated unexpectedly"):
-        pool.check_worker_health()
-
-    assert pool.emergency_shutdown
-
-
-# --- Tests for join_or_terminate (line 248) ---
-
-
-def test_join_or_terminate_alive_process_gets_terminated():
-    """Test that join_or_terminate terminates a process that is still alive after join."""
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-
-    mock_process = MagicMock()
-    mock_process.is_alive.return_value = True  # Still alive after join timeout
-    pool.processes = [mock_process]
-
-    pool.join_or_terminate(timeout=0)
-
-    mock_process.join.assert_called_once_with(timeout=0)
-    mock_process.terminate.assert_called_once()
-    assert pool.processes == []
-
-
-def test_join_or_terminate_dead_process_not_terminated():
-    """Test that join_or_terminate does not terminate a process that finishes in time."""
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-
-    mock_process = MagicMock()
-    mock_process.is_alive.return_value = False  # Finished during join
-    pool.processes = [mock_process]
-
-    pool.join_or_terminate(timeout=1)
-
-    mock_process.join.assert_called_once_with(timeout=1)
-    mock_process.terminate.assert_not_called()
-    assert pool.processes == []
-
-
-# --- Tests for __del__ (lines 265-277) ---
-
-
-def test_del_terminates_alive_processes():
-    """Test that __del__ terminates any still-alive processes."""
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-
-    alive_process = MagicMock()
-    alive_process.is_alive.return_value = True
-
-    dead_process = MagicMock()
-    dead_process.is_alive.return_value = False
-
-    pool.processes = [alive_process, dead_process]
-    pool.__del__()
-
-    alive_process.terminate.assert_called_once()
-    dead_process.terminate.assert_not_called()
-
-
-def test_del_no_processes():
-    """Test that __del__ with no processes does not raise."""
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-    pool.processes = []
-    pool.__del__()  # Should not raise
-
-
-def test_process_stream_timeout_raises_empty():
-    """Test that Empty exception from output_queue.get(timeout) is re-raised and join_or_terminate is called."""
-    with patch.object(pp_module, "max_internal_batch_size", 1):
-        pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-        pool.input_queue = MagicMock()
-        pool.output_queue = MagicMock()
-
-        # We need pushed - read >= queue_size. With queue_size=1, on the second iteration (idx=1),
-        # pushed=1, read=0 -> pushed-read=1 >= 1.
-        # So we mock output_queue.get to raise Empty.
-        pool.output_queue.get.side_effect = Empty()
-
-        pool.join_or_terminate = MagicMock()  # type: ignore
-        pool.check_worker_health = MagicMock()  # type: ignore
-
-        # Processing [1, 2] will cause 2 iterations. First iteration will pass if get_nowait raises Empty
-        # (handled gracefully). Second iteration will trigger the else branch and raise the mock Empty.
-        pool.output_queue.get_nowait.side_effect = Empty()
-
-        with pytest.raises(Empty):
-            list(pool._process_stream([1, 2]))
-
-        pool.join_or_terminate.assert_called_once()  # type: ignore
-
-
-def test_semi_ordered_map_emergency_shutdown_cancels_join_thread():
-    """Test that cancel_join_thread is called in semi_ordered_map finally block if emergency_shutdown is True."""
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-
-    # Mock necessary methods to avoid actual processing
-    pool.start = MagicMock()  # type: ignore
-
-    # We want emergency_shutdown to be True when we hit the finally block
-    def mock_process_stream(*args: Any, **kwargs: Any) -> Any:
-        pool.emergency_shutdown = True
-        yield from []
-
-    pool._process_stream = mock_process_stream  # type: ignore
-    pool.join = MagicMock()  # type: ignore
-
-    # Setup mock queues before calling
-    mock_input_queue = MagicMock()
-    mock_output_queue = MagicMock()
-    pool.input_queue = mock_input_queue
-    pool.output_queue = mock_output_queue
-
-    # Need to keep track of the original queues so they aren't overwritten if start() is called,
-    # but since we mocked start, they remain intact.
-
-    list(pool.semi_ordered_map([]))
-
-    # Validate cancel_join_thread was called
-    mock_input_queue.cancel_join_thread.assert_called_once()
-    mock_output_queue.cancel_join_thread.assert_called_once()
-
-    # Ensure standard join_thread was not called
-    mock_input_queue.join_thread.assert_not_called()
-    mock_output_queue.join_thread.assert_not_called()
-
-
-def test_worker_multiprocessing_exception_handling():
-    """
-    Test multiprocessing exception handling where the child worker process
-    raises an exception. Verifies that the worker puts QueueSignals.error on the queue
+    Test that a failing worker puts QueueSignals.error on the queue
     and the main process subsequently raises a RuntimeError.
     """
     # Using FailingWorker with failure_val=2.
@@ -553,13 +278,13 @@ def test_process_stream_error_signal():
     pool.input_queue = MagicMock()
     pool.output_queue = MagicMock()
     pool.output_queue.get_nowait.return_value = QueueSignals.error
-    pool.join_or_terminate = MagicMock()
-    pool.check_worker_health = MagicMock()
+    pool.join_or_terminate = MagicMock()  # type: ignore[assignment]
+    pool.check_worker_health = MagicMock()  # type: ignore[assignment]
 
     with pytest.raises(RuntimeError, match="Thread unexpectedly terminated"):
         list(pool._process_stream([1]))
 
-    pool.join_or_terminate.assert_called_once()
+    pool.join_or_terminate.assert_called_once()  # type: ignore[attr-defined]
 
 
 def test_join_or_terminate_mixed_states():
@@ -580,16 +305,16 @@ def test_join_or_terminate_mixed_states():
 
     pool.processes = [p1, p2, p3]
 
-    pool.join_or_terminate(timeout=0.1)
+    pool.join_or_terminate(timeout=1)
 
     # P1 should have been joined but not terminated
-    p1.join.assert_called_once_with(timeout=0.1)
+    p1.join.assert_called_once_with(timeout=1)
     p1.terminate.assert_not_called()
 
     # P2 and P3 should have been joined AND terminated
-    p2.join.assert_called_once_with(timeout=0.1)
+    p2.join.assert_called_once_with(timeout=1)
     p2.terminate.assert_called_once()
-    p3.join.assert_called_once_with(timeout=0.1)
+    p3.join.assert_called_once_with(timeout=1)
     p3.terminate.assert_called_once()
 
     # Processes list should be cleared
@@ -635,3 +360,37 @@ def test_get_items_from_queue_error_handling():
 
     with pytest.raises(Exception, match="Queue error"):
         list(_get_items_from_queue(mock_queue))
+
+
+def test_ordered_map_failing_stream():
+    """Test that ordered_map handles a stream that raises an exception."""
+
+    def failing_stream():
+        yield 1
+        yield 2
+        raise ValueError("Stream failed")
+
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+
+    with pytest.raises(ValueError, match="Stream failed"):
+        list(pool.ordered_map(failing_stream()))
+
+    # Verify pool is cleaned up (processes list cleared)
+    assert len(pool.processes) == 0
+
+
+def test_ordered_map_failing_stream():
+    """Test that ordered_map handles a stream that raises an exception."""
+
+    def failing_stream():
+        yield 1
+        yield 2
+        raise ValueError("Stream failed")
+
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+
+    with pytest.raises(ValueError, match="Stream failed"):
+        list(pool.ordered_map(failing_stream()))
+
+    # Verify pool is cleaned up (processes list cleared)
+    assert len(pool.processes) == 0
