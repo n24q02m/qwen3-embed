@@ -47,10 +47,9 @@ def make_model_description(
     url: str | None = None,
     model_file: str = "model.onnx",
     additional_files: list[str] | None = None,
-    deprecated_tar_struct: bool = False,
 ) -> BaseModelDescription:
     """Build a minimal BaseModelDescription for testing."""
-    source = ModelSource(hf=hf, url=url, _deprecated_tar_struct=deprecated_tar_struct)
+    source = ModelSource(hf=hf, url=url, _deprecated_tar_struct=False)
     return BaseModelDescription(
         model=model,
         sources=source,
