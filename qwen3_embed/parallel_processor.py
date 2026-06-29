@@ -207,7 +207,8 @@ class ParallelWorkerPool:
         pushed = 0
         read = 0
         for idx, item in enumerate(stream):
-            self.check_worker_health()
+            if idx % 1000 == 0:
+                self.check_worker_health()
             if pushed - read < self.queue_size:
                 try:
                     out_item = self.output_queue.get_nowait()
@@ -234,7 +235,8 @@ class ParallelWorkerPool:
             self.input_queue.put(QueueSignals.stop)
 
         while read < pushed:
-            self.check_worker_health()
+            if read % 1000 == 0:
+                self.check_worker_health()
             out_item = self.output_queue.get(timeout=processing_timeout)
             if out_item == QueueSignals.error:
                 self.join_or_terminate()
