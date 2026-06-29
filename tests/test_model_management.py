@@ -1987,3 +1987,54 @@ class TestValidateTarMember:
                 self._member("link", is_reg=False, is_lnk=True, linkname="../outside.txt"),
                 str(tmp_path),
             )
+
+
+class TestIsWithinDir:
+    """Tests for _is_within_dir static method."""
+
+    def test_is_within_dir_absolute_paths_success(self):
+        """Test _is_within_dir with absolute paths that resolve correctly."""
+        base = "/tmp/base"
+        candidate = "/tmp/base/sub/file.txt"
+        assert ModelManagement._is_within_dir(base, candidate) is True
+
+    def test_is_within_dir_absolute_paths_failure(self):
+        """Test _is_within_dir with absolute paths that are outside the base."""
+        base = "/tmp/base"
+        candidate = "/tmp/other/file.txt"
+        assert ModelManagement._is_within_dir(base, candidate) is False
+
+    def test_is_within_dir_relative_paths_success(self):
+        """Test _is_within_dir with relative paths that resolve inside the base."""
+        # abspath will resolve relative to the current working directory
+        base = "cache"
+        candidate = "cache/sub/file.txt"
+        assert ModelManagement._is_within_dir(base, candidate) is True
+
+    def test_is_within_dir_relative_paths_failure(self):
+        """Test _is_within_dir with relative paths that resolve outside the base."""
+        base = "cache"
+        candidate = "cache/../../evil.txt"
+        assert ModelManagement._is_within_dir(base, candidate) is False
+
+    def test_is_within_dir_sibling_directories(self):
+        """Test _is_within_dir with sibling directories sharing a prefix."""
+        base = "/tmp/cache"
+        candidate = "/tmp/cache-evil/file.txt"
+        assert ModelManagement._is_within_dir(base, candidate) is False
+
+    def test_is_within_dir_trailing_separators(self):
+        """Test _is_within_dir with trailing separators."""
+        base = "/tmp/cache/"
+        candidate = "/tmp/cache/file.txt"
+        assert ModelManagement._is_within_dir(base, candidate) is True
+
+    def test_is_within_dir_same_path(self):
+        """Test _is_within_dir when base and candidate are the same."""
+        path = "/tmp/cache"
+        assert ModelManagement._is_within_dir(path, path) is True
+
+    def test_is_within_dir_different_drives(self):
+        """Test _is_within_dir when paths are on different drives (Windows)."""
+        with patch("os.path.commonpath", side_effect=ValueError):
+            assert ModelManagement._is_within_dir("C:\\base", "D:\\base") is False
