@@ -614,17 +614,30 @@ def test_cleanup_worker_error_handling():
     num_active_workers.value = 5
     worker_id = 1
 
-    # Mock input_queue.close to raise an exception
-    input_queue.close.side_effect = Exception("Cleanup failed")
+    # Mock all cleanup methods to raise exceptions
+    input_queue.close.side_effect = Exception("input_queue.close failed")
+    output_queue.close.side_effect = Exception("output_queue.close failed")
+    input_queue.join_thread.side_effect = Exception("input_queue.join_thread failed")
+    output_queue.join_thread.side_effect = Exception("output_queue.join_thread failed")
 
     with patch("logging.exception") as mock_log_exception:
         _cleanup_worker(input_queue, output_queue, num_active_workers, worker_id)
 
-    # Verify that the exception was logged
-    mock_log_exception.assert_called_once()
-    assert "failed to cleanup queues" in mock_log_exception.call_args[0][0]
+    # Verify that all exceptions were logged (one for each failed cleanup step)
+    assert mock_log_exception.call_count == 4
+    log_messages = [call.args[0] for call in mock_log_exception.call_args_list]
+    assert any("failed to close input_queue" in msg for msg in log_messages)
+    assert any("failed to close output_queue" in msg for msg in log_messages)
+    assert any("failed to join_thread input_queue" in msg for msg in log_messages)
+    assert any("failed to join_thread output_queue" in msg for msg in log_messages)
 
-    # Verify that num_active_workers was still decremented despite the error
+    # Verify that all cleanup methods were still called despite previous failures
+    input_queue.close.assert_called_once()
+    output_queue.close.assert_called_once()
+    input_queue.join_thread.assert_called_once()
+    output_queue.join_thread.assert_called_once()
+
+    # Verify that num_active_workers was still decremented despite all errors
     assert num_active_workers.value == 4
 
 
