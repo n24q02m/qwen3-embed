@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from dataclasses import asdict
 from typing import Any
 
@@ -7,7 +7,7 @@ from qwen3_embed.common.model_description import (
     DenseModelDescription,
     PoolingType,
 )
-from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
+from qwen3_embed.common.types import NumpyArray
 from qwen3_embed.text.custom_text_embedding import CustomTextEmbedding
 from qwen3_embed.text.gguf_embedding import Qwen3TextEmbeddingGGUF
 from qwen3_embed.text.onnx_embedding import OnnxTextEmbedding
@@ -104,10 +104,6 @@ class TextEmbedding(TextEmbeddingBase):
         model_name: str = "n24q02m/Qwen3-Embedding-0.6B-ONNX",
         cache_dir: str | None = None,
         threads: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        lazy_load: bool = False,
         **kwargs: Any,
     ):
         super().__init__(model_name, cache_dir, threads, **kwargs)
@@ -122,10 +118,6 @@ class TextEmbedding(TextEmbeddingBase):
                 model_name=model_name,
                 cache_dir=cache_dir,
                 threads=threads,
-                providers=providers,
-                cuda=cuda,
-                device_ids=device_ids,
-                lazy_load=lazy_load,
                 **kwargs,
             )
             return

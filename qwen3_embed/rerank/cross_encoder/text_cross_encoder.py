@@ -1,11 +1,10 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from dataclasses import asdict
 from typing import Any
 
 from qwen3_embed.common.model_description import (
     BaseModelDescription,
 )
-from qwen3_embed.common.types import Device, OnnxProvider
 from qwen3_embed.rerank.cross_encoder.custom_text_cross_encoder import CustomTextCrossEncoder
 from qwen3_embed.rerank.cross_encoder.gguf_cross_encoder import Qwen3CrossEncoderGGUF
 from qwen3_embed.rerank.cross_encoder.onnx_text_cross_encoder import OnnxTextCrossEncoder
@@ -84,10 +83,6 @@ class TextCrossEncoder(TextCrossEncoderBase):
         model_name: str,
         cache_dir: str | None = None,
         threads: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        lazy_load: bool = False,
         **kwargs: Any,
     ):
         super().__init__(model_name, cache_dir, threads, **kwargs)
@@ -103,10 +98,6 @@ class TextCrossEncoder(TextCrossEncoderBase):
                 model_name=model_name,
                 cache_dir=cache_dir,
                 threads=threads,
-                providers=providers,
-                cuda=cuda,
-                device_ids=device_ids,
-                lazy_load=lazy_load,
                 **kwargs,
             )
             return
