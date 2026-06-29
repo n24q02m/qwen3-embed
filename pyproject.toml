@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy>=2.4.6",
+    "numpy>=2.4.6,<2.5",
     "onnxruntime>1.20.0; python_version >= '3.11'",
     "tqdm>=4.68.3",
     "requests>=2.34.2",
