@@ -560,3 +560,45 @@ def test_process_stream_error_signal():
         list(pool._process_stream([1]))
 
     pool.join_or_terminate.assert_called_once()
+
+
+def test_join_or_terminate_mixed_states():
+    """Test join_or_terminate with multiple processes in different states."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=3))
+
+    # P1: Finishes immediately
+    p1 = MagicMock()
+    p1.is_alive.return_value = False
+
+    # P2: Hangs and needs termination
+    p2 = MagicMock()
+    p2.is_alive.return_value = True
+
+    # P3: Also hangs
+    p3 = MagicMock()
+    p3.is_alive.return_value = True
+
+    pool.processes = [p1, p2, p3]
+
+    pool.join_or_terminate(timeout=0.1)
+
+    # P1 should have been joined but not terminated
+    p1.join.assert_called_once_with(timeout=0.1)
+    p1.terminate.assert_not_called()
+
+    # P2 and P3 should have been joined AND terminated
+    p2.join.assert_called_once_with(timeout=0.1)
+    p2.terminate.assert_called_once()
+    p3.join.assert_called_once_with(timeout=0.1)
+    p3.terminate.assert_called_once()
+
+    # Processes list should be cleared
+    assert pool.processes == []
+
+
+def test_join_or_terminate_empty():
+    """Test join_or_terminate with no processes."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=0))
+    pool.processes = []
+    pool.join_or_terminate()
+    assert pool.processes == []
