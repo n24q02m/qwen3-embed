@@ -1,9 +1,9 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Sequence  # noqa: F401
 from typing import Any
 
 from qwen3_embed.common.model_description import DenseModelDescription
 from qwen3_embed.common.onnx_model import OnnxOutputContext, OnnxSessionConfig
-from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider
+from qwen3_embed.common.types import Device, NumpyArray, OnnxProvider  # noqa: F401
 from qwen3_embed.common.utils import define_cache_dir, normalize
 from qwen3_embed.text.onnx_text_model import OnnxTextModel, TextEmbeddingWorker
 from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
@@ -32,12 +32,6 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
         model_name: str = "BAAI/bge-small-en-v1.5",
         cache_dir: str | None = None,
         threads: int | None = None,
-        providers: Sequence[OnnxProvider] | None = None,
-        cuda: bool | Device = Device.AUTO,
-        device_ids: list[int] | None = None,
-        lazy_load: bool = False,
-        device_id: int | None = None,
-        specific_model_path: str | None = None,
         **kwargs: Any,
     ):
         """
@@ -47,25 +41,46 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
                                        Can be set using the `qwen3_embed_CACHE_PATH` env variable.
                                        Defaults to `qwen3_embed_cache` in the system's temp directory.
             threads (int, optional): The number of threads single onnxruntime session can use. Defaults to None.
-            providers (Optional[Sequence[OnnxProvider]], optional): The list of onnxruntime providers to use.
-                Mutually exclusive with the `cuda` and `device_ids` arguments. Defaults to None.
-            cuda (Union[bool, Device], optional): Whether to use cuda for inference. Mutually exclusive with `providers`
-                Defaults to Device.AUTO.
-            device_ids (Optional[list[int]], optional): The list of device ids to use for data parallel processing in
-                workers. Should be used with `cuda` equals to `True`, `Device.AUTO` or `Device.CUDA`, mutually exclusive
-                with `providers`. Defaults to None.
-            lazy_load (bool, optional): Whether to load the model during class initialization or on demand.
-                Should be set to True when using multiple-gpu and parallel encoding. Defaults to False.
-            device_id (Optional[int], optional): The device id to use for loading the model in the worker process.
-            specific_model_path (Optional[str], optional): The specific path to the onnx model dir if it should be imported from somewhere else
+            **kwargs: Additional keyword arguments:
+                providers (Optional[Sequence[OnnxProvider]], optional): The list of onnxruntime providers to use.
+                    Mutually exclusive with the `cuda` and `device_ids` arguments. Defaults to None.
+                cuda (Union[bool, Device], optional): Whether to use cuda for inference. Mutually exclusive with `providers`
+                    Defaults to Device.AUTO.
+                device_ids (Optional[list[int]], optional): The list of device ids to use for data parallel processing in
+                    workers. Should be used with `cuda` equals to `True`, `Device.AUTO` or `Device.CUDA`, mutually exclusive
+                    with `providers`. Defaults to None.
+                lazy_load (bool, optional): Whether to load the model during class initialization or on demand.
+                    Should be set to True when using multiple-gpu and parallel encoding. Defaults to False.
+                device_id (Optional[int], optional): The device id to use for loading the model in the worker process.
+                specific_model_path (Optional[str], optional): The specific path to the onnx model dir if it should be imported from somewhere else
 
         Raises:
             ValueError: If the model_name is not in the format <org>/<model> e.g. BAAI/bge-base-en.
         """
+        # Extract model-specific parameters from kwargs to prevent them from
+        # polluting super().__init__ or _extra_session_options.
+        self.providers = kwargs.pop("providers", None)
+        self.lazy_load = kwargs.pop("lazy_load", False)
+        cuda = kwargs.pop("cuda", Device.AUTO)
+        device_ids = kwargs.pop("device_ids", None)
+        device_id = kwargs.pop("device_id", None)
+        specific_model_path = kwargs.pop("specific_model_path", None)
+
         super().__init__(model_name, cache_dir, threads, **kwargs)
-        self.providers = providers
-        self.lazy_load = lazy_load
         self._extra_session_options = self._select_exposed_session_options(kwargs)
+
+        self._setup_device(cuda, device_ids, device_id)
+        self._setup_model_assets(model_name, cache_dir, specific_model_path)
+
+        if not self.lazy_load:
+            self.load_onnx_model()
+
+    def _setup_device(
+        self,
+        cuda: bool | Device,
+        device_ids: list[int] | None,
+        device_id: int | None,
+    ) -> None:
         # List of device ids, that can be used for data parallel processing in workers
         self.device_ids = device_ids
         self.cuda = cuda
@@ -77,6 +92,12 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
         elif self.device_ids is not None:
             self.device_id = self.device_ids[0]
 
+    def _setup_model_assets(
+        self,
+        model_name: str,
+        cache_dir: str | None,
+        specific_model_path: str | None,
+    ) -> None:
         self.model_description = self._get_model_description(model_name)
         self.cache_dir = str(define_cache_dir(cache_dir))
         self._specific_model_path = specific_model_path
@@ -86,9 +107,6 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
             local_files_only=self._local_files_only,
             specific_model_path=self._specific_model_path,
         )
-
-        if not self.lazy_load:
-            self.load_onnx_model()
 
     def embed(
         self,
@@ -160,6 +178,7 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
             device_id=self.device_id,
             extra_session_options=self._extra_session_options,
         )
+
         self._load_onnx_model(
             model_dir=self._model_dir,
             model_file=self.model_description.model_file,
