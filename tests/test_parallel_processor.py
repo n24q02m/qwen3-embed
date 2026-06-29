@@ -377,20 +377,3 @@ def test_ordered_map_failing_stream():
 
     # Verify pool is cleaned up (processes list cleared)
     assert len(pool.processes) == 0
-
-
-def test_ordered_map_failing_stream():
-    """Test that ordered_map handles a stream that raises an exception."""
-
-    def failing_stream():
-        yield 1
-        yield 2
-        raise ValueError("Stream failed")
-
-    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
-
-    with pytest.raises(ValueError, match="Stream failed"):
-        list(pool.ordered_map(failing_stream()))
-
-    # Verify pool is cleaned up (processes list cleared)
-    assert len(pool.processes) == 0
