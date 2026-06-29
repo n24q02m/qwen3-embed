@@ -255,7 +255,7 @@ class ModelManagement(Generic[T]):
                     return False
 
                 if repo_files:  # online verification
-                    file_info = repo_files_map.get(file_path.name)
+                    file_info = repo_files_map.get(rel_path)
                     if (
                         not file_info
                         or file_info.size != meta["size"]
@@ -279,7 +279,7 @@ class ModelManagement(Generic[T]):
         file_info_map = {f.path: f for f in repo_files}
         for file_path in model_dir.rglob("*"):
             if file_path.is_file() and file_path.name != cls.METADATA_FILE:
-                repo_file = file_info_map.get(file_path.name)
+                repo_file = file_info_map.get(str(file_path.relative_to(model_dir)))
                 if repo_file:
                     meta[str(file_path.relative_to(model_dir))] = {
                         "size": repo_file.size,
