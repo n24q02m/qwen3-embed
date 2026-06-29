@@ -53,13 +53,16 @@ def _cleanup_worker(
     # See:
     # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#pipes-and-queues
     # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#programming-guidelines
-    input_queue.close()
-    output_queue.close()
-    input_queue.join_thread()
-    output_queue.join_thread()
-
-    with num_active_workers.get_lock():
-        num_active_workers.value -= 1
+    try:
+        input_queue.close()
+        output_queue.close()
+        input_queue.join_thread()
+        output_queue.join_thread()
+    except Exception as e:
+        logging.exception(f"Reader worker {worker_id} failed to cleanup queues: {e}")
+    finally:
+        with num_active_workers.get_lock():
+            num_active_workers.value -= 1
 
     logging.info(f"Reader worker {worker_id} finished")
 
