@@ -705,7 +705,7 @@ class TestDownloadFilesFromHuggingFace:
     def _make_repo_files(self) -> list[RepoFile]:
         return [
             make_repo_file("model.onnx", size=500, oid="aaa"),
-            make_repo_file("config.json", size=100, oid="bbb"),
+            make_repo_file("sub/config.json", size=100, oid="bbb"),
         ]
 
     @patch("qwen3_embed.common.model_management.disable_progress_bars")
@@ -1119,7 +1119,7 @@ class TestDownloadFilesFromHuggingFace:
 
         repo_files = [
             make_repo_file("model.onnx", size=500, oid="aaa"),
-            make_repo_file("config.json", size=100, oid="bbb"),
+            make_repo_file("sub/config.json", size=100, oid="bbb"),
         ]
 
         mock_info.return_value = Mock(sha="rev123")
