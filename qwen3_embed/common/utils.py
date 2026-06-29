@@ -63,9 +63,11 @@ def last_token_pool(input_array: NumpyArray, attention_mask: NDArray[np.int64]) 
     last_token_indices = attention_mask.shape[1] - 1 - np.argmax(attention_mask[:, ::-1], axis=1)
 
     # ⚡ Bolt: Handle all-zero rows by masking result
-    mask_exists = attention_mask.any(axis=1)
+    batch_indices = np.arange(batch_size)
+    # ⚡ Bolt: O(1) boolean indexing check avoids O(N) .any(axis=1) scan
+    mask_exists = attention_mask[batch_indices, last_token_indices] != 0
 
-    result = input_array[np.arange(batch_size), last_token_indices]
+    result = input_array[batch_indices, last_token_indices]
 
     if not mask_exists.all():
         result[~mask_exists] = 0
