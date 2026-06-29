@@ -635,3 +635,68 @@ def test_get_items_from_queue_error_handling():
 
     with pytest.raises(Exception, match="Queue error"):
         list(_get_items_from_queue(mock_queue))
+
+
+def test_batched_worker_health_check_detection():
+    """Test that worker crashes are still detected even with batched health checks."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+    pool.input_queue = MagicMock()
+    pool.output_queue = MagicMock()
+    pool.check_worker_health = MagicMock(side_effect=RuntimeError("Worker died"))  # type: ignore
+
+    # idx = 0 should trigger health check
+    with pytest.raises(RuntimeError, match="Worker died"):
+        next(iter(pool._process_stream([1, 2, 3])))
+
+    assert pool.check_worker_health.call_count == 1  # type: ignore
+
+
+def test_drain_loop_timeout_health_check_detection():
+    """Test that worker crashes are detected in the drain loop via timeout."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+    pool.input_queue = MagicMock()
+    pool.output_queue = MagicMock()
+
+    call_count = 0
+
+    def side_effect():
+        nonlocal call_count
+        call_count += 1
+        if call_count > 1:
+            raise RuntimeError("Worker died in drain")
+
+    pool.check_worker_health = MagicMock(side_effect=side_effect)  # type: ignore
+
+    pool.output_queue.get_nowait.side_effect = [(0, 0), Empty()]
+    pool.output_queue.get.side_effect = Empty()
+
+    gen = pool._process_stream([0, 1])
+    assert next(iter(gen)) == (0, 0)
+
+    with pytest.raises(RuntimeError, match="Worker died in drain"):
+        list(gen)
+
+    assert pool.check_worker_health.call_count == 2  # type: ignore
+
+
+def test_input_loop_timeout_health_check_detection():
+    """Test that worker crashes are detected in the input loop via timeout."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+    pool.input_queue = MagicMock()
+    pool.output_queue = MagicMock()
+    pool.queue_size = 0
+
+    call_count = 0
+
+    def side_effect():
+        nonlocal call_count
+        call_count += 1
+        if call_count > 1:
+            raise RuntimeError("Worker died on input timeout")
+
+    pool.check_worker_health = MagicMock(side_effect=side_effect)  # type: ignore
+    pool.output_queue.get.side_effect = Empty()
+
+    gen = pool._process_stream([0, 1])
+    with pytest.raises(RuntimeError, match="Worker died on input timeout"):
+        next(iter(gen))
