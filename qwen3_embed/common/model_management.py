@@ -511,8 +511,10 @@ class ModelManagement(Generic[T]):
         # caller spelled the directory (trailing separator, relative path, ...).
         cache_dir = os.path.abspath(cache_dir)
 
-        # SECURITY: Only allow regular files, directories, and links
-        if not (member.isreg() or member.isdir() or member.issym() or member.islnk()):
+        # SECURITY: Only allow regular files and directories. Prohibiting
+        # symlinks and hardlinks in the manual fallback path is the most
+        # robust defense against symlink-as-directory traversal attacks.
+        if not (member.isreg() or member.isdir()):
             raise tarfile.TarError(f"Unsupported file type in tar file: {member.name}")
 
         if os.path.isabs(member.name) or member.name.startswith(("/", "\\")):
@@ -521,27 +523,6 @@ class ModelManagement(Generic[T]):
         member_path = os.path.abspath(os.path.join(cache_dir, member.name))
         if not cls._is_within_dir(cache_dir, member_path):
             raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
-
-        # SECURITY: Validate symlink and hardlink targets to prevent
-        # arbitrary file writes outside the extraction directory.
-        if member.issym() or member.islnk():
-            if os.path.isabs(member.linkname) or member.linkname.startswith(("/", "\\")):
-                raise tarfile.TarError(
-                    f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
-                )
-            if member.issym():
-                # Symlinks resolve relative to the directory containing the link
-                link_target_path = os.path.abspath(
-                    os.path.join(os.path.dirname(member_path), member.linkname)
-                )
-            else:
-                # Hardlinks (LNKTYPE) resolve relative to the extraction root
-                link_target_path = os.path.abspath(os.path.join(cache_dir, member.linkname))
-
-            if not cls._is_within_dir(cache_dir, link_target_path):
-                raise tarfile.TarError(
-                    f"Attempted path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
-                )
 
     @classmethod
     def decompress_to_cache(cls, targz_path: str, cache_dir: str) -> str:
@@ -569,30 +550,31 @@ class ModelManagement(Generic[T]):
                 # Extract all files into the cache directory securely
                 target_dir = os.path.abspath(cache_dir)
 
-                def validate_and_yield_members():
+                # ⚡ Bolt: Use higher-level safe extraction (filter="data") if available (Python 3.12+).
+                # Fallback to manual extraction with strict validation for older versions.
+                def get_members():
                     total_size = 0
-                    max_uncompressed_size = 20 * 1024 * 1024 * 1024  # 20 GB
+                    max_size = 20 * 1024 * 1024 * 1024  # 20 GB
                     for member in tar:
+                        total_size += (
+                            int(member.size)
+                            if not isinstance(member.size, (int, float))
+                            else member.size
+                        )
+                        if total_size > max_size:
+                            raise tarfile.TarError("Decompression bomb detected")
                         cls._validate_tar_member(member, target_dir)
-                        total_size += member.size
-                        if total_size > max_uncompressed_size:
-                            raise tarfile.TarError(
-                                f"Decompression bomb detected: total uncompressed size exceeds {max_uncompressed_size} bytes"
-                            )
                         yield member
 
                 if hasattr(tarfile, "data_filter"):
-                    tar.extractall(
-                        path=cache_dir, members=validate_and_yield_members(), filter="data"
-                    )
+                    tar.extractall(path=cache_dir, members=get_members(), filter="data")
                 else:
-                    for member in validate_and_yield_members():
-                        # Sanitize metadata to mimic "data" filter
+                    for member in get_members():
+                        # SECURITY: Emulate "data" filter for older Python versions.
+                        # Prohibits special files and strips permissions/ownership.
                         member.mode &= 0o777
-                        member.uid = 0
-                        member.gid = 0
-                        member.uname = ""
-                        member.gname = ""
+                        member.uid = member.gid = 0
+                        member.uname = member.gname = ""
                         tar.extract(member, path=cache_dir)
         except tarfile.TarError as e:
             # If decompression fails, remove the partially extracted directory

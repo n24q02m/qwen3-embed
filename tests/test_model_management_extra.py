@@ -53,37 +53,24 @@ class TestModelManagementExtra:
             with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
                 ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
-    def test_decompress_safe_symlink_and_hardlink(self, tmp_path):
-        """Test safe symlinks and hardlinks to cover safe branch for links (line 399)."""
-        cache_dir = tmp_path / "cache_links"
-        cache_dir.mkdir()
+    def test_decompress_safe_symlink_and_hardlink_blocked(self, tmp_path):
+        import io
 
         tar_path = tmp_path / "links.tar.gz"
         with tarfile.open(tar_path, "w:gz") as tar:
-            # Regular file
             info = tarfile.TarInfo(name="file.txt")
-            info.size = 4
-            tar.addfile(info, io.BytesIO(b"data"))
-
-            # Safe symlink: points to a file within the same directory
+            info.size = 5
+            tar.addfile(info, fileobj=io.BytesIO(b"hello"))
             sym_info = tarfile.TarInfo(name="symlink.txt")
             sym_info.type = tarfile.SYMTYPE
             sym_info.linkname = "file.txt"
             tar.addfile(sym_info)
 
-            # Safe hardlink: points to a file within the same directory (relative to root)
-            hard_info = tarfile.TarInfo(name="hardlink.txt")
-            hard_info.type = tarfile.LNKTYPE
-            hard_info.linkname = "file.txt"
-            tar.addfile(hard_info)
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
 
-        result = ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
-        assert result == str(cache_dir)
-        assert (cache_dir / "file.txt").exists()
-        # On some systems/Python versions, symlink/hardlink might not be fully
-        # supported or behaved differently in tests, but the logic should pass.
-        assert (cache_dir / "symlink.txt").exists()
-        assert (cache_dir / "hardlink.txt").exists()
+        with pytest.raises(tarfile.TarError, match="Unsupported file type in tar file"):
+            ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
     def test_decompress_no_data_filter(self, tmp_path):
         """Cover fallback by mocking tarfile to lack data_filter and verify manual extraction loop."""
