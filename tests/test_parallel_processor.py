@@ -559,13 +559,13 @@ def test_process_stream_error_signal():
     pool.input_queue = MagicMock()
     pool.output_queue = MagicMock()
     pool.output_queue.get_nowait.return_value = QueueSignals.error
-    pool.join_or_terminate = MagicMock()
-    pool.check_worker_health = MagicMock()
+    pool.join_or_terminate = MagicMock()  # type: ignore[assignment]
+    pool.check_worker_health = MagicMock()  # type: ignore[assignment]
 
     with pytest.raises(RuntimeError, match="Thread unexpectedly terminated"):
         list(pool._process_stream([1]))
 
-    pool.join_or_terminate.assert_called_once()
+    pool.join_or_terminate.assert_called_once()  # type: ignore[attr-defined]
 
 
 def test_join_or_terminate_mixed_states():
@@ -586,16 +586,16 @@ def test_join_or_terminate_mixed_states():
 
     pool.processes = [p1, p2, p3]
 
-    pool.join_or_terminate(timeout=0.1)
+    pool.join_or_terminate(timeout=1)
 
     # P1 should have been joined but not terminated
-    p1.join.assert_called_once_with(timeout=0.1)
+    p1.join.assert_called_once_with(timeout=1)
     p1.terminate.assert_not_called()
 
     # P2 and P3 should have been joined AND terminated
-    p2.join.assert_called_once_with(timeout=0.1)
+    p2.join.assert_called_once_with(timeout=1)
     p2.terminate.assert_called_once()
-    p3.join.assert_called_once_with(timeout=0.1)
+    p3.join.assert_called_once_with(timeout=1)
     p3.terminate.assert_called_once()
 
     # Processes list should be cleared
@@ -699,3 +699,65 @@ def test_semi_ordered_map_start_failure():
     # queues should be None or handled safely
     assert pool.input_queue is None
     assert pool.output_queue is None
+def test_check_worker_health_healthy():
+    """Test check_worker_health does not raise when all processes are alive or exited cleanly."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
+
+    # Process 1: Alive
+    p1 = MagicMock()
+    p1.is_alive.return_value = True
+    p1.exitcode = None
+
+    # Process 2: Exited cleanly
+    p2 = MagicMock()
+    p2.is_alive.return_value = False
+    p2.exitcode = 0
+
+    pool.processes = [p1, p2]
+
+    # Should not raise
+    pool.check_worker_health()
+    assert pool.emergency_shutdown is False
+
+
+def test_check_worker_health_unhealthy():
+    """Test check_worker_health raises RuntimeError when a process terminates unexpectedly."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+
+    p1 = MagicMock()
+    p1.is_alive.return_value = False
+    p1.exitcode = 1
+    p1.pid = 1234
+
+    pool.processes = [p1]
+    pool.join_or_terminate = MagicMock()  # type: ignore[assignment]
+
+    with pytest.raises(RuntimeError, match="Worker PID: 1234 terminated unexpectedly with code 1"):
+        pool.check_worker_health()
+
+    assert pool.emergency_shutdown is True
+    pool.join_or_terminate.assert_called_once()  # type: ignore[attr-defined]
+
+
+def test_check_worker_health_called_during_processing():
+    """Test that check_worker_health is called during the processing loop."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+
+    # Mock necessary parts to avoid real multiprocessing
+    pool.start = MagicMock()  # type: ignore[assignment]
+    pool.join = MagicMock()  # type: ignore[assignment]
+    pool.input_queue = MagicMock()  # type: ignore[assignment]
+    pool.output_queue = MagicMock()  # type: ignore[assignment]
+
+    # Simulate one item being processed
+    # First call to get_nowait returns None, second call returns item
+    pool.output_queue.get_nowait.side_effect = [None, (0, 100)]  # type: ignore[attr-defined]
+    # Final get call for the remaining items
+    pool.output_queue.get.return_value = (0, 100)  # type: ignore[attr-defined]
+
+    with patch.object(ParallelWorkerPool, "check_worker_health") as mock_check_health:
+        # We need to exhaust the generator
+        list(pool.semi_ordered_map([10]))
+
+        # It should be called at least once
+        assert mock_check_health.called
