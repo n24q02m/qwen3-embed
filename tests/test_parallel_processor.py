@@ -390,14 +390,15 @@ def test_worker_start_exception_handling():
     num_active_workers.value = 1
     worker_id = 0
 
-    _worker(
-        worker_class=StartFailingWorker,
-        input_queue=input_queue,
-        output_queue=output_queue,
-        num_active_workers=num_active_workers,
-        worker_id=worker_id,
-        kwargs={},
-    )
+    with pytest.raises(RuntimeError):
+        _worker(
+            worker_class=StartFailingWorker,
+            input_queue=input_queue,
+            output_queue=output_queue,
+            num_active_workers=num_active_workers,
+            worker_id=worker_id,
+            kwargs={},
+        )
 
     # Verify that QueueSignals.error was put in the output queue
     output_queue.put.assert_called_with(QueueSignals.error)
@@ -426,7 +427,10 @@ def test_worker_processing_exception_handling():
 
     # Mock _get_items_from_queue to return a single item then stop
     # This triggers worker.process() and then the exception.
-    with patch("qwen3_embed.parallel_processor._get_items_from_queue", return_value=[(0, "item")]):
+    with (
+        patch("qwen3_embed.parallel_processor._get_items_from_queue", return_value=[(0, "item")]),
+        pytest.raises(RuntimeError),
+    ):
         _worker(
             worker_class=ProcessFailingWorker,
             input_queue=input_queue,
@@ -660,3 +664,38 @@ def test_semi_ordered_map_empty():
     assert result == []
     # Verify processes are joined and list is cleared
     assert len(pool.processes) == 0
+def test_semi_ordered_map_interrupted_no_hang():
+    """Test that semi_ordered_map does not hang when consumption is interrupted early."""
+    pool = ParallelWorkerPool(worker=SlowWorker, config=PoolConfig(num_workers=1))
+
+    # We consume only the first item and then break.
+    # This should trigger the finally block and cleanup processes without hanging.
+    try:
+        for _idx, val in pool.semi_ordered_map(range(10)):
+            assert val == 0
+            break
+    except Exception:
+        pytest.fail("semi_ordered_map raised an unexpected exception")
+
+
+def test_empty_stream_worker_start_failure():
+    """Test that worker start failure is detected even for an empty input stream."""
+    pool = ParallelWorkerPool(worker=StartFailingWorker, config=PoolConfig(num_workers=1))
+
+    with pytest.raises(RuntimeError, match="terminated unexpectedly"):
+        list(pool.ordered_map([]))
+
+
+def test_semi_ordered_map_start_failure():
+    """Test semi_ordered_map when start() fails."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=1))
+
+    with (
+        patch.object(ParallelWorkerPool, "start", side_effect=RuntimeError("Start failed")),
+        pytest.raises(RuntimeError, match="Start failed"),
+    ):
+        list(pool.semi_ordered_map([]))
+
+    # queues should be None or handled safely
+    assert pool.input_queue is None
+    assert pool.output_queue is None

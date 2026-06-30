@@ -98,7 +98,7 @@ def _worker(
         except Exception as e:  # pylint: disable=broad-except
             logging.exception(f"Worker {worker_id} failed to start: {e}")
             output_queue.put(QueueSignals.error)
-            return
+            raise
 
         try:
             for processed_item in worker.process(_get_items_from_queue(input_queue)):
@@ -106,6 +106,7 @@ def _worker(
         except Exception as e:  # pylint: disable=broad-except
             logging.exception(f"Worker {worker_id} failed during processing: {e}")
             output_queue.put(QueueSignals.error)
+            raise
     finally:
         _cleanup_worker(input_queue, output_queue, num_active_workers, worker_id)
 
@@ -191,22 +192,34 @@ class ParallelWorkerPool:
         try:
             self.start(**kwargs)
             yield from self._process_stream(stream)
+        except Exception:
+            self.emergency_shutdown = True
+            raise
         finally:
-            assert self.input_queue is not None, "Input queue is None"
-            assert self.output_queue is not None, "Output queue is None"
-            self.join()
-            self.input_queue.close()
-            self.output_queue.close()
             if self.emergency_shutdown:
-                self.input_queue.cancel_join_thread()
-                self.output_queue.cancel_join_thread()
+                self.join_or_terminate()
             else:
-                self.input_queue.join_thread()
-                self.output_queue.join_thread()
+                self.join()
+
+            if self.input_queue is not None:
+                self.input_queue.close()
+                if self.emergency_shutdown:
+                    self.input_queue.cancel_join_thread()
+                else:
+                    self.input_queue.join_thread()
+
+            if self.output_queue is not None:
+                self.output_queue.close()
+                if self.emergency_shutdown:
+                    self.output_queue.cancel_join_thread()
+                else:
+                    self.output_queue.join_thread()
 
     def _process_stream(self, stream: Iterable[Any]) -> Iterable[tuple[int, Any]]:
         assert self.input_queue is not None, "Input queue was not initialized"
         assert self.output_queue is not None, "Output queue was not initialized"
+
+        self.check_worker_health()
 
         pushed = 0
         read = 0
@@ -246,6 +259,8 @@ class ParallelWorkerPool:
             yield out_item
             read += 1
 
+        self.check_worker_health()
+
     def check_worker_health(self) -> None:
         """
         Checks if any worker process has terminated unexpectedly
@@ -271,9 +286,12 @@ class ParallelWorkerPool:
         self.processes.clear()
 
     def join(self) -> None:
-        for process in self.processes:
-            process.join()
-        self.processes.clear()
+        try:
+            for process in self.processes:
+                process.join()
+            self.check_worker_health()
+        finally:
+            self.processes.clear()
 
     def __del__(self) -> None:
         """
