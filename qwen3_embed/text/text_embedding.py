@@ -26,12 +26,14 @@ class TextEmbedding(TextEmbeddingBase):
         PooledEmbedding,
         CustomTextEmbedding,
     ]
+    _supported_models_cache: list[DenseModelDescription] | None = None
     _embedding_type_cache: dict[str, type[TextEmbeddingBase]] | None = None
     _embedding_description_cache: dict[str, DenseModelDescription] | None = None
 
     @classmethod
     def _clear_model_cache(cls) -> None:
         cls._embedding_type_cache = None
+        cls._supported_models_cache = None
         cls._embedding_description_cache = None
 
     @classmethod
@@ -62,9 +64,14 @@ class TextEmbedding(TextEmbeddingBase):
 
     @classmethod
     def _list_supported_models(cls) -> list[DenseModelDescription]:
+        if cls._supported_models_cache is not None:
+            return cls._supported_models_cache
+
         result: list[DenseModelDescription] = []
         for embedding in cls.EMBEDDINGS_REGISTRY:
             result.extend(embedding._list_supported_models())
+
+        cls._supported_models_cache = result
         return result
 
     @classmethod
