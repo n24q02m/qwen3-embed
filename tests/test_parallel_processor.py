@@ -102,6 +102,8 @@ def test_ordered_map_empty():
     pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
     results = list(pool.ordered_map([]))
     assert results == []
+    # Verify processes are joined and list is cleared
+    assert len(pool.processes) == 0
 
 
 def test_ordered_map_generator():
@@ -635,3 +637,13 @@ def test_get_items_from_queue_error_handling():
 
     with pytest.raises(Exception, match="Queue error"):
         list(_get_items_from_queue(mock_queue))
+
+
+def test_semi_ordered_map_empty():
+    """Test semi_ordered_map with an empty stream."""
+    pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
+    stream = []
+    result = list(pool.semi_ordered_map(stream))
+    assert result == []
+    # Verify processes are joined and list is cleared
+    assert len(pool.processes) == 0
