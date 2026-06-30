@@ -664,6 +664,8 @@ def test_semi_ordered_map_empty():
     assert result == []
     # Verify processes are joined and list is cleared
     assert len(pool.processes) == 0
+
+
 def test_semi_ordered_map_interrupted_no_hang():
     """Test that semi_ordered_map does not hang when consumption is interrupted early."""
     pool = ParallelWorkerPool(worker=SlowWorker, config=PoolConfig(num_workers=1))
@@ -699,6 +701,8 @@ def test_semi_ordered_map_start_failure():
     # queues should be None or handled safely
     assert pool.input_queue is None
     assert pool.output_queue is None
+
+
 def test_check_worker_health_healthy():
     """Test check_worker_health does not raise when all processes are alive or exited cleanly."""
     pool = ParallelWorkerPool(worker=SquareWorker, config=PoolConfig(num_workers=2))
