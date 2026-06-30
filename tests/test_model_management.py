@@ -1911,10 +1911,14 @@ class TestValidateTarMember:
         member.islnk.return_value = is_lnk
         return member
 
-    # --- safe members must be ALLOWED (regression for the over-strict bug) ---
+    # --- safe members must be ALLOWED (regression for previous validation issue) ---
 
     def test_allows_plain_file(self, tmp_path):
         ModelManagement._validate_tar_member(self._member("file.txt"), str(tmp_path))
+
+    def test_allows_dot_prefixed_file(self, tmp_path):
+        # Path normalization should handle the leading dot.
+        ModelManagement._validate_tar_member(self._member("./file.txt"), str(tmp_path))
 
     def test_allows_nested_relative_file(self, tmp_path):
         # Forward slashes are the canonical tar separator and must be accepted.
@@ -1924,6 +1928,10 @@ class TestValidateTarMember:
         ModelManagement._validate_tar_member(
             self._member("subdir", is_reg=False, is_dir=True), str(tmp_path)
         )
+
+    def test_allows_safe_parent_reference(self, tmp_path):
+        # A path containing ".." is safe as long as it stays within the cache directory.
+        ModelManagement._validate_tar_member(self._member("sub/../file.txt"), str(tmp_path))
 
     def test_allows_member_when_cache_dir_has_trailing_separator(self, tmp_path):
         # A trailing separator on cache_dir previously broke the naive
