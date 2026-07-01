@@ -36,3 +36,7 @@
 ## 2026-06-27 - [Fast all-zero mask check in pooling operations]
 **Learning:** When checking if rows in an attention mask are entirely zero during a pooling operation, if the target pooling index (like `last_token_indices`) is already computed, using an O(1) boolean lookup at that index (e.g., `attention_mask[batch_indices, last_token_indices] != 0`) is significantly faster than using an O(N) scan across the entire row (e.g., `attention_mask.any(axis=1)`). If the `last_token_index` holds a valid padding index, checking its exact value verifies if any valid tokens existed in the row.
 **Action:** Avoid full-row `.any()` or `.all()` checks when determining if a padded sequence contains valid tokens if the last valid index is already known. Use O(1) boolean indexing directly.
+
+## 2026-07-01 - [Fast mask summation before float cast]
+**Learning:** Optimizing array reductions (like calculating `sum_mask` in `mean_pooling`) by summing integer arrays (like `attention_mask`) before casting them to a wider floating-point type (e.g., `np.float32`) is significantly faster and more memory-efficient than casting the entire array prior to summation.
+**Action:** When computing sums or other reductions over integer masks that need to be used in floating point math, do the reduction on the original integer array first, then cast the reduced result.
