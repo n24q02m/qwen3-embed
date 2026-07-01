@@ -2,6 +2,163 @@
 
 <!-- version list -->
 
+## v1.12.0 (2026-07-01)
+
+### Bug Fixes
+
+- Add check_worker_health test
+  ([`dccf2f0`](https://github.com/n24q02m/qwen3-embed/commit/dccf2f0eef45c6f859f41da79077f2db35d2f840))
+
+- Add cumulative and fallback-path tar bomb tests for decompress_to_cache
+  ([`8d99154`](https://github.com/n24q02m/qwen3-embed/commit/8d99154c3d2d4e6581ddb6cc7ef16567deed4b63))
+
+- Add edge-case tests for iter_batch (too-large size, empty iterable, zero-size non-consumption)
+  ([`18c6666`](https://github.com/n24q02m/qwen3-embed/commit/18c6666a481ee30b48f4eecfdd55a4ce610cb488))
+
+- Add error test for _validate_tar_member path traversal
+  ([`5589597`](https://github.com/n24q02m/qwen3-embed/commit/558959743f88edecc319d0c3a16625278a97a734))
+
+- Add error-path test for check_input_length
+  ([`715fb16`](https://github.com/n24q02m/qwen3-embed/commit/715fb16ca4a212c79c1609d7b57b1e733f3cae8f))
+
+- Add tests for regression test for over-strict bug
+  ([`f4158f2`](https://github.com/n24q02m/qwen3-embed/commit/f4158f294b8a54616920cf95b9dfc29a542584c8))
+
+- Add tests for too many arguments: make_model_description
+  ([`d46931c`](https://github.com/n24q02m/qwen3-embed/commit/d46931c9d6925887e7184288154f3b183204a507))
+
+- Add tests for untested error path in _save_file_metadata
+  ([`2b8a50b`](https://github.com/n24q02m/qwen3-embed/commit/2b8a50bb9865dbf7f47d645c695158bc7e9e13a1))
+
+- Correct doc rot in README intro and stale embedding docstrings
+  ([#800](https://github.com/n24q02m/qwen3-embed/pull/800),
+  [`29c95ea`](https://github.com/n24q02m/qwen3-embed/commit/29c95eab8edfef0364a0b2a40dffa3215cf38082))
+
+- Correct last_token_pool for mixed-padding, empty, and all-zero attention masks
+  ([`07f19ee`](https://github.com/n24q02m/qwen3-embed/commit/07f19eee2653273aa6517001614c640bc604f6e0))
+
+- Cover export_to_onnx
+  ([`2f434c9`](https://github.com/n24q02m/qwen3-embed/commit/2f434c919f22df796ad440bf1bc007913a1f0283))
+
+- Cover internal worker loop and cleanup in parallel_processor
+  ([`413fbe5`](https://github.com/n24q02m/qwen3-embed/commit/413fbe5b5b24a439a43137e379de4c293599ed58))
+
+- Cover join_or_terminate states
+  ([`5b186a6`](https://github.com/n24q02m/qwen3-embed/commit/5b186a67251ac239d19b1e0357a58cba52783fdd))
+
+- Cover onnx_text_model
+  ([`0a07dad`](https://github.com/n24q02m/qwen3-embed/commit/0a07dada871ec7371009985ea5cc0554d606b044))
+
+- Drop unused llama_cpp import in GGUF cross-encoder dependency check
+  ([`dfa6e97`](https://github.com/n24q02m/qwen3-embed/commit/dfa6e9716b984779f939c6aa2e70cce3513d51f2))
+
+- Drop unused OnnxProvider/PathInput re-export from common package
+  ([`c6eb038`](https://github.com/n24q02m/qwen3-embed/commit/c6eb038755cbe3e21f8a7c34914de1e2d27dcd91))
+
+- Extract yes/no token logits without full-vocab slice
+  ([`b862da4`](https://github.com/n24q02m/qwen3-embed/commit/b862da40d5d17cfde8b24892e2c0743f43cff868))
+
+- Guard _cleanup_worker leak on queue.close error + cover
+  ([`c12e397`](https://github.com/n24q02m/qwen3-embed/commit/c12e39738522efc9405758a8cf38c0e745ec9903))
+
+- Import TextCrossEncoder from source module and drop redundant re-export
+  ([`fc4f490`](https://github.com/n24q02m/qwen3-embed/commit/fc4f4904176ae6e0e0d4ee3514f87b5ed85d12c2))
+
+- Mismatched dictionary key lookup for repo files
+  ([`447d5e6`](https://github.com/n24q02m/qwen3-embed/commit/447d5e665fbbd5e151606cc76ec0e498c3da4158))
+
+- Missing cache for supported models in TextEmbedding
+  ([`788e65d`](https://github.com/n24q02m/qwen3-embed/commit/788e65dbb480b7a6827014d5638f06d3988b81ce))
+
+- Missing edge case: is_safe_path with relative paths
+  ([`0a137e4`](https://github.com/n24q02m/qwen3-embed/commit/0a137e42fe35825d0b5bfb3bff92bb110ffec90a))
+
+- Missing edge case: semi_ordered_map with empty stream
+  ([`30222d1`](https://github.com/n24q02m/qwen3-embed/commit/30222d1192e8668c1c3c41ce385d986da46f5d65))
+
+- Missing error test for parallel worker cleanup
+  ([`5cec788`](https://github.com/n24q02m/qwen3-embed/commit/5cec788104a0cae34f5d2d5fddec5cc1b4c7729c))
+
+- Missing tests for custom_model.py
+  ([`fc2d6af`](https://github.com/n24q02m/qwen3-embed/commit/fc2d6afb2eff92a9344a0ea9b37136e6a99e5406))
+
+- Missing tests for export.py
+  ([`b7cc5c0`](https://github.com/n24q02m/qwen3-embed/commit/b7cc5c0eb548f9ab68c1e7e14fd96877974bbad5))
+
+- O(1) last_token_pool index lookup
+  ([`8224a13`](https://github.com/n24q02m/qwen3-embed/commit/8224a13840be0fb3d568c1b7e498a36d24b2dabf))
+
+- Pin numpy <2.5 to keep Python 3.11 support
+  ([`4ad79c3`](https://github.com/n24q02m/qwen3-embed/commit/4ad79c3f2c946889d1c8aaf3a2faf72f39ce461c))
+
+- Propagate custom reranker registry to spawned workers
+  ([#799](https://github.com/n24q02m/qwen3-embed/pull/799),
+  [`8367ad7`](https://github.com/n24q02m/qwen3-embed/commit/8367ad71bc3dfe3f51b9a8912b8e86f52478b15a))
+
+- Re-raise worker exceptions after draining the queue + harden worker health detection
+  ([`df6c877`](https://github.com/n24q02m/qwen3-embed/commit/df6c877ec390db8339c6857748271dbf83a83391))
+
+- Reduce _rerank_pairs params via kwargs
+  ([`2f2c9b1`](https://github.com/n24q02m/qwen3-embed/commit/2f2c9b17db17b45d6264397112122e46d25edbc6))
+
+- Reduce HF download arg count via model param
+  ([`cce375f`](https://github.com/n24q02m/qwen3-embed/commit/cce375f5696eaae432a4ecde8761b025b120c236))
+
+- Refresh lockfile (renovate maintenance)
+  ([`754b199`](https://github.com/n24q02m/qwen3-embed/commit/754b19934d9411a19426a3467d88ca04e09d9803))
+
+- Remove unused __future__ annotations import in gguf_embedding
+  ([`7b96533`](https://github.com/n24q02m/qwen3-embed/commit/7b9653314d909141209b2192260e737686403979))
+
+- Resolve #792 (hermes-solve) ([#793](https://github.com/n24q02m/qwen3-embed/pull/793),
+  [`77c95f2`](https://github.com/n24q02m/qwen3-embed/commit/77c95f2670467fc1cf1f83c84cce9fb0eab25cbf))
+
+- Ruff-format test_parallel_processor.py after merge
+  ([#873](https://github.com/n24q02m/qwen3-embed/pull/873),
+  [`5f6f1b1`](https://github.com/n24q02m/qwen3-embed/commit/5f6f1b198258d874b7f926e4c5d244c4b1febcd6))
+
+- Single-pass real-token count
+  ([`cb74697`](https://github.com/n24q02m/qwen3-embed/commit/cb74697744f8c009b587a48cfb98419fb5a42817))
+
+- Split download_files_from_huggingface
+  ([`793fc8b`](https://github.com/n24q02m/qwen3-embed/commit/793fc8bf5e960dc76e8e4c85daa3f6c990496ed7))
+
+- Split OnnxTextCrossEncoder __init__ setup
+  ([`325341a`](https://github.com/n24q02m/qwen3-embed/commit/325341ac32331586b8c09d8883297cae8f4fe1dd))
+
+- Split retrieve_model_gcs into helpers
+  ([`a1c77e0`](https://github.com/n24q02m/qwen3-embed/commit/a1c77e032714b5501f518223a2ca39491e430977))
+
+- Update non-major dependencies
+  ([`1bf021b`](https://github.com/n24q02m/qwen3-embed/commit/1bf021bd4b6a7e8d0e508648cae05ce943f0e80f))
+
+- **deps**: Update non-major dependencies ([#782](https://github.com/n24q02m/qwen3-embed/pull/782),
+  [`42970bc`](https://github.com/n24q02m/qwen3-embed/commit/42970bcf90a82b9f37451cae702afb1947797ddf))
+
+- **model-management**: Reduce argument count in _download_with_retries and related helpers
+  ([`cce375f`](https://github.com/n24q02m/qwen3-embed/commit/cce375f5696eaae432a4ecde8761b025b120c236))
+
+- **utils**: Robust last_token_pool handling for mixed padding and edge cases
+  ([`07f19ee`](https://github.com/n24q02m/qwen3-embed/commit/07f19eee2653273aa6517001614c640bc604f6e0))
+
+### Chores
+
+- **deps**: Lock file maintenance ([#801](https://github.com/n24q02m/qwen3-embed/pull/801),
+  [`c9daf37`](https://github.com/n24q02m/qwen3-embed/commit/c9daf3798f36eccea5ca23773e48554206cabd47))
+
+- **deps**: Update actions/checkout action to v7
+  ([#783](https://github.com/n24q02m/qwen3-embed/pull/783),
+  [`3b1691c`](https://github.com/n24q02m/qwen3-embed/commit/3b1691c519593d9b98688513d781e11acede12ba))
+
+- **deps**: Update actions/setup-python digest to ece7cb0
+  ([#841](https://github.com/n24q02m/qwen3-embed/pull/841),
+  [`f6a8672`](https://github.com/n24q02m/qwen3-embed/commit/f6a867218ed8bfe5474d2bfc13cf1ed386f25377))
+
+- **deps**: Update dawidd6/action-send-mail action to v18
+  ([#844](https://github.com/n24q02m/qwen3-embed/pull/844),
+  [`703d51c`](https://github.com/n24q02m/qwen3-embed/commit/703d51cae545e7718658da876cdc1c7ac61e7904))
+
+
 ## v1.12.0-beta.3 (2026-06-13)
 
 ### Bug Fixes
