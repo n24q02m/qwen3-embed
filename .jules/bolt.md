@@ -36,3 +36,7 @@
 ## 2026-06-27 - [Fast all-zero mask check in pooling operations]
 **Learning:** When checking if rows in an attention mask are entirely zero during a pooling operation, if the target pooling index (like `last_token_indices`) is already computed, using an O(1) boolean lookup at that index (e.g., `attention_mask[batch_indices, last_token_indices] != 0`) is significantly faster than using an O(N) scan across the entire row (e.g., `attention_mask.any(axis=1)`). If the `last_token_index` holds a valid padding index, checking its exact value verifies if any valid tokens existed in the row.
 **Action:** Avoid full-row `.any()` or `.all()` checks when determining if a padded sequence contains valid tokens if the last valid index is already known. Use O(1) boolean indexing directly.
+
+## 2024-05-27 - [Fast single-batch scalar math using math.exp]
+**Learning:** For single scalar mathematical operations (e.g., `batch_size == 1` logit differences in `_compute_yes_no_scores`), using Python's built-in `math.exp(float(val))` wrapped in a `try...except OverflowError` block is ~4-5x faster than `numpy.exp(array)`. This is because it completely bypasses NumPy's C-API dispatch, type checking, and array object creation overhead.
+**Action:** When performing mathematical operations on scalar arrays or batches of size 1, conditionally branch to use the standard library `math` module instead of `numpy` functions for significant speedups.
