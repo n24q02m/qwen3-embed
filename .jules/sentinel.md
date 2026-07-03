@@ -1,31 +1,4 @@
-## 2024-10-24 - [Atomic File Downloads]
-**Vulnerability:** File downloads via GCS were written directly to their final `output_path`. If the process crashed, was interrupted, or the integrity check failed *after* partial writing, a corrupted or malicious file could be left at the expected location, leading to cache poisoning or execution errors in concurrent processes.
-**Learning:** `os.replace` is atomic on POSIX systems when the source and destination are on the same filesystem. Always download to a temporary file (`.tmp`) and rename it only *after* complete validation.
-**Prevention:** Implement atomic file writes by downloading to an intermediate path and using `os.replace`. Use `contextlib.suppress(OSError)` in a `finally` block to safely clean up the temporary file if the operation aborts.
-## 2024-10-24 - [SSRF Bypass in URL Validation]
-**Vulnerability:** The `download_file_from_gcs` method validated URLs using `url.startswith('https://storage.googleapis.com/')`. This could be bypassed using credentials syntax (e.g., `https://storage.googleapis.com@127.0.0.1/`), allowing an attacker to fetch arbitrary internal resources (Server-Side Request Forgery).
-**Learning:** String matching like `startswith` is insufficient for URL validation because parsers handle auth components differently.
-**Prevention:** Always parse URLs using `urllib.parse.urlparse` and validate the `scheme` and `netloc` (or `hostname`) independently.
-
-## 2026-05-05 - [Decompression Bomb Vulnerability]
-**Vulnerability:** The `decompress_to_cache` method did not restrict the total uncompressed size of a tar archive. A malicious tar file (tar bomb) could consume excessive disk space or memory.
-**Learning:** Extracted tar members can expand to gigabytes or terabytes from a small archive, resulting in Resource Exhaustion (DoS).
-**Prevention:** Track the running total of `.size` properties from `tar.getmembers()` and raise an exception if it exceeds a maximum safe limit (e.g., 20 GB).
-## 2026-05-21 - [Decompression Bomb Vulnerability]
-**Vulnerability:** The `decompress_to_cache` method called `tar.getmembers()` which reads all archive members into memory at once. For malicious archives with millions of files (tar bomb), this can cause Out-Of-Memory (OOM) exhaustion DoS.
-**Learning:** When extracting or iterating through untrusted archives, avoid loading all metadata into memory simultaneously.
-**Prevention:** Use an iterator (`for member in tar:`) instead of `tar.getmembers()` to process and validate archive members one by one.
-
-## 2026-05-22 - Fix arbitrary permission modification via symlink attacks
-**Vulnerability:** os.chmod and Path.chmod follow symlinks by default. When setting permissions on a directory that an attacker can preemptively create as a symlink (e.g. cache directory), the permissions of the symlink target (such as /etc/passwd) are altered, causing Local Privilege Escalation or DoS.
-**Learning:** Always check `Path.is_symlink()` before calling `chmod` on dynamically created directories that might reside in shared or user-controlled locations.
-**Prevention:** Guard the `chmod` call with `if not cache_path.is_symlink():` so symlink targets are never altered.
-
-## 2026-05-22 - [Decompression Bomb OOM via TarInfo List]
-**Vulnerability:** Even when using `for member in tar:` to avoid `tar.getmembers()`, accumulating the resulting `TarInfo` objects in a list (e.g., `safe_members.append(member)`) still caused Out-Of-Memory (OOM) exhaustion DoS for archives with millions of files.
-**Learning:** Holding millions of object references in memory for pre-validation defeats the purpose of stream-based archive parsing.
-**Prevention:** Use a nested generator function that yields validated members lazily, and pass this generator directly to `tar.extractall(members=generator())` or iterate over it.
-## 2026-05-22 - [Multi-hash Integrity Verification]
-**Vulnerability:** File downloads via GCS were originally verified using only MD5 checksums extracted from `x-goog-hash` headers. MD5 is vulnerable to collision attacks and is no longer cryptographically secure for file integrity verification against malicious tampering.
-**Learning:** Cloud providers like Google Cloud Storage often include multiple hash algorithms (e.g., CRC32c, MD5, SHA256) in their metadata headers. Prioritizing the strongest available algorithm significantly hardens the verification process against sophisticated tampering.
-**Prevention:** Always implement multi-hash support for file integrity checks. Parse all available algorithms and use the most cryptographically secure one available (e.g., SHA256) before falling back to weaker algorithms like MD5.
+## YYYY-MM-DD - SSRF Prevention with Hostname vs Netloc
+**Vulnerability:** `urllib.parse.urlparse(url).netloc` was used instead of `.hostname` for URL domain validation.
+**Learning:** Checking `.netloc` instead of `.hostname` can sometimes lead to SSRF bypasses if the check uses `.endswith()` or similar methods, because `.netloc` includes userinfo and port syntax (e.g., `user:pass@host:port`). Although the original exact match was strictly safe, using `.hostname` is the robust standard that prevents future regression to bypassable patterns and handles explicit ports cleanly.
+**Prevention:** Always use `urllib.parse.urlparse(url).hostname` for URL validation when verifying the domain.
