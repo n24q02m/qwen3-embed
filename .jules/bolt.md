@@ -43,3 +43,6 @@
 ## 2026-07-01 - [Fast mask summation before float cast]
 **Learning:** Optimizing array reductions (like calculating `sum_mask` in `mean_pooling`) by summing integer arrays (like `attention_mask`) before casting them to a wider floating-point type (e.g., `np.float32`) is significantly faster and more memory-efficient than casting the entire array prior to summation.
 **Action:** When computing sums or other reductions over integer masks that need to be used in floating point math, do the reduction on the original integer array first, then cast the reduced result.
+## 2024-05-18 - Avoid re-summing integer arrays in mean_pooling
+**Learning:** When performing mean pooling, we were casting an integer attention mask to float, and then re-summing the original integer array and casting the result to float.
+**Action:** Reuse the casted float array for the sum (e.g., `mask_cast.sum()`) to avoid the overhead of re-summing the integer array and a second float cast.
