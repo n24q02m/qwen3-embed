@@ -40,3 +40,6 @@
 ## 2025-02-12 - Fast Sigmoid Calculation for Scalar Values
 **Learning:** Computing a sigmoid on a scalar value (e.g. `batch_size == 1` logit differences) using NumPy incurs significant C-API and array allocation overhead.
 **Action:** Use Python's built-in `math.exp(float(val))` wrapped in a `try...except OverflowError` block for scalar values. This avoids the overhead and is ~4-5x faster than `numpy.exp(array)`.
+## 2026-07-01 - [Fast mask summation before float cast]
+**Learning:** Optimizing array reductions (like calculating `sum_mask` in `mean_pooling`) by summing integer arrays (like `attention_mask`) before casting them to a wider floating-point type (e.g., `np.float32`) is significantly faster and more memory-efficient than casting the entire array prior to summation.
+**Action:** When computing sums or other reductions over integer masks that need to be used in floating point math, do the reduction on the original integer array first, then cast the reduced result.
