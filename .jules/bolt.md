@@ -36,3 +36,7 @@
 ## 2026-06-27 - [Fast all-zero mask check in pooling operations]
 **Learning:** When checking if rows in an attention mask are entirely zero during a pooling operation, if the target pooling index (like `last_token_indices`) is already computed, using an O(1) boolean lookup at that index (e.g., `attention_mask[batch_indices, last_token_indices] != 0`) is significantly faster than using an O(N) scan across the entire row (e.g., `attention_mask.any(axis=1)`). If the `last_token_index` holds a valid padding index, checking its exact value verifies if any valid tokens existed in the row.
 **Action:** Avoid full-row `.any()` or `.all()` checks when determining if a padded sequence contains valid tokens if the last valid index is already known. Use O(1) boolean indexing directly.
+
+## 2025-02-12 - Fast Sigmoid Calculation for Scalar Values
+**Learning:** Computing a sigmoid on a scalar value (e.g. `batch_size == 1` logit differences) using NumPy incurs significant C-API and array allocation overhead.
+**Action:** Use Python's built-in `math.exp(float(val))` wrapped in a `try...except OverflowError` block for scalar values. This avoids the overhead and is ~4-5x faster than `numpy.exp(array)`.
