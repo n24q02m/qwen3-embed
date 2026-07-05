@@ -61,7 +61,9 @@ def test_numpy_array_type() -> None:
         # arg is NDArray[np.float64] which is numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
         # arg.__args__[1] is numpy.dtype[numpy.float64]
         # arg.__args__[1].__args__[0] is numpy.float64
-        actual_dtypes.append(arg.__args__[1].__args__[0])
+        actual_dtypes.append(
+            arg.__args__[0] if len(arg.__args__) == 1 else arg.__args__[1].__args__[0]
+        )
 
     for dtype in expected_dtypes:
         assert dtype in actual_dtypes
