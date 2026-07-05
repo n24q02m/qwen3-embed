@@ -2,6 +2,26 @@
 
 <!-- version list -->
 
+## v1.12.1-beta.1 (2026-07-05)
+
+### Bug Fixes
+
+- Fast-path scalar sigmoid with math.exp for batch size 1
+  ([`53744a1`](https://github.com/n24q02m/qwen3-embed/commit/53744a11eba280dd5ef494eb23e58e744a977530))
+
+- Sum integer attention mask before float cast in mean pooling
+  ([`6702cd4`](https://github.com/n24q02m/qwen3-embed/commit/6702cd45ed04ba63f250a0287de49a25552ab000))
+
+- Validate GCS download host via parsed.hostname to prevent SSRF
+  ([`8d1c946`](https://github.com/n24q02m/qwen3-embed/commit/8d1c946414083fbac3790405ab4a45afeecaea43))
+
+- **deps**: Lock file maintenance
+  ([`b751f96`](https://github.com/n24q02m/qwen3-embed/commit/b751f96d28a9b6128e62f2d5a88c669766e93d95))
+
+- **deps**: Update non-major dependencies
+  ([`28697e2`](https://github.com/n24q02m/qwen3-embed/commit/28697e23fc92c796500944d3879b000c3816357f))
+
+
 ## v1.12.0 (2026-07-01)
 
 ### Bug Fixes
