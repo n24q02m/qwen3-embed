@@ -60,12 +60,18 @@ def test_numpy_array_type() -> None:
     for arg in args:
         # Check string representation or use simple hasattr matching
         arg_str = str(arg)
-        if 'float64' in arg_str: actual_dtypes.append(np.float64)
-        elif 'float32' in arg_str: actual_dtypes.append(np.float32)
-        elif 'float16' in arg_str: actual_dtypes.append(np.float16)
-        elif 'int8' in arg_str: actual_dtypes.append(np.int8)
-        elif 'int64' in arg_str: actual_dtypes.append(np.int64)
-        elif 'int32' in arg_str: actual_dtypes.append(np.int32)
+        if "float64" in arg_str:
+            actual_dtypes.append(np.float64)
+        elif "float32" in arg_str:
+            actual_dtypes.append(np.float32)
+        elif "float16" in arg_str:
+            actual_dtypes.append(np.float16)
+        elif "int8" in arg_str:
+            actual_dtypes.append(np.int8)
+        elif "int64" in arg_str:
+            actual_dtypes.append(np.int64)
+        elif "int32" in arg_str:
+            actual_dtypes.append(np.int32)
 
     for dtype in expected_dtypes:
         assert dtype in actual_dtypes
