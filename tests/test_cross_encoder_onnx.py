@@ -710,7 +710,7 @@ class TestOnnxTextCrossEncoderRerankPairs:
     def test_rerank_pairs_single_tuple(self, onnx_encoder: OnnxTextCrossEncoder) -> None:
         onnx_encoder.tokenizer = _make_mock_tokenizer(n_pairs=1)  # type: ignore[invalid-assignment]
         # Passing a single tuple instead of a list of tuples
-        scores = list(onnx_encoder.rerank_pairs(("query", "doc")))
+        scores = list(onnx_encoder.rerank_pairs([("query", "doc")]))
         assert len(scores) == 1
         assert isinstance(scores[0], float)
 

@@ -140,7 +140,7 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
         self,
         documents: str | Iterable[str],
         batch_size: int = 256,
-        parallel: int | None = None,  # noqa: ARG002
+        parallel: int | None = None,
         **kwargs: Any,
     ) -> Iterable[NumpyArray]:
         """Encode documents into embeddings.

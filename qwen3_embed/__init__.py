@@ -15,6 +15,6 @@ __all__ = [
     "CustomModelSpec",
     "CustomRerankerSpec",
     "Device",
-    "TextEmbedding",
     "TextCrossEncoder",
+    "TextEmbedding",
 ]

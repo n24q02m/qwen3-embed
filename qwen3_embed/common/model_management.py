@@ -268,7 +268,7 @@ class ModelManagement(Generic[T]):
                         return False
             return True
         except (OSError, KeyError) as e:
-            logger.error(f"Error verifying files: {str(e)}")
+            logger.error(f"Error verifying files: {e!s}")
             return False
 
     @classmethod
