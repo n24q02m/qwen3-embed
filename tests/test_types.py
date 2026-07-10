@@ -58,20 +58,10 @@ def test_numpy_array_type() -> None:
 
     actual_dtypes = []
     for arg in args:
-        # Check string representation or use simple hasattr matching
-        arg_str = str(arg)
-        if "float64" in arg_str:
-            actual_dtypes.append(np.float64)
-        elif "float32" in arg_str:
-            actual_dtypes.append(np.float32)
-        elif "float16" in arg_str:
-            actual_dtypes.append(np.float16)
-        elif "int8" in arg_str:
-            actual_dtypes.append(np.int8)
-        elif "int64" in arg_str:
-            actual_dtypes.append(np.int64)
-        elif "int32" in arg_str:
-            actual_dtypes.append(np.int32)
+        # arg is NDArray[np.float64] which is numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
+        # arg.__args__[1] is numpy.dtype[numpy.float64]
+        # arg.__args__[1].__args__[0] is numpy.float64
+        actual_dtypes.append(arg.__args__[1].__args__[0])
 
     for dtype in expected_dtypes:
         assert dtype in actual_dtypes
