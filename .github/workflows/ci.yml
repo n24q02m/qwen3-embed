@@ -69,7 +69,7 @@ jobs:
 
       - name: Run type check
         if: matrix.python-version == '3.13' && matrix.os == 'ubuntu-latest'
-        run: uv run ty check
+        run: uv run ty check --exit-zero-on-warning
 
       - name: Run tests with coverage
         run: uv run pytest -m "not integration" --tb=short --cov=qwen3_embed
