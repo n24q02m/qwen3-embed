@@ -217,11 +217,10 @@ class ModelManagement(Generic[T]):
                 response, tmp_output_path, total_size_in_bytes, show_progress
             )
 
-            if expected_sha256:
-                if expected_sha256 != calculated_sha256:
-                    raise ValueError(
-                        f"File integrity check failed: expected SHA256 {expected_sha256}, got {calculated_sha256}"
-                    )
+            if expected_sha256 and expected_sha256 != calculated_sha256:
+                raise ValueError(
+                    f"File integrity check failed: expected SHA256 {expected_sha256}, got {calculated_sha256}"
+                )
             os.replace(tmp_output_path, output_path)
         finally:
             if os.path.exists(tmp_output_path):
