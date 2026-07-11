@@ -46,3 +46,6 @@
 ## 2024-05-18 - Avoid re-summing integer arrays in mean_pooling
 **Learning:** When performing mean pooling, we were casting an integer attention mask to float, and then re-summing the original integer array and casting the result to float.
 **Action:** Reuse the casted float array for the sum (e.g., `mask_cast.sum()`) to avoid the overhead of re-summing the integer array and a second float cast.
+## 2025-02-14 - Optimize regex substitution loops with search fast-path
+**Learning:** Using `re.search` as a fast-path condition before executing a `re.subn` loop significantly improves performance (e.g., ~50% faster for clean text) because `re.search` is highly optimized in C and avoids the overhead of substitution checks when no matches exist.
+**Action:** Always implement an initial `search` or string-matching fast-path before performing iterative regex substitutions or replacements, especially on hot paths like text sanitization.
