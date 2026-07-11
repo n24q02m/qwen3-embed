@@ -161,7 +161,8 @@ class TestDownloadFileFromGcs:
         response.status_code = 200
         response.headers = {
             "content-length": "4",
-            "x-goog-hash": "sha256=" + base64.b64encode(hashlib.sha256(b"data").digest()).decode(),
+            "x-goog-hash": "md5="
+            + base64.b64encode(hashlib.md5(b"data", usedforsecurity=False).digest()).decode(),
         }
         response.iter_content.return_value = [b"data"]
         mock_session.get.return_value = response
@@ -360,13 +361,15 @@ class TestDownloadFileFromGcs:
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
         chunk = b"actual content"
-        wrong_sha256 = base64.b64encode(hashlib.sha256(b"different content").digest()).decode()
+        wrong_md5 = base64.b64encode(
+            hashlib.md5(b"different content", usedforsecurity=False).digest()
+        ).decode()  # SECURITY: MD5 is used solely for non-cryptographic file integrity checking.
 
         response = Mock()
         response.status_code = 200
         response.headers = {
             "content-length": str(len(chunk)),
-            "x-goog-hash": f"sha256={wrong_sha256}",
+            "x-goog-hash": f"md5={wrong_md5}",
         }
         response.iter_content.return_value = [chunk]
         mock_get.return_value = response
@@ -384,13 +387,15 @@ class TestDownloadFileFromGcs:
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
         chunk = b"verified content"
-        correct_sha256 = base64.b64encode(hashlib.sha256(chunk).digest()).decode()
+        correct_md5 = base64.b64encode(
+            hashlib.md5(chunk, usedforsecurity=False).digest()
+        ).decode()  # SECURITY: MD5 is used solely for non-cryptographic file integrity checking.
 
         response = Mock()
         response.status_code = 200
         response.headers = {
             "content-length": str(len(chunk)),
-            "x-goog-hash": f"crc32c=abc123, sha256={correct_sha256}",
+            "x-goog-hash": f"crc32c=abc123, md5={correct_md5}",
         }
         response.iter_content.return_value = [chunk]
         mock_get.return_value = response
@@ -1802,41 +1807,41 @@ class TestVerifyLocalMetadata:
 class TestGetExpectedHashes:
     """Tests for _get_expected_hashes method."""
 
-    def test_get_expected_sha256_no_header(self):
+    def test_get_expected_md5_no_header(self):
         """None should be returned if x-goog-hash header is missing."""
-        assert ModelManagement._get_expected_hashes({}) is None
+        assert ModelManagement._get_expected_hashes({}) == (None, None)
 
-    def test_get_expected_sha256_no_sha256(self):
-        """None should be returned if x-goog-hash header is present but missing sha256."""
+    def test_get_expected_md5_no_md5(self):
+        """None should be returned if x-goog-hash header is present but missing md5."""
         headers = {"x-goog-hash": "crc32c=n9f4Sg=="}
-        assert ModelManagement._get_expected_hashes(headers) is None
+        assert ModelManagement._get_expected_hashes(headers) == (None, None)
 
-    def test_get_expected_sha256_success(self):
-        """Correct hex SHA-256 should be returned if sha256 is present in x-goog-hash."""
-        headers = {"x-goog-hash": "sha256=uU0nuZNNPgilLlLX2n2r+sSE7+N6U4DukIj3rOLvzek="}
-        assert (
-            ModelManagement._get_expected_hashes(headers)
-            == "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+    def test_get_expected_md5_success(self):
+        """Correct hex MD5 should be returned if md5 is present in x-goog-hash."""
+        # "test" md5 is 098f6bcd4621d373cade4e832627b4f6
+        # base64 encoded: CY9rzUYh03PK3k6DJie09g==
+        headers = {"x-goog-hash": "md5=CY9rzUYh03PK3k6DJie09g=="}
+        assert ModelManagement._get_expected_hashes(headers) == (
+            "098f6bcd4621d373cade4e832627b4f6",
+            None,
         )
 
-    def test_get_expected_sha256_multi_part(self):
-        """Correct hex SHA-256 should be returned if multiple hashes are present."""
+    def test_get_expected_md5_multi_part(self):
+        """Correct hex MD5 should be returned if multiple hashes are present."""
         headers = {
             "x-goog-hash": "crc32c=n9f4Sg==, md5=CY9rzUYh03PK3k6DJie09g==, sha256=uU0nuZNNPgilLlLX2n2r+sSE7+N6U4DukIj3rOLvzek="
         }
-        assert (
-            ModelManagement._get_expected_hashes(headers)
-            == "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+        assert ModelManagement._get_expected_hashes(headers) == (
+            "098f6bcd4621d373cade4e832627b4f6",
+            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
         )
 
-    def test_get_expected_sha256_whitespace(self):
-        """Correct hex SHA-256 should be returned even with extra whitespace."""
-        headers = {
-            "x-goog-hash": " crc32c=n9f4Sg== , sha256=uU0nuZNNPgilLlLX2n2r+sSE7+N6U4DukIj3rOLvzek= "
-        }
-        assert (
-            ModelManagement._get_expected_hashes(headers)
-            == "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+    def test_get_expected_md5_whitespace(self):
+        """Correct hex MD5 should be returned even with extra whitespace."""
+        headers = {"x-goog-hash": " crc32c=n9f4Sg== , md5=CY9rzUYh03PK3k6DJie09g== "}
+        assert ModelManagement._get_expected_hashes(headers) == (
+            "098f6bcd4621d373cade4e832627b4f6",
+            None,
         )
 
 
