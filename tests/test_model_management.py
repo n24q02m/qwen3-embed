@@ -161,8 +161,7 @@ class TestDownloadFileFromGcs:
         response.status_code = 200
         response.headers = {
             "content-length": "4",
-            "x-goog-hash": "sha256="
-            + base64.b64encode(hashlib.sha256(b"data").digest()).decode(),
+            "x-goog-hash": "sha256=" + base64.b64encode(hashlib.sha256(b"data").digest()).decode(),
         }
         response.iter_content.return_value = [b"data"]
         mock_session.get.return_value = response
@@ -361,9 +360,7 @@ class TestDownloadFileFromGcs:
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
         chunk = b"actual content"
-        wrong_sha256 = base64.b64encode(
-            hashlib.sha256(b"different content").digest()
-        ).decode()
+        wrong_sha256 = base64.b64encode(hashlib.sha256(b"different content").digest()).decode()
 
         response = Mock()
         response.status_code = 200
@@ -387,9 +384,7 @@ class TestDownloadFileFromGcs:
         mock_get = mock_session.get
         mock_get_session.return_value = mock_session
         chunk = b"verified content"
-        correct_sha256 = base64.b64encode(
-            hashlib.sha256(chunk).digest()
-        ).decode()
+        correct_sha256 = base64.b64encode(hashlib.sha256(chunk).digest()).decode()
 
         response = Mock()
         response.status_code = 200
@@ -1821,19 +1816,30 @@ class TestGetExpectedHashes:
         # "test" sha256 is 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
         # base64 encoded: n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=
         headers = {"x-goog-hash": "sha256=n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg="}
-        assert ModelManagement._get_expected_hashes(headers) == "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        assert (
+            ModelManagement._get_expected_hashes(headers)
+            == "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        )
 
     def test_get_expected_sha256_multi_part(self):
         """Correct hex SHA256 should be returned if multiple hashes are present."""
         headers = {
             "x-goog-hash": "crc32c=n9f4Sg==, md5=CY9rzUYh03PK3k6DJie09g==, sha256=uU0nuZNNPgilLlLX2n2r+sSE7+N6U4DukIj3rOLvzek="
         }
-        assert ModelManagement._get_expected_hashes(headers) == "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+        assert (
+            ModelManagement._get_expected_hashes(headers)
+            == "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+        )
 
     def test_get_expected_sha256_whitespace(self):
         """Correct hex SHA256 should be returned even with extra whitespace."""
-        headers = {"x-goog-hash": " crc32c=n9f4Sg== , sha256=n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg= "}
-        assert ModelManagement._get_expected_hashes(headers) == "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        headers = {
+            "x-goog-hash": " crc32c=n9f4Sg== , sha256=n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg= "
+        }
+        assert (
+            ModelManagement._get_expected_hashes(headers)
+            == "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        )
 
 
 # ---------------------------------------------------------------------------
