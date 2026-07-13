@@ -289,9 +289,6 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
             outputs = self.model.run(self.ONNX_OUTPUT_NAMES, onnx_input)
             model_output = outputs[0]
 
-            if getattr(model_output, "dtype", None) == np.float16:
-                model_output = model_output.astype(np.float32)  # type: ignore[unresolved-attribute]
-
             # batch=1 with no padding: the yes/no token is the last position. The mask
             # (all ones) is passed for the full-vocab variant; the YesNo variant ignores
             # it (output already collapsed to (1, 2)).
