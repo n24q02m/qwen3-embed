@@ -94,9 +94,8 @@ def mean_pooling(input_array: NumpyArray, attention_mask: NDArray[np.int64]) -> 
     # ⚡ Bolt: Fast mean pooling using np.matmul (~5x faster than np.expand_dims and np.sum)
     mask_cast = attention_mask.astype(input_array.dtype)
     sum_embeddings = np.matmul(mask_cast[:, np.newaxis, :], input_array).squeeze(1)
-    # ⚡ Bolt: Fast reduction using integer array sum before cast to save memory/time (~10% faster)
-    # Using .astype(..., copy=False) avoids the UFuncTypeError when dividing float16/32 array in-place by float64 array
-    sum_mask = attention_mask.sum(axis=1, keepdims=True).astype(input_array.dtype, copy=False)
+    # ⚡ Bolt: Fast reduction using casted float array sum to avoid re-summing integer array
+    sum_mask = mask_cast.sum(axis=1, keepdims=True)
     # ⚡ Bolt: Fast in-place division to avoid allocating new array (~20% faster)
     sum_embeddings /= np.maximum(sum_mask, 1e-9)
     return sum_embeddings
