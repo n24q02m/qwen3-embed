@@ -34,3 +34,7 @@
 **Vulnerability:** File downloads via GCS were using MD5 checksums extracted from `x-goog-hash` headers for file integrity. MD5 is vulnerable to collision attacks and is no longer cryptographically secure for file integrity verification against malicious tampering.
 **Learning:** Even as a fallback, utilizing cryptographically broken algorithms like MD5 provides a false sense of security and creates unnecessary attack surface.
 **Prevention:** Completely remove support for MD5 hashing in file integrity checks. Always use cryptographically secure algorithms like SHA-256 exclusively.
+## 2026-07-11 - [Reverted: Remove Weak MD5 Hashing for File Integrity]
+**Vulnerability:** Attempted to remove MD5 hashing for file integrity checks from GCS downloads.
+**Learning:** Google Cloud Storage only guarantees `crc32c` and `md5` in the `x-goog-hash` header. Removing MD5 support caused the integrity check to silently fail and become a no-op because SHA-256 was not provided by GCS. In this context, MD5 serves as a non-cryptographic checksum for transport integrity rather than a secure boundary against a trusted origin.
+**Prevention:** Do not remove MD5 fallback logic from GCS file integrity checks without ensuring an alternative secure hash (like SHA-256) is actually provided by the upstream provider. A weaker checksum is better than no checksum for preventing accidental transport corruption.
