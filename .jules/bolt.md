@@ -49,3 +49,6 @@
 ## 2025-02-14 - Optimize regex substitution loops with search fast-path
 **Learning:** Using `re.search` as a fast-path condition before executing a `re.subn` loop significantly improves performance (e.g., ~50% faster for clean text) because `re.search` is highly optimized in C and avoids the overhead of substitution checks when no matches exist.
 **Action:** Always implement an initial `search` or string-matching fast-path before performing iterative regex substitutions or replacements, especially on hot paths like text sanitization.
+## 2024-05-24 - Defer Tensor Casting
+**Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
+**Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
