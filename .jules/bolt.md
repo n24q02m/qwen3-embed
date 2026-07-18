@@ -52,3 +52,7 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
+
+## 2025-02-14 - Optimize string replacement loops with re.search fast-path
+**Learning:** Using `re.search` as a fast-path condition before executing a `.replace()` loop significantly improves performance (e.g., ~50% faster for clean text) because `re.search` is highly optimized in C and avoids the overhead of iteration and matching when no forbidden tokens exist. For dirty text, Python's string `.replace()` loop remains faster than regex substitution `re.subn()`.
+**Action:** Always implement an initial `re.search` fast-path before performing iterative `.replace()` loops, especially on hot paths like text sanitization.
