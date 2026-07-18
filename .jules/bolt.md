@@ -1,3 +1,54 @@
-## 2025-07-14 - Replace Regex with Native String Replacement for Prompt Sanitization
-**Learning:** For stripping out static forbidden tokens from user input in a loop, Python's native `str.replace()` is significantly faster (~3x) than using the `re` module (specifically `re.subn`), because string methods execute primarily in C and avoid regex engine setup/dispatch overhead. Using `any(token in text for token in FORBIDDEN_TOKENS)` also properly hooks back into the single source of truth without sacrificing much speed.
-**Action:** Default to using simple string methods (`in` and `.replace`) for basic substring search and replacement tasks instead of compiling regexes, especially on hot paths or loops that handle adversarial input.
+## 2026-05-01 - [Fast 2-class classification in Numpy]
+**Learning:** For 2-class classification (binary softmax) in numpy, computing the sigmoid on the difference of logits is fast. This can be further optimized by using `np.subtract(yes_no_logits[:, 0], yes_no_logits[:, 1], dtype=np.float32)` instead of casting individually to floats and then subtracting, saving array allocations and execution time. Also, using in-place operations like `np.exp(diff, out=diff)` and `np.reciprocal(diff, out=diff)` avoids extra memory overhead.
+**Action:** Always prefer `np.subtract` over `array.astype() - array.astype()` and utilize in-place mutation where possible when optimizing hot paths involving numpy arrays.
+
+## 2024-05-24 - [Fast iterable chunking with walrus operator]
+**Learning:** When chunking generic iterables in hot paths using `itertools.islice`, using the walrus operator (`while b := list(islice(source_iter, size)):`) instead of a `while True` loop with an explicit length check reduces bytecode execution overhead.
+**Action:** Use the walrus operator for iterator exhaustion loops to avoid unnecessary length checks and loop breaks.
+
+## 2024-05-06 - [Fast single scalar math operations]
+**Learning:** For mathematical operations on single scalar values (e.g., computing a sigmoid from a logit difference), using Python's built-in `math.exp` is significantly faster than `numpy.exp` due to the avoidance of numpy's C-API dispatch and object creation overhead. Because `math.exp` raises an `OverflowError` for large negative exponents, it should be wrapped in a `try...except OverflowError` block to handle edge cases appropriately (e.g., returning 0.0 or 1.0 for sigmoid boundaries).
+**Action:** Use `math.exp` instead of `np.exp` when operating on single scalar values, wrapping it in a `try...except OverflowError` block to handle numerical boundaries.
+
+## 2024-05-24 - [Fast last token index in right-padded masks]
+**Learning:** When calculating the last token index for strictly right-padded attention masks (contiguous 1s followed by 0s) in numpy, using `mask.sum(axis=1) - 1` is significantly faster (~4-5x) than `seq_len - 1 - np.argmax(mask[:, ::-1], axis=1)`. It avoids array reversal and argmax allocation overhead.
+**Action:** Use `mask.sum(axis=1) - 1` to find the last valid token index for right-padded attention masks.
+
+## 2025-05-24 - Fast L2 Normalization
+**Learning:** In hot paths like embedding normalization, chained numpy operations (`np.sqrt`, `np.maximum`, `/`) allocate large intermediate arrays.
+**Action:** Use in-place operations (`out=` parameter for ufuncs and `/=`) to reuse memory. We optimized `normalize` in `utils.py` to mutate the array in-place, yielding a ~25% speedup without breaking semantics, as the pooled array is temporary.
+
+## 2026-05-26 - [Fast logit subtraction without stack]
+**Learning:** When subtracting two columns from a 2D numpy array (e.g. logit extraction), constructing an intermediate array via `np.stack` creates unnecessary allocation overhead. Direct subtraction of the sliced columns via `np.subtract(last_logits[:, NO], last_logits[:, YES])` avoids this.
+**Action:** Avoid `np.stack` for simple column extractions when the immediate next step is a reduction or subtraction operation.
+
+## 2026-06-10 - [Fast NumPy Input Tensor Creation]
+**Learning:** Creating NumPy arrays from a sequence of lists (e.g., tokenized input) with a specified `dtype` (e.g., `dtype=np.int64`) in a single call is more efficient than creating a default array first and then casting it. The latter leads to redundant O(N) memory allocations and copies because `np.array(..., dtype=np.int64)` on an existing array defaults to `copy=True`.
+**Action:** Always specify the final `dtype` when creating input tensors for model inference from Python sequences to avoid intermediate copies.
+
+## 2026-06-11 - Optimize last_token_pool using reverse argmax
+**Learning:** Finding the last non-zero token index in a padding mask using `seq_len - 1 - np.argmax(attention_mask[:, ::-1], axis=1)` is significantly (~2.5x) faster than the previous `np.argmax(np.cumsum(attention_mask, axis=1), axis=1)` approach. `cumsum` does unnecessary arithmetic over the entire sequence dimension, whereas `argmax` over the reversed array operates much more efficiently.
+**Action:** Use reverse argmax to find the last occurrence of a condition in numpy arrays rather than cumsum-based strategies when dealing with boolean/binary masks.
+
+## 2024-05-27 - [Fast stream reordering with sentinel pop]
+**Learning:** When reordering items from a concurrent generator stream (where items arrive out-of-order and must be yielded sequentially), implementing a "fast path" that immediately yields items arriving in the correct expected order bypasses the overhead of dictionary insertion. Furthermore, using `dict.pop(key, sentinel)` combined with a `while` loop allows simultaneous existence-checking and extraction, avoiding double lookups (`key in dict` followed by `dict.pop(key)`).
+**Action:** When buffering out-of-order stream results in a dictionary, always check if the item is the `next_expected` one first to bypass buffering entirely, and use `dict.pop` with a sentinel for faster extraction loops.
+## 2026-06-27 - [Fast all-zero mask check in pooling operations]
+**Learning:** When checking if rows in an attention mask are entirely zero during a pooling operation, if the target pooling index (like `last_token_indices`) is already computed, using an O(1) boolean lookup at that index (e.g., `attention_mask[batch_indices, last_token_indices] != 0`) is significantly faster than using an O(N) scan across the entire row (e.g., `attention_mask.any(axis=1)`). If the `last_token_index` holds a valid padding index, checking its exact value verifies if any valid tokens existed in the row.
+**Action:** Avoid full-row `.any()` or `.all()` checks when determining if a padded sequence contains valid tokens if the last valid index is already known. Use O(1) boolean indexing directly.
+
+## 2025-02-12 - Fast Sigmoid Calculation for Scalar Values
+**Learning:** Computing a sigmoid on a scalar value (e.g. `batch_size == 1` logit differences) using NumPy incurs significant C-API and array allocation overhead.
+**Action:** Use Python's built-in `math.exp(float(val))` wrapped in a `try...except OverflowError` block for scalar values. This avoids the overhead and is ~4-5x faster than `numpy.exp(array)`.
+## 2026-07-01 - [Fast mask summation before float cast]
+**Learning:** Optimizing array reductions (like calculating `sum_mask` in `mean_pooling`) by summing integer arrays (like `attention_mask`) before casting them to a wider floating-point type (e.g., `np.float32`) is significantly faster and more memory-efficient than casting the entire array prior to summation.
+**Action:** When computing sums or other reductions over integer masks that need to be used in floating point math, do the reduction on the original integer array first, then cast the reduced result.
+## 2024-05-18 - Avoid re-summing integer arrays in mean_pooling
+**Learning:** When performing mean pooling, we were casting an integer attention mask to float, and then re-summing the original integer array and casting the result to float.
+**Action:** Reuse the casted float array for the sum (e.g., `mask_cast.sum()`) to avoid the overhead of re-summing the integer array and a second float cast.
+## 2025-02-14 - Optimize regex substitution loops with search fast-path
+**Learning:** Using `re.search` as a fast-path condition before executing a `re.subn` loop significantly improves performance (e.g., ~50% faster for clean text) because `re.search` is highly optimized in C and avoids the overhead of substitution checks when no matches exist.
+**Action:** Always implement an initial `search` or string-matching fast-path before performing iterative regex substitutions or replacements, especially on hot paths like text sanitization.
+## 2024-05-24 - Defer Tensor Casting
+**Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
+**Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
