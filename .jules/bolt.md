@@ -49,3 +49,6 @@
 ## 2025-02-14 - Optimize regex substitution loops with search fast-path
 **Learning:** Using `re.search` as a fast-path condition before executing a `re.subn` loop significantly improves performance (e.g., ~50% faster for clean text) because `re.search` is highly optimized in C and avoids the overhead of substitution checks when no matches exist.
 **Action:** Always implement an initial `search` or string-matching fast-path before performing iterative regex substitutions or replacements, especially on hot paths like text sanitization.
+## 2026-07-02 - [Fast 2D Array Sum in Numpy]
+**Learning:** In numpy, computing the sum over an integer array before casting it to float is significantly faster than casting it to float and then computing the sum.
+**Action:** Sum integer arrays before casting their results to floats (e.g., using `.astype()` on the sum).
