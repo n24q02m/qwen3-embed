@@ -52,3 +52,6 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
+## 2026-07-28 - [Optimize text processing with string fast-paths]
+**Learning:** For loops iterating over a large number of items where only a few items trigger an expensive condition (e.g., checking multiple substring matches in a string), implementing a pre-condition fast-path using a single, broad string containment check (like `if "<|" not in text:`) before the main loop or `any()` call avoids significant Python iteration overhead. Since strings are evaluated in C under the hood, this initial O(N) substring scan is extremely fast and drops execution time for clean texts dramatically compared to the generator overhead inside `any()`.
+**Action:** Always consider a fast-path condition when processing lists of strings, specifically looking for common prefixes or structural indicators of the target condition, to bypass more expensive iteration for the typical "clean" cases.
