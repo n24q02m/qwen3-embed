@@ -53,6 +53,9 @@ RERANK_TEMPLATE = (
 # Tokens that must be stripped from user input to prevent prompt injection
 FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
 
+# Defensive assertion for the C-level fast path in _sanitize_input
+assert all("<|" in t for t in FORBIDDEN_TOKENS)
+
 # ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
@@ -127,6 +130,10 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     @staticmethod
     def _sanitize_input(text: str) -> str:
         """Strip forbidden special tokens from user input."""
+        # ⚡ Bolt: Fast C-level substring check to bypass Python iteration on clean text
+        if "<|" not in text:
+            return text
+
         # ⚡ Bolt: Fast string replacement avoids regex engine overhead for dirty inputs (~3x faster)
         if not any(token in text for token in FORBIDDEN_TOKENS):
             return text
