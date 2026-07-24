@@ -52,3 +52,7 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
+
+## 2026-07-28 - [Fast C-level substring check before sanitization]
+**Learning:** When sanitizing text against multiple specific tokens with a common prefix (e.g., Qwen forbidden tokens like `<|im_start|>`), adding a broad C-level substring fast-path (e.g., `if "<|" not in text: return text`) before an `any(...)` loop or regex check significantly reduces Python iteration and regex overhead on typical clean inputs.
+**Action:** Always implement an initial fast-path checking for a common prefix before performing iterative checks or substitutions on hot paths, and include a module-level defensive assertion to ensure the prefix remains valid for all forbidden tokens.
