@@ -626,7 +626,10 @@ class ModelManagement(Generic[T]):
         cls, cache_tmp_dir: Path, model_tmp_dir: Path, model_tar_gz: Path
     ) -> None:
         if model_tmp_dir.exists():
-            shutil.rmtree(model_tmp_dir)
+            if model_tmp_dir.is_symlink() or not model_tmp_dir.is_dir():
+                model_tmp_dir.unlink()
+            else:
+                shutil.rmtree(model_tmp_dir)
 
         cache_tmp_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         # SECURITY: Prevent arbitrary permission modification via symlink attacks
