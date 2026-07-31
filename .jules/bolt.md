@@ -52,3 +52,7 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
+
+## 2026-07-31 - [Fast regex substring bypass]
+**Learning:** When repeatedly sanitizing inputs against a list of tokens that share a common substring prefix (like `<|`), adding an O(1) C-level substring check (`if "<|" not in text: return text`) before invoking the regex engine significantly reduces overhead for clean inputs.
+**Action:** Add a simple substring check as a fast-path before running regex substitutions.
