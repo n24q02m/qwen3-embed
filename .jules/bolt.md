@@ -52,3 +52,6 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
+## 2026-07-01 - [Fast regex substitution with C-level substring fast-path]
+**Learning:** When sanitizing text with `re.subn` against a list of forbidden tokens sharing a common prefix (e.g., `<|`), checking if the prefix exists in the string using a C-level substring check (`if "<|" not in text: return text`) is significantly faster than using an `any()` iterator or checking via `re.search`. Also, using a compiled regex with `re.subn` inside a `while True` loop is faster than iterating through the tokens and calling `str.replace` repeatedly.
+**Action:** Always add a broad C-level substring check before executing a regex substitution or search loop to completely avoid regex engine overhead on clean strings, especially in hot paths like text sanitization.
