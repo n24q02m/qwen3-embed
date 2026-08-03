@@ -53,8 +53,8 @@ class TestModelManagementExtra:
             with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
                 ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
-    def test_decompress_safe_symlink_and_hardlink(self, tmp_path):
-        """Test safe symlinks and hardlinks to cover safe branch for links (line 399)."""
+    def test_decompress_blocks_symlink_and_hardlink(self, tmp_path):
+        """Test symlinks and hardlinks are blocked."""
         cache_dir = tmp_path / "cache_links"
         cache_dir.mkdir()
 
@@ -77,13 +77,10 @@ class TestModelManagementExtra:
             hard_info.linkname = "file.txt"
             tar.addfile(hard_info)
 
-        result = ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
-        assert result == str(cache_dir)
-        assert (cache_dir / "file.txt").exists()
-        # On some systems/Python versions, symlink/hardlink might not be fully
-        # supported or behaved differently in tests, but the logic should pass.
-        assert (cache_dir / "symlink.txt").exists()
-        assert (cache_dir / "hardlink.txt").exists()
+        with pytest.raises(
+            tarfile.TarError, match="Unsupported file type in tar file: symlink.txt"
+        ):
+            ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
     def test_decompress_no_data_filter(self, tmp_path):
         """Cover fallback by mocking tarfile to lack data_filter and verify manual extraction loop."""
