@@ -52,3 +52,6 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
+## 2025-02-12 - Regex vs String Replace for Prompt Sanitization
+**Learning:** In `_sanitize_input`, iterative `str.replace()` in a `while True` loop is inefficient for scrubbing forbidden tokens during prompt injection attempts. Using a compiled regex with `.subn()` is faster, but adding a fast-path C-level substring check (`"<|" in text`) in front of the regex drastically reduces overhead for the 99% of typical clean inputs.
+**Action:** When sanitizing strings against known token prefixes, use a fast C-level substring check before invoking the regex engine. Include a module-level assertion to ensure the token list matches the fast-path check.
