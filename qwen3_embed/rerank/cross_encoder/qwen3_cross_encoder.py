@@ -54,7 +54,9 @@ RERANK_TEMPLATE = (
 # Tokens that must be stripped from user input to prevent prompt injection
 FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
 
-assert all("<|" in t for t in FORBIDDEN_TOKENS), "All forbidden tokens must contain '<|' for fast-path optimization"
+assert all("<|" in t for t in FORBIDDEN_TOKENS), (
+    "All forbidden tokens must contain '<|' for fast-path optimization"
+)
 _FORBIDDEN_TOKENS_PATTERN = re.compile("|".join(re.escape(t) for t in FORBIDDEN_TOKENS))
 
 # ---------------------------------------------------------------------------
