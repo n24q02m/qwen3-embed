@@ -52,7 +52,9 @@ RERANK_TEMPLATE = (
 
 # Tokens that must be stripped from user input to prevent prompt injection
 FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
-assert all("<|" in t for t in FORBIDDEN_TOKENS), "FORBIDDEN_TOKENS must all contain '<|' for fast path"
+assert all("<|" in t for t in FORBIDDEN_TOKENS), (
+    "FORBIDDEN_TOKENS must all contain '<|' for fast path"
+)
 
 # ---------------------------------------------------------------------------
 # Model registry
