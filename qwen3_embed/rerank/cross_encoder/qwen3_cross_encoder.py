@@ -14,6 +14,7 @@ instead of the typical ``(batch, num_labels)`` from cross-encoders.
 """
 
 import math
+import re
 from typing import Any
 
 import numpy as np
@@ -52,6 +53,8 @@ RERANK_TEMPLATE = (
 
 # Tokens that must be stripped from user input to prevent prompt injection
 FORBIDDEN_TOKENS = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
+assert all("<|" in t for t in FORBIDDEN_TOKENS)
+FORBIDDEN_TOKENS_PATTERN = re.compile("|".join(re.escape(t) for t in FORBIDDEN_TOKENS))
 
 # ---------------------------------------------------------------------------
 # Model registry
@@ -127,16 +130,18 @@ class Qwen3CrossEncoder(OnnxTextCrossEncoder):
     @staticmethod
     def _sanitize_input(text: str) -> str:
         """Strip forbidden special tokens from user input."""
-        # ⚡ Bolt: Fast string replacement avoids regex engine overhead for dirty inputs (~3x faster)
-        if not any(token in text for token in FORBIDDEN_TOKENS):
+        # ⚡ Bolt: Fast C-level substring check avoids iteration overhead on clean inputs
+        if "<|" not in text:
+            return text
+
+        # ⚡ Bolt: Fast path check with re.search before re.subn loop avoids overhead on clean text
+        if not FORBIDDEN_TOKENS_PATTERN.search(text):
             return text
 
         # SECURITY: Prevent prompt injection bypass via iterative payload construction.
         while True:
-            original = text
-            for token in FORBIDDEN_TOKENS:
-                text = text.replace(token, "")
-            if text == original:
+            text, num_subs = FORBIDDEN_TOKENS_PATTERN.subn("", text)
+            if num_subs == 0:
                 break
         return text
 
