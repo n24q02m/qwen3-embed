@@ -512,8 +512,8 @@ class ModelManagement(Generic[T]):
         # caller spelled the directory (trailing separator, relative path, ...).
         cache_dir = os.path.abspath(cache_dir)
 
-        # SECURITY: Only allow regular files and directories. Symlinks and hardlinks are prohibited.
-        if not (member.isreg() or member.isdir()):
+        # SECURITY: Only allow regular files, directories, and links
+        if not (member.isreg() or member.isdir() or member.issym() or member.islnk()):
             raise tarfile.TarError(f"Unsupported file type in tar file: {member.name}")
 
         if os.path.isabs(member.name) or member.name.startswith(("/", "\\")):
@@ -522,6 +522,27 @@ class ModelManagement(Generic[T]):
         member_path = os.path.abspath(os.path.join(cache_dir, member.name))
         if not cls._is_within_dir(cache_dir, member_path):
             raise tarfile.TarError(f"Attempted path traversal in tar file: {member.name}")
+
+        # SECURITY: Validate symlink and hardlink targets to prevent
+        # arbitrary file writes outside the extraction directory.
+        if member.issym() or member.islnk():
+            if os.path.isabs(member.linkname) or member.linkname.startswith(("/", "\\")):
+                raise tarfile.TarError(
+                    f"Attempted absolute path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
+                )
+            if member.issym():
+                # Symlinks resolve relative to the directory containing the link
+                link_target_path = os.path.abspath(
+                    os.path.join(os.path.dirname(member_path), member.linkname)
+                )
+            else:
+                # Hardlinks (LNKTYPE) resolve relative to the extraction root
+                link_target_path = os.path.abspath(os.path.join(cache_dir, member.linkname))
+
+            if not cls._is_within_dir(cache_dir, link_target_path):
+                raise tarfile.TarError(
+                    f"Attempted path traversal in symlink/hardlink: {member.name} -> {member.linkname}"
+                )
 
     @classmethod
     def decompress_to_cache(cls, targz_path: str, cache_dir: str) -> str:
