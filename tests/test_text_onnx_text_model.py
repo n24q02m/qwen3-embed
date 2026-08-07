@@ -434,6 +434,80 @@ class TestOnnxTextModelEmbedDocuments:
         assert call_kwargs["config"].start_method in ("forkserver", "spawn")
 
 
+class TestOnnxTextModelStaticBatchGraph:
+    """A graph pinned to a fixed batch must never be fed a larger one.
+
+    Feeding it more rows aborts inside onnxruntime with a buffer shape
+    mismatch, so the requested batch size is clamped to what the graph
+    declares -- and left alone when the batch axis is dynamic.
+    """
+
+    def _session(self, batch_dim: int | str) -> MagicMock:
+        """Mock session shaped like a real text-embedding graph."""
+        session = MagicMock()
+        session.run.return_value = [np.ones((1, 4), dtype=np.float32)]
+        node_ids = MagicMock()
+        node_ids.name = "input_ids"
+        node_ids.shape = ["batch_size", "sequence_length"]
+        session.get_inputs.return_value = [node_ids]
+        node_out = MagicMock()
+        node_out.name = "last_hidden_state"
+        node_out.shape = [batch_dim, "sequence_length", 4]
+        session.get_outputs.return_value = [node_out]
+        return session
+
+    def _tokenizer(self) -> MagicMock:
+        """Tokenizer whose output length tracks the batch it is given."""
+        enc = MagicMock()
+        enc.ids = [1, 2, 3, 0]
+        enc.attention_mask = [1, 1, 1, 0]
+        tok = MagicMock()
+        tok.encode_batch.side_effect = lambda documents: [enc] * len(documents)
+        return tok
+
+    def _model(self, batch_dim: int | str) -> tuple[ConcreteOnnxTextModel, MagicMock]:
+        session = self._session(batch_dim)
+        m = ConcreteOnnxTextModel()
+        m.model = session
+        m.model_input_names = {"input_ids"}
+        m.tokenizer = self._tokenizer()
+        m.static_batch_size = m._detect_static_batch_size(session)
+        return m, session
+
+    @staticmethod
+    def _batch_widths(session: MagicMock) -> list[int]:
+        return [call[0][1]["input_ids"].shape[0] for call in session.run.call_args_list]
+
+    def test_static_batch_graph_is_fed_one_document_at_a_time(self) -> None:
+        m, session = self._model(batch_dim=1)
+        documents = [f"document {i}" for i in range(8)]
+
+        list(m._embed_documents("t", "/tmp", documents=documents))
+
+        assert self._batch_widths(session) == [1] * 8
+
+    def test_dynamic_batch_graph_keeps_the_requested_batch(self) -> None:
+        m, session = self._model(batch_dim="batch_size")
+        documents = [f"document {i}" for i in range(8)]
+
+        list(m._embed_documents("t", "/tmp", documents=documents))
+
+        assert self._batch_widths(session) == [8]
+
+    def test_caller_batch_size_below_the_graph_limit_is_respected(self) -> None:
+        m, session = self._model(batch_dim=4)
+        documents = [f"document {i}" for i in range(6)]
+
+        list(m._embed_documents("t", "/tmp", documents=documents, batch_size=2))
+
+        assert self._batch_widths(session) == [2, 2, 2]
+
+    def test_unloaded_session_leaves_the_batch_size_alone(self) -> None:
+        """With lazy_load plus parallel the graph lives only in the workers."""
+        m = ConcreteOnnxTextModel()
+        assert m._effective_batch_size(256) == 256
+
+
 class TestTextEmbeddingWorkerProcess:
     """Lines 183-185 — TextEmbeddingWorker.process yields (idx, OnnxOutputContext)."""
 

@@ -285,6 +285,87 @@ def test_add_extra_session_options():
         ConcreteOnnxModel.add_extra_session_options(session_options, {"invalid_option": True})
 
 
+def _shape_node(name: str, shape: list[Any]) -> MagicMock:
+    """A stand-in for an onnxruntime NodeArg carrying a declared shape."""
+    node = MagicMock()
+    node.name = name
+    node.shape = shape
+    return node
+
+
+class TestDetectStaticBatchSize:
+    """A literal on the batch axis pins the graph; a dim_param string does not."""
+
+    def test_fully_dynamic_returns_none(self):
+        session = MagicMock()
+        session.get_inputs.return_value = [
+            _shape_node("input_ids", ["batch_size", "sequence_length"]),
+        ]
+        session.get_outputs.return_value = [
+            _shape_node("last_hidden_state", ["batch_size", "sequence_length", 768]),
+        ]
+        assert OnnxModel._detect_static_batch_size(session) is None
+
+    def test_literal_on_output_only(self):
+        """Shapes as declared by n24q02m/Qwen3-Embedding-0.6B-ONNX model_quantized.onnx:
+        the inputs still say ``batch_size`` while the output says ``1``."""
+        session = MagicMock()
+        session.get_inputs.return_value = [
+            _shape_node("input_ids", ["batch_size", "sequence_length"]),
+            _shape_node("attention_mask", ["batch_size", "sequence_length"]),
+        ]
+        session.get_outputs.return_value = [
+            _shape_node("last_hidden_state", [1, "sequence_length", 1024]),
+        ]
+        assert OnnxModel._detect_static_batch_size(session) == 1
+
+    def test_literal_on_input(self):
+        session = MagicMock()
+        session.get_inputs.return_value = [
+            _shape_node("input_ids", [4, "sequence_length"]),
+        ]
+        session.get_outputs.return_value = [
+            _shape_node("last_hidden_state", ["batch_size", "sequence_length", 768]),
+        ]
+        assert OnnxModel._detect_static_batch_size(session) == 4
+
+    def test_smallest_literal_wins(self):
+        session = MagicMock()
+        session.get_inputs.return_value = [
+            _shape_node("input_ids", [4, "sequence_length"]),
+        ]
+        session.get_outputs.return_value = [
+            _shape_node("last_hidden_state", [1, "sequence_length", 768]),
+        ]
+        assert OnnxModel._detect_static_batch_size(session) == 1
+
+    def test_rank_one_node_is_not_a_batch_axis(self):
+        session = MagicMock()
+        session.get_inputs.return_value = [
+            _shape_node("input_ids", ["batch_size", "sequence_length"]),
+            _shape_node("max_new_tokens", [1]),
+        ]
+        session.get_outputs.return_value = [
+            _shape_node("last_hidden_state", ["batch_size", "sequence_length", 768]),
+        ]
+        assert OnnxModel._detect_static_batch_size(session) is None
+
+
+def test_load_records_static_batch_size(model: ConcreteOnnxModel, mock_ort):
+    """The batch axis is read once, when the session is created."""
+    session_mock = mock_ort.InferenceSession.return_value
+    session_mock.get_inputs.return_value = [
+        _shape_node("input_ids", ["batch_size", "sequence_length"]),
+    ]
+    session_mock.get_outputs.return_value = [
+        _shape_node("last_hidden_state", [1, "sequence_length", 1024]),
+    ]
+
+    model._load_onnx_model(Path("dummy"), "model.onnx", OnnxSessionConfig(threads=None))
+
+    assert model.static_batch_size == 1
+
+
 def test_preprocess_onnx_input(model: ConcreteOnnxModel):
     """Test _preprocess_onnx_input returns unchanged input by default."""
     data = {"input_ids": np.array([[1, 2, 3]])}

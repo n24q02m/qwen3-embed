@@ -58,6 +58,7 @@ class OnnxModel(Generic[T]):
     def __init__(self) -> None:
         self.model: ort.InferenceSession | None = None
         self.model_input_names: set[str] | None = None
+        self.static_batch_size: int | None = None
         self.tokenizer: Tokenizer | None = None
         self.special_token_to_id: dict[str, int] = {}
 
@@ -167,6 +168,28 @@ class OnnxModel(Generic[T]):
                 )
         return session, input_names
 
+    @staticmethod
+    def _detect_static_batch_size(session: "ort.InferenceSession") -> int | None:
+        """Return the batch size the graph is pinned to, or None if it is dynamic.
+
+        ONNX declares each dimension either as an int (static) or as a symbolic
+        ``dim_param`` string such as ``"batch_size"`` (dynamic). Both the inputs
+        and the outputs are inspected because they can disagree: causal-LM
+        exports keep the symbolic ``batch_size`` on ``input_ids`` while the graph
+        body was traced with a fixed batch, and only the output declaration
+        carries the literal. Feeding a larger batch to such a graph fails deep
+        inside onnxruntime with a buffer shape mismatch, so the smallest literal
+        found on a batch axis wins.
+        """
+        declared = [
+            node.shape[0]
+            for node in (*session.get_inputs(), *session.get_outputs())
+            # Rank < 2 has no batch axis to speak of, e.g. a scalar side input
+            # declared as ``[1]`` is a length, not a batch of one.
+            if node.shape is not None and len(node.shape) >= 2 and isinstance(node.shape[0], int)
+        ]
+        return min(declared) if declared else None
+
     def _load_onnx_model(
         self,
         model_dir: Path,
@@ -179,6 +202,7 @@ class OnnxModel(Generic[T]):
             config=config,
         )
         self.model_input_names = set(input_names)
+        self.static_batch_size = self._detect_static_batch_size(self.model)
         self.tokenizer, self.special_token_to_id = load_tokenizer(model_dir=model_dir)
         return self.model, input_names
 
