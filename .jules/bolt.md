@@ -52,3 +52,6 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
+## 2026-07-30 - [Fast path string sanitization rejected]
+**Learning:** Adding a C-level substring fast-path (`if "<|" not in text: return text`) before regex/iteration-based prompt sanitization yields a measurable micro-benchmark improvement (e.g., ~2.46 µs per call). However, in the context of an 8.3-second ML forward pass, this represents 0.00003% of the work. Furthermore, tying a security check to a hardcoded literal via an `assert` that is stripped under `-O` introduces a potential prompt injection vulnerability if the token list is updated.
+**Action:** Do not micro-optimize string formatting or basic text sanitization just before heavy ML inference. The minuscule performance gains are heavily outweighed by the added complexity and potential security risks (e.g., asserts being removed under `-O`).
