@@ -146,6 +146,7 @@ class Qwen3CrossEncoderGGUF(TextCrossEncoderBase):
         # ⚡ Bolt: Fast C-level substring check prevents regex overhead for clean inputs
         if "<|" not in text:
             return text
+        assert all("<|" in t for t in FORBIDDEN_TOKENS), "fast path assumes '<|' in every token"
 
         # ⚡ Bolt: Fast path to avoid regex substitution overhead on clean text (~50% faster for clean inputs)
         if not FORBIDDEN_RE.search(text):
