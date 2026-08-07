@@ -106,22 +106,26 @@ class TestModelManagementExtra:
         with pytest.raises(tarfile.TarError, match="Unsupported file type"):
             ModelManagement._validate_tar_member(member, str(tmp_path))
 
-    def test_extraction_refuses_a_symlink_escaping_the_cache(self, tmp_path, monkeypatch):
+    def test_extraction_refuses_a_symlink_escaping_the_cache(self, tmp_path):
         """A symlink chain that reads as safe but escapes on disk must be refused.
 
-        Three members were enough to walk out of the cache directory.
+        Three members are enough to walk out of the cache directory.
         ``sub/link -> ..`` is inside the cache under either reading. But
         ``sub/link/../pwned.txt`` normalises to ``sub/pwned.txt`` on paper, while
         on disk -- once ``sub/link`` exists -- it resolves one level *above* the
         cache. Extracting this archive wrote ``pwned.txt`` outside the cache
-        directory on POSIX.
+        directory on Linux before the type check was tightened.
 
-        ``data_filter`` is removed so the manual extraction branch runs. That is
-        not a stub: it is the branch taken by Python 3.11.0-3.11.3, which
-        ``requires-python = ">=3.11"`` still admits (``data_filter`` arrived in
-        3.11.4). Everything else -- the archive, the library, the symlink -- is
-        real, which is the point: the escape is a property of how the filesystem
-        resolves a link, and a mocked ``tarfile`` could not exhibit it.
+        The error must name the *link* as an unsupported type, which is this
+        package refusing the archive. On Python 3.11.4+ ``tarfile``'s own "data"
+        filter would also stop this one, a step later and with a different
+        message -- but ``requires-python = ">=3.11"`` also admits 3.11.0-3.11.3,
+        where ``decompress_to_cache`` falls back to a manual loop with no such
+        backstop. That fallback is where the escape actually landed, so the
+        refusal has to come from here rather than from the standard library.
+
+        The archive is real: the escape is a property of how the filesystem
+        resolves a real symlink, and a stubbed ``tarfile`` could not exhibit it.
         """
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir()
@@ -141,8 +145,7 @@ class TestModelManagementExtra:
             payload_info.size = 5
             tar.addfile(payload_info, io.BytesIO(b"PWNED"))
 
-        monkeypatch.delattr(tarfile, "data_filter", raising=False)
-        with pytest.raises(tarfile.TarError, match="Unsupported file type"):
+        with pytest.raises(tarfile.TarError, match="Unsupported file type in tar file: sub/link"):
             ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
         assert not (tmp_path / "pwned.txt").exists()
