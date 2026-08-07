@@ -258,3 +258,105 @@ class TestModelManagementExtra:
 
         with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
             ModelManagement._validate_tar_member(member, str(cache_dir))
+
+
+def _symlinks_available(tmp_path) -> bool:
+    """Whether this process may create symlinks (Windows needs a privilege)."""
+    probe = tmp_path / "_symlink_probe"
+    try:
+        probe.symlink_to(tmp_path)
+    except (OSError, NotImplementedError):
+        return False
+    probe.unlink()
+    return True
+
+
+class TestPrepareGcsCacheCleanup:
+    """``_prepare_gcs_cache`` must clear the staging path whatever is sitting on it.
+
+    The path is a fixed, predictable name under a shared cache root, so a local
+    user can plant something there before a download starts. ``shutil.rmtree``
+    accepts only a real directory: anything else made the call raise and left
+    every subsequent download failing at the same spot.
+    """
+
+    def test_replaces_a_leftover_regular_file(self, tmp_path):
+        """A file where the staging directory belongs is removed, not passed to rmtree."""
+        cache_tmp_dir = tmp_path / "cache"
+        model_tmp_dir = tmp_path / "model_tmp"
+        model_tar_gz = tmp_path / "model.tar.gz"
+        model_tmp_dir.write_text("leftover from an interrupted run")
+
+        ModelManagement._prepare_gcs_cache(cache_tmp_dir, model_tmp_dir, model_tar_gz)
+
+        assert not model_tmp_dir.exists()
+        assert cache_tmp_dir.is_dir()
+
+    def test_removes_a_symlink_without_touching_its_target(self, tmp_path):
+        """The link is unlinked; the directory it pointed at keeps its contents.
+
+        ``rmtree`` refuses a symlink outright, so before the guard this raised.
+        The assertion on ``victim`` is the part that matters: whatever replaces
+        the guard must never follow the link and delete through it.
+        """
+        if not _symlinks_available(tmp_path):
+            pytest.skip("creating symlinks is not permitted in this environment")
+
+        cache_tmp_dir = tmp_path / "cache"
+        model_tmp_dir = tmp_path / "model_tmp"
+        model_tar_gz = tmp_path / "model.tar.gz"
+
+        victim = tmp_path / "victim"
+        victim.mkdir()
+        (victim / "keep.txt").write_text("must survive")
+        model_tmp_dir.symlink_to(victim, target_is_directory=True)
+
+        ModelManagement._prepare_gcs_cache(cache_tmp_dir, model_tmp_dir, model_tar_gz)
+
+        assert not model_tmp_dir.is_symlink()
+        assert not model_tmp_dir.exists()
+        assert (victim / "keep.txt").read_text() == "must survive"
+
+    def test_removes_a_dangling_symlink(self, tmp_path):
+        """A broken link reads as absent through ``exists`` and must still be cleared.
+
+        This is the case an ``exists``-first guard misses: the link survives
+        ``_prepare_gcs_cache`` and the later extract and rename follow it.
+        """
+        if not _symlinks_available(tmp_path):
+            pytest.skip("creating symlinks is not permitted in this environment")
+
+        cache_tmp_dir = tmp_path / "cache"
+        model_tmp_dir = tmp_path / "model_tmp"
+        model_tar_gz = tmp_path / "model.tar.gz"
+        model_tmp_dir.symlink_to(tmp_path / "does_not_exist", target_is_directory=True)
+
+        assert not model_tmp_dir.exists()
+        assert model_tmp_dir.is_symlink()
+
+        ModelManagement._prepare_gcs_cache(cache_tmp_dir, model_tmp_dir, model_tar_gz)
+
+        assert not model_tmp_dir.is_symlink()
+
+    def test_still_removes_a_real_stale_directory(self, tmp_path):
+        """The ordinary path keeps working: a real directory is deleted recursively."""
+        cache_tmp_dir = tmp_path / "cache"
+        model_tmp_dir = tmp_path / "model_tmp"
+        model_tar_gz = tmp_path / "model.tar.gz"
+        (model_tmp_dir / "nested").mkdir(parents=True)
+        (model_tmp_dir / "nested" / "stale.bin").write_bytes(b"stale")
+
+        ModelManagement._prepare_gcs_cache(cache_tmp_dir, model_tmp_dir, model_tar_gz)
+
+        assert not model_tmp_dir.exists()
+
+    def test_removes_a_stale_archive(self, tmp_path):
+        """A leftover tarball is unlinked so the download cannot append to it."""
+        cache_tmp_dir = tmp_path / "cache"
+        model_tmp_dir = tmp_path / "model_tmp"
+        model_tar_gz = tmp_path / "model.tar.gz"
+        model_tar_gz.write_bytes(b"partial download")
+
+        ModelManagement._prepare_gcs_cache(cache_tmp_dir, model_tmp_dir, model_tar_gz)
+
+        assert not model_tar_gz.exists()

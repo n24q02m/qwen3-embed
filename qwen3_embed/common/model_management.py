@@ -612,7 +612,16 @@ class ModelManagement(Generic[T]):
     def _prepare_gcs_cache(
         cls, cache_tmp_dir: Path, model_tmp_dir: Path, model_tar_gz: Path
     ) -> None:
-        if model_tmp_dir.exists():
+        # SECURITY: ``rmtree`` only accepts a real directory. A leftover file, or a
+        # symlink planted at this path by another local user, makes it raise
+        # (``NotADirectoryError`` for a file, "Cannot call rmtree on a symbolic link"
+        # for a link) and every download aborts until the path is cleared by hand.
+        # ``is_symlink`` is tested first and on its own because ``exists`` follows
+        # links: a dangling symlink reads as absent, so an ``exists``-first guard
+        # would leave it in place for the later extract and rename to follow.
+        if model_tmp_dir.is_symlink() or (model_tmp_dir.exists() and not model_tmp_dir.is_dir()):
+            model_tmp_dir.unlink()
+        elif model_tmp_dir.exists():
             shutil.rmtree(model_tmp_dir)
 
         cache_tmp_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
