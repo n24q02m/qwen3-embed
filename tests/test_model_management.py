@@ -1953,19 +1953,23 @@ class TestValidateTarMember:
         cache_dir = str(tmp_path) + os.sep
         ModelManagement._validate_tar_member(self._member("file.txt"), cache_dir)
 
-    def test_allows_safe_relative_symlink(self, tmp_path):
-        ModelManagement._validate_tar_member(
-            self._member("dir/link", is_reg=False, is_sym=True, linkname="../file.txt"),
-            str(tmp_path),
-        )
-
-    def test_allows_safe_relative_hardlink(self, tmp_path):
-        ModelManagement._validate_tar_member(
-            self._member("link", is_reg=False, is_lnk=True, linkname="file.txt"),
-            str(tmp_path),
-        )
-
     # --- real traversal attempts must be BLOCKED ---
+
+    def test_blocks_symlink_even_with_relative_target(self, tmp_path):
+        # A target that reads as safe is still refused: it can only be resolved
+        # against the filesystem the link will live on, which does not exist yet.
+        with pytest.raises(tarfile.TarError, match="Unsupported file type"):
+            ModelManagement._validate_tar_member(
+                self._member("dir/link", is_reg=False, is_sym=True, linkname="../file.txt"),
+                str(tmp_path),
+            )
+
+    def test_blocks_hardlink_even_with_relative_target(self, tmp_path):
+        with pytest.raises(tarfile.TarError, match="Unsupported file type"):
+            ModelManagement._validate_tar_member(
+                self._member("link", is_reg=False, is_lnk=True, linkname="file.txt"),
+                str(tmp_path),
+            )
 
     def test_blocks_parent_traversal_name(self, tmp_path):
         with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
@@ -1990,21 +1994,21 @@ class TestValidateTarMember:
             ModelManagement._validate_tar_member(self._member("dev", is_reg=False), str(tmp_path))
 
     def test_blocks_absolute_symlink_target(self, tmp_path):
-        with pytest.raises(tarfile.TarError, match="Attempted absolute path traversal"):
+        with pytest.raises(tarfile.TarError, match="Unsupported file type"):
             ModelManagement._validate_tar_member(
                 self._member("link", is_reg=False, is_sym=True, linkname="/etc/passwd"),
                 str(tmp_path),
             )
 
     def test_blocks_parent_traversal_symlink_target(self, tmp_path):
-        with pytest.raises(tarfile.TarError, match="Attempted path traversal in symlink/hardlink"):
+        with pytest.raises(tarfile.TarError, match="Unsupported file type"):
             ModelManagement._validate_tar_member(
                 self._member("link", is_reg=False, is_sym=True, linkname="../../../etc/passwd"),
                 str(tmp_path),
             )
 
     def test_blocks_parent_traversal_hardlink_target(self, tmp_path):
-        with pytest.raises(tarfile.TarError, match="Attempted path traversal in symlink/hardlink"):
+        with pytest.raises(tarfile.TarError, match="Unsupported file type"):
             ModelManagement._validate_tar_member(
                 self._member("link", is_reg=False, is_lnk=True, linkname="../outside.txt"),
                 str(tmp_path),

@@ -53,8 +53,8 @@ class TestModelManagementExtra:
             with pytest.raises(tarfile.TarError, match="Attempted path traversal"):
                 ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
 
-    def test_decompress_safe_symlink_and_hardlink(self, tmp_path):
-        """Test safe symlinks and hardlinks to cover safe branch for links (line 399)."""
+    def test_decompress_blocks_symlink_and_hardlink(self, tmp_path):
+        """An archive carrying links is refused, whatever the links point at."""
         cache_dir = tmp_path / "cache_links"
         cache_dir.mkdir()
 
@@ -65,25 +65,90 @@ class TestModelManagementExtra:
             info.size = 4
             tar.addfile(info, io.BytesIO(b"data"))
 
-            # Safe symlink: points to a file within the same directory
+            # Symlink pointing next to itself -- still refused.
             sym_info = tarfile.TarInfo(name="symlink.txt")
             sym_info.type = tarfile.SYMTYPE
             sym_info.linkname = "file.txt"
             tar.addfile(sym_info)
 
-            # Safe hardlink: points to a file within the same directory (relative to root)
+            # Hardlink pointing next to itself -- still refused.
             hard_info = tarfile.TarInfo(name="hardlink.txt")
             hard_info.type = tarfile.LNKTYPE
             hard_info.linkname = "file.txt"
             tar.addfile(hard_info)
 
-        result = ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
-        assert result == str(cache_dir)
-        assert (cache_dir / "file.txt").exists()
-        # On some systems/Python versions, symlink/hardlink might not be fully
-        # supported or behaved differently in tests, but the logic should pass.
-        assert (cache_dir / "symlink.txt").exists()
-        assert (cache_dir / "hardlink.txt").exists()
+        with pytest.raises(
+            tarfile.TarError, match="Unsupported file type in tar file: symlink.txt"
+        ):
+            ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
+    def test_validate_tar_member_refuses_a_real_symlink(self, tmp_path):
+        """``_validate_tar_member`` must refuse a symlink read out of a real archive.
+
+        The member is a genuine ``TarInfo`` parsed back from a genuine tar, not a
+        stand-in: link handling is the part of ``tarfile`` under test here, so a
+        stubbed member would only assert what the stub was told to say. The
+        earlier check called a link safe whenever ``os.path.abspath`` of its
+        target stayed inside the cache -- a purely textual reading, since
+        ``abspath`` collapses ``..`` without consulting the filesystem.
+        """
+        tar_path = tmp_path / "link.tar.gz"
+        with tarfile.open(tar_path, "w:gz") as tar:
+            sym_info = tarfile.TarInfo(name="link")
+            sym_info.type = tarfile.SYMTYPE
+            sym_info.linkname = ".."
+            tar.addfile(sym_info)
+
+        with tarfile.open(tar_path, "r:gz") as tar:
+            member = next(iter(tar))
+
+        assert member.issym()
+        with pytest.raises(tarfile.TarError, match="Unsupported file type"):
+            ModelManagement._validate_tar_member(member, str(tmp_path))
+
+    def test_extraction_refuses_a_symlink_escaping_the_cache(self, tmp_path):
+        """A symlink chain that reads as safe but escapes on disk must be refused.
+
+        Three members are enough to walk out of the cache directory.
+        ``sub/link -> ..`` is inside the cache under either reading. But
+        ``sub/link/../pwned.txt`` normalises to ``sub/pwned.txt`` on paper, while
+        on disk -- once ``sub/link`` exists -- it resolves one level *above* the
+        cache. Extracting this archive wrote ``pwned.txt`` outside the cache
+        directory on Linux before the type check was tightened.
+
+        The error must name the *link* as an unsupported type, which is this
+        package refusing the archive. On Python 3.11.4+ ``tarfile``'s own "data"
+        filter would also stop this one, a step later and with a different
+        message -- but ``requires-python = ">=3.11"`` also admits 3.11.0-3.11.3,
+        where ``decompress_to_cache`` falls back to a manual loop with no such
+        backstop. That fallback is where the escape actually landed, so the
+        refusal has to come from here rather than from the standard library.
+
+        The archive is real: the escape is a property of how the filesystem
+        resolves a real symlink, and a stubbed ``tarfile`` could not exhibit it.
+        """
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        tar_path = tmp_path / "evil.tar.gz"
+        with tarfile.open(tar_path, "w:gz") as tar:
+            sub_info = tarfile.TarInfo(name="sub")
+            sub_info.type = tarfile.DIRTYPE
+            tar.addfile(sub_info)
+
+            link_info = tarfile.TarInfo(name="sub/link")
+            link_info.type = tarfile.SYMTYPE
+            link_info.linkname = ".."
+            tar.addfile(link_info)
+
+            payload_info = tarfile.TarInfo(name="sub/link/../pwned.txt")
+            payload_info.size = 5
+            tar.addfile(payload_info, io.BytesIO(b"PWNED"))
+
+        with pytest.raises(tarfile.TarError, match="Unsupported file type in tar file: sub/link"):
+            ModelManagement.decompress_to_cache(str(tar_path), str(cache_dir))
+
+        assert not (tmp_path / "pwned.txt").exists()
 
     def test_decompress_no_data_filter(self, tmp_path):
         """Cover fallback by mocking tarfile to lack data_filter and verify manual extraction loop."""
