@@ -138,10 +138,12 @@ embeddings_256 = list(model.embed(documents, dim=256))
 # Each embedding: numpy array of shape (256,), L2-normalized
 
 # Query with instruction (for retrieval tasks)
-queries = list(model.query_embed(
-    ["What is Qwen3?"],
-    task="Given a question, retrieve relevant passages",
-))
+queries = list(
+    model.query_embed(
+        ["What is Qwen3?"],
+        task="Given a question, retrieve relevant passages",
+    )
+)
 ```
 
 ### Reranking
@@ -194,7 +196,9 @@ CustomModelSpec(
     model_id="onnx-community/gte-multilingual-base",
     hf="onnx-community/gte-multilingual-base",
     model_file="onnx/model_quantized.onnx",
-    dim=768, pooling="CLS", normalization=True,
+    dim=768,
+    pooling="CLS",
+    normalization=True,
 ).register()
 
 model = TextEmbedding("onnx-community/gte-multilingual-base")
@@ -229,6 +233,7 @@ deps don't co-resolve with the lean runtime pins):
 ```python
 # pip install "optimum[exporters]" torch transformers onnx
 from qwen3_embed.export import export_to_onnx
+
 export_to_onnx("intfloat/multilingual-e5-base", "./e5-onnx")
 ```
 
