@@ -53,6 +53,6 @@
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
 
-## 2026-07-31 - [Fast regex substring bypass]
-**Learning:** When repeatedly sanitizing inputs against a list of tokens that share a common substring prefix (like `<|`), adding an O(1) C-level substring check (`if "<|" not in text: return text`) before invoking the regex engine significantly reduces overhead for clean inputs.
-**Action:** Add a simple substring check as a fast-path before running regex substitutions.
+## 2026-07-31 - [Regex fast-path bypass]
+**Learning:** When optimizing prompt injection sanitization (`_sanitize_input`), avoid micro-optimizing string replacement loops (like `str.replace` to `re.subn`) or hardcoding substring fast-paths (like `if "<|" not in text:`). These changes yield functionally zero measurable impact (e.g., saving ~2 microseconds on an 8-second ML forward pass, or 0.00003%). Furthermore, hardcoded substring assumptions guarded only by `assert` statements introduce silent security bypass vulnerabilities if the application is run with Python optimizations enabled (`-O`), which strips `assert`s and allows non-matching tokens to pass through unsanitized.
+**Action:** Do not attempt to micro-optimize security-critical sanitization functions that run on cold paths just before heavy ML inference. The negligible performance gain is not worth the risk of brittle code or silent security regressions.
