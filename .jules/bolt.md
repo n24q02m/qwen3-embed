@@ -53,6 +53,6 @@
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
 
-## 2024-05-15 - Fast-path substring check for sanitization
-**Learning:** Python iteration overhead (`any`) on clean text for sanitization is expensive. Adding a broad C-level substring check (`"<|" in text`) is faster, but we must use a module-level assertion (`assert all("<|" in t...)`) to keep the fast path safe if tokens change. Compiled regex with `re.subn` is faster than `str.replace()` for iterative cleaning.
-**Action:** Use broad C-level substring fast-paths with module-level assertions before regex engine checks or loops when sanitizing text against multiple specific tokens with a common prefix.
+## 2024-05-15 - [Fast-path substring check for sanitization]
+**Learning:** Python iteration overhead (`any`) on clean text for sanitization is expensive. Adding a broad C-level substring check (`"<|" in text`) is faster. However, guarding this fast path with a module-level assertion (`assert all("<|" in t...)`) is dangerous because `assert` statements are stripped when Python is run with the `-O` flag, creating a silent security bypass if the tokens change. Additionally, micro-optimizing code that is not a bottleneck (like 3 sanitize calls in front of an 8-second model pass) is not worth the risk or complexity.
+**Action:** Do not use `assert` statements to guard security-critical invariants because they can be disabled in production. Avoid micro-optimizations that do not measurably improve overall system throughput, especially when they introduce complexity or fragility to security controls.
