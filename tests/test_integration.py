@@ -81,6 +81,32 @@ class TestEmbeddingBasic:
         assert len(embeddings) == 1
         assert embeddings[0].shape == (1024,)
 
+    @pytest.mark.parametrize("blank", ["", "   ", "\n\t "])
+    def test_blank_input_yields_usable_embedding(self, embedding_model, blank):
+        """Blank text must produce a finite, unit-norm vector, not an exception.
+
+        Downstream callers reach these paths with machine-generated text (empty
+        search snippets, whitespace-only queries) and cannot pre-filter reliably.
+        """
+        emb = list(embedding_model.embed(blank))[0]
+        assert emb.shape == (1024,)
+        assert not np.any(np.isnan(emb))
+        assert not np.any(np.isinf(emb))
+        assert abs(np.linalg.norm(emb) - 1.0) < 1e-3
+
+    def test_blank_entry_does_not_abort_batch(self, embedding_model):
+        """One blank document must not stop the surrounding batch from embedding."""
+        embeddings = list(embedding_model.embed(["First document.", "", "   ", "Last document."]))
+        assert len(embeddings) == 4
+        for emb in embeddings:
+            assert emb.shape == (1024,)
+
+    def test_blank_query_embed(self, embedding_model):
+        """query_embed must accept a whitespace-only query (instruction prefix still applies)."""
+        emb = list(embedding_model.query_embed("   "))[0]
+        assert emb.shape == (1024,)
+        assert abs(np.linalg.norm(emb) - 1.0) < 1e-3
+
     def test_deterministic_output(self, embedding_model):
         """Same input should produce identical embeddings."""
         text = "Deterministic test input"
@@ -464,6 +490,29 @@ class TestRerankerEdgeCases:
         )
         assert len(scores) == 1
         assert not np.isnan(scores[0])
+
+    def test_blank_document_does_not_abort_rerank(self, reranker_model):
+        """A blank document in the candidate list must be scored, not raise.
+
+        Search backends routinely return results whose snippet is empty; callers
+        wrap rerank in a broad ``except`` and silently fall back to unranked
+        order, so a raise here degrades retrieval invisibly.
+        """
+        scores = list(
+            reranker_model.rerank(
+                "What is Python?",
+                ["Python is a programming language.", "", "   "],
+            )
+        )
+        assert len(scores) == 3
+        for score in scores:
+            assert 0.0 <= score <= 1.0
+            assert not np.isnan(score)
+
+    def test_blank_query_does_not_abort_rerank(self, reranker_model):
+        scores = list(reranker_model.rerank("   ", ["Some candidate document."]))
+        assert len(scores) == 1
+        assert 0.0 <= scores[0] <= 1.0
 
     def test_identical_query_and_doc(self, reranker_model):
         """When query == document, should score very high."""
