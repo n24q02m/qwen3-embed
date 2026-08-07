@@ -89,6 +89,21 @@ class OnnxTextModel(OnnxModel[T]):
             input_ids=onnx_input.get("input_ids", input_ids),
         )
 
+    def _effective_batch_size(self, batch_size: int) -> int:
+        """Clamp the requested batch size to what the loaded graph accepts.
+
+        A graph whose batch axis is dynamic keeps the requested batch size; one
+        pinned to a fixed batch is capped at that value, because exceeding it
+        aborts the run inside onnxruntime instead of raising something a caller
+        can act on. The requested size is also returned untouched when no
+        session is loaded in this process -- with ``lazy_load`` plus
+        ``parallel`` the graph only exists in the workers.
+        """
+        static_batch_size = getattr(self, "static_batch_size", None)
+        if static_batch_size is None:
+            return batch_size
+        return min(batch_size, static_batch_size)
+
     def _embed_documents(
         self,
         model_name: str,
@@ -116,7 +131,7 @@ class OnnxTextModel(OnnxModel[T]):
         if parallel is None or is_small:
             if not hasattr(self, "model") or self.model is None:
                 self.load_onnx_model()
-            for batch in iter_batch(documents, batch_size):
+            for batch in iter_batch(documents, self._effective_batch_size(batch_size)):
                 yield from self._post_process_onnx_output(
                     self.onnx_embed(batch, **kwargs), **kwargs
                 )
@@ -148,7 +163,8 @@ class OnnxTextModel(OnnxModel[T]):
                     start_method=start_method,
                 ),
             )
-            for batch in pool.ordered_map(iter_batch(documents, batch_size), **params):
+            batches = iter_batch(documents, self._effective_batch_size(batch_size))
+            for batch in pool.ordered_map(batches, **params):
                 yield from self._post_process_onnx_output(batch, **kwargs)
 
     def _token_count(self, texts: str | Iterable[str], batch_size: int = 1024, **_: Any) -> int:

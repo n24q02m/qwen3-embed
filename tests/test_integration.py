@@ -295,6 +295,47 @@ class TestCustomModelParallel:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Embedding: Custom model on a static-batch graph
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.integration
+class TestCustomModelStaticBatchGraph:
+    """A custom model on causal-LM weights must not crash on the default batch size.
+
+    The Qwen3 ONNX graph is pinned to a batch of one, so embedding more
+    documents than that in a single run used to abort inside onnxruntime with
+    ``Shape mismatch attempting to re-use buffer``.
+    """
+
+    def test_default_batch_size_on_static_batch_graph(self):
+        CustomTextEmbedding._SUPPORTED.clear()
+        model_id = "Org/Custom-Qwen-Static-Batch"
+        TextEmbedding.add_custom_model(
+            model_description=DenseModelDescription(
+                model=model_id,
+                sources=ModelSource(hf="n24q02m/Qwen3-Embedding-0.6B-ONNX"),
+                model_file="onnx/model_quantized.onnx",
+                dim=1024,
+            ),
+            pooling=PoolingType.LAST_TOKEN,
+            normalization=True,
+        )
+        try:
+            model = TextEmbedding(model_name=model_id)
+            docs = [f"Document number {i} about topic {chr(65 + i)}." for i in range(8)]
+            # No batch_size: the default of 256 is what the caller gets by default.
+            embeddings = list(model.embed(docs))
+        finally:
+            CustomTextEmbedding._SUPPORTED.clear()
+
+        assert len(embeddings) == 8
+        for emb in embeddings:
+            assert emb.shape == (1024,)
+            assert abs(np.linalg.norm(emb) - 1.0) < 1e-3
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Reranker: Basic operations
 # ═══════════════════════════════════════════════════════════════════════════
 

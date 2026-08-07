@@ -103,7 +103,8 @@ class OnnxTextEmbedding(TextEmbeddingBase, OnnxTextModel[NumpyArray]):
 
         Args:
             documents: Iterator of documents or single document to embed
-            batch_size: Batch size for encoding -- higher values will use more memory, but be faster
+            batch_size: Batch size for encoding -- higher values will use more memory, but be faster.
+                Capped at the batch size the ONNX graph is pinned to, if it declares one.
             parallel:
                 If > 1, data-parallel encoding will be used, recommended for offline encoding of large datasets.
                 If 0, use all available cores.
