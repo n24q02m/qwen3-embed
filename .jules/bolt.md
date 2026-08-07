@@ -52,6 +52,7 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
-## 2026-07-01 - [Fast regex substitution with C-level substring fast-path]
-**Learning:** When sanitizing text with `re.subn` against a list of forbidden tokens sharing a common prefix (e.g., `<|`), checking if the prefix exists in the string using a C-level substring check (`if "<|" not in text: return text`) is significantly faster than using an `any()` iterator or checking via `re.search`. Also, using a compiled regex with `re.subn` inside a `while True` loop is faster than iterating through the tokens and calling `str.replace` repeatedly.
-**Action:** Always add a broad C-level substring check before executing a regex substitution or search loop to completely avoid regex engine overhead on clean strings, especially in hot paths like text sanitization.
+
+## 2026-08-01 - [Avoid micro-optimizing prompt string formatting]
+**Learning:** Micro-optimizing string replacement/formatting (like `_sanitize_input`) in the cold path just before heavy ML inference yields no measurable throughput improvement. It can also introduce security risks (like bypassing prompt injection checks if tokens change) when using unsafe invariants (like checking for `<|`), especially because `assert` statements are stripped under `-O`.
+**Action:** Do not optimize string formatting or prompt construction on cold paths preceding expensive model passes. If a security function's invariant depends on external data (like `FORBIDDEN_TOKENS`), never use `assert` to enforce it, as it vanishes under `python -O`.
