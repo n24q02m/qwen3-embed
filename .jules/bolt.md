@@ -52,3 +52,6 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
+## 2026-07-22 - Avoid micro-optimizing string replacement in cold paths
+**Learning:** Micro-optimizing string operations (like `_sanitize_input`) in front of a heavy ML inference path (e.g. 8.3s rerank pair) provides zero measurable application throughput improvement. Making security functions depend on runtime assertions about token substrings risks silent prompt-injection bypasses if python is run with `-O` (which strips asserts) and new tokens don't match the hardcoded fast-path substring.
+**Action:** Do not micro-optimize string formatting or sanitization before a heavy ML forward pass unless it is a proven bottleneck. Do not add fast-paths that rely on assertions about security invariants unless those assertions are completely fail-safe in production environments.
