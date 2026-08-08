@@ -1,0 +1,86 @@
+name: Integration
+
+# The integration suite downloads real model weights (~2.7 GiB of unique blobs
+# for the ONNX embedding + reranker pair) and takes minutes, so it lives in its
+# own workflow rather than as a job in ci.yml -- that is the only way to get a
+# native `paths` filter without pulling in a third-party changed-files action.
+#
+# ci.yml runs `pytest -m "not integration"`, which is why these tests went
+# unexercised for so long: 60 tests that never ran in CI, two of which had been
+# failing since before v1.12.1.
+#
+# GitHub-hosted, not self-hosted, deliberately: this repository is public, so
+# pull requests carry code from bots and forks. Public repositories get standard
+# GitHub-hosted runners for free, so there is nothing to trade away.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "qwen3_embed/**"
+      - "tests/test_integration*.py"
+      - "tests/conftest.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/integration.yml"
+  push:
+    branches: [main]
+    paths:
+      - "qwen3_embed/**"
+      - "tests/test_integration*.py"
+      - "tests/conftest.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/integration.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: Integration (real models, Python 3.13)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "latest"
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      # Model weights are immutable, so the key is fixed and the cache is only
+      # ever written once. Bump the version suffix when the set of models the
+      # suite pulls changes, otherwise the new weights are downloaded on every
+      # run and never cached.
+      - name: Cache model weights
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/qwen3_embed
+          key: qwen3-embed-models-v1
+
+      - name: Install dependencies
+        run: uv sync --python 3.13 --group dev
+
+      # The `gguf` extra is deliberately absent: llama-cpp-python 0.3.34 ships
+      # an sdist only -- no wheels for any platform -- so installing it here
+      # would mean a from-source C++ build on every cold cache. The 19 tests in
+      # tests/test_integration_gguf.py therefore skip, which is honest: they are
+      # not covered here, and the file's pytest.importorskip reports that.
+      - name: Run integration tests
+        run: uv run pytest -m integration --tb=short
