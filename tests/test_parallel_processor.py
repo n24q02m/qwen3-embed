@@ -70,6 +70,26 @@ class SlowWorker(Worker):
             yield idx, item
 
 
+class BulkWorker(Worker):
+    """
+    A worker whose results are far larger than a pipe buffer.
+
+    Payload size is what makes an abandoned consumer deadlock: small results are
+    handed to the OS pipe and the feeder thread finishes regardless of whether
+    anyone reads them, so a worker exits cleanly and nothing hangs. Only once the
+    pipe is full does the feeder block mid-write, and only then does
+    output_queue.join_thread() in the worker wait on a reader that has gone away.
+    """
+
+    @classmethod
+    def start(cls, **kwargs: Any) -> "BulkWorker":
+        return cls()
+
+    def process(self, items: Iterable[tuple[int, Any]]) -> Iterable[tuple[int, Any]]:
+        for idx, _item in items:
+            yield idx, b"x" * (1 << 18)  # 256 KiB, against a 64 KiB pipe buffer
+
+
 # --- Tests ---
 
 
@@ -678,6 +698,36 @@ def test_semi_ordered_map_interrupted_no_hang():
             break
     except Exception:
         pytest.fail("semi_ordered_map raised an unexpected exception")
+
+
+@pytest.mark.timeout(90)
+def test_semi_ordered_map_abandoned_with_full_pipe_terminates_workers():
+    """An abandoned consumer must not deadlock while workers hold unread output.
+
+    The test above looks like it covers this and does not: its results are small
+    ints, which fit in the pipe buffer, so the feeder thread drains and every
+    worker exits no matter what the pool does. This one uses payloads larger than
+    the buffer, which is the condition under which the workers block in
+    output_queue.join_thread() -- and then the pool must terminate them rather
+    than join() them forever.
+
+    Observed as a real outage before the fix: a TypeError raised by the consumer
+    of rerank_pairs(..., parallel=2) closed this generator with GeneratorExit,
+    which is not an Exception, so the pool took the non-emergency path and the
+    process never exited. CI showed a test suite that produced no result at all
+    for 59 minutes.
+    """
+    pool = ParallelWorkerPool(worker=BulkWorker, config=PoolConfig(num_workers=2))
+
+    stream = pool.semi_ordered_map(range(64))
+    for _idx, _val in stream:
+        break
+    # Close explicitly rather than leaving it to refcounting: this call is the
+    # exact point that used to block forever.
+    stream.close()
+
+    assert pool.processes == []
+    assert pool.emergency_shutdown is True
 
 
 def test_empty_stream_worker_start_failure():
