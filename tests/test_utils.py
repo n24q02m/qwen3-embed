@@ -246,18 +246,16 @@ class TestInputValidation:
         ):
             check_input_length("a" * 1000001)
 
-    def test_check_input_length_empty(self) -> None:
-        """Should raise ValueError when input is empty."""
-        with pytest.raises(ValueError, match="Input text cannot be empty."):
-            check_input_length("")
+    def test_check_input_length_empty_is_accepted(self) -> None:
+        """Empty input is valid: the guard bounds size only, and "" is the cheapest input."""
+        check_input_length("")
 
-    def test_check_input_length_whitespace(self) -> None:
-        """Should raise ValueError when input contains only whitespace."""
-        with pytest.raises(
-            ValueError, match="Input text cannot contain only whitespace characters."
-        ):
-            check_input_length("   ")
-        with pytest.raises(
-            ValueError, match="Input text cannot contain only whitespace characters."
-        ):
-            check_input_length("\n\t ")
+    def test_check_input_length_whitespace_is_accepted(self) -> None:
+        """Whitespace-only input is valid; blank machine-generated text is a real input."""
+        check_input_length("   ")
+        check_input_length("\n\t ")
+
+    def test_iter_checked_texts_passes_blank_entries_through(self) -> None:
+        """A blank entry mid-iterable must not abort the batch."""
+        texts = ["abc", "", "   ", "def"]
+        assert list(iter_checked_texts(texts)) == texts
