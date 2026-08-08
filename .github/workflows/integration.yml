@@ -9,6 +9,15 @@ name: Integration
 # unexercised for so long: 69 tests that never ran in CI, two of which had been
 # failing since before v1.12.1.
 #
+# The trigger is `tests/**` rather than a narrower glob because the narrower one
+# was wrong. `tests/test_integration*.py` matches test_integration.py and
+# test_integration_q4f16.py but NOT test_custom_reranker_registry.py or
+# test_export.py, which also carry @pytest.mark.integration -- so editing either of
+# those two did not run the suite that covers them. The list also named
+# tests/conftest.py, which does not exist. Enumerating the files that hold
+# integration tests is a list that drifts silently and had already drifted; the
+# directory does not.
+#
 # GitHub-hosted, not self-hosted, deliberately: this repository is public, so
 # pull requests carry code from bots and forks. Public repositories get standard
 # GitHub-hosted runners for free, so there is nothing to trade away, and fork code
@@ -19,8 +28,7 @@ on:
     branches: [main]
     paths:
       - "qwen3_embed/**"
-      - "tests/test_integration*.py"
-      - "tests/conftest.py"
+      - "tests/**"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/integration.yml"
@@ -28,8 +36,7 @@ on:
     branches: [main]
     paths:
       - "qwen3_embed/**"
-      - "tests/test_integration*.py"
-      - "tests/conftest.py"
+      - "tests/**"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/integration.yml"
