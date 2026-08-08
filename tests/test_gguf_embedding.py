@@ -11,16 +11,22 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-# Mock llama_cpp before importing the module under test
-_mock_llama_module = MagicMock()
-sys.modules["llama_cpp"] = _mock_llama_module
-
-from qwen3_embed.text.gguf_embedding import (  # noqa: E402
+from qwen3_embed.text.gguf_embedding import (
     DEFAULT_TASK,
     QUERY_INSTRUCTION_TEMPLATE,
     Qwen3TextEmbeddingGGUF,
     _check_llama_cpp,
 )
+
+# Note: qwen3_embed.text.gguf_embedding imports llama_cpp lazily inside
+# functions (see _check_llama_cpp / Qwen3TextEmbeddingGGUF.__init__), not at
+# module import time, so no sys.modules mock is needed just to import it.
+# Each test below that needs llama_cpp to appear "installed" scopes its own
+# mock via patch.dict(sys.modules, {"llama_cpp": ...}) so nothing leaks into
+# other test modules collected in the same pytest session (in particular,
+# tests/test_integration_gguf.py relies on llama_cpp being genuinely absent
+# so its pytest.importorskip("llama_cpp") can skip when the optional
+# dependency is not installed).
 
 # ---------------------------------------------------------------------------
 # Tests for _check_llama_cpp
