@@ -192,7 +192,17 @@ class ParallelWorkerPool:
         try:
             self.start(**kwargs)
             yield from self._process_stream(stream)
-        except Exception:
+        except BaseException:
+            # BaseException, not Exception, because the most common way out of
+            # this generator is GeneratorExit -- the consumer stopped reading,
+            # by `break` or because its own body raised. GeneratorExit does not
+            # derive from Exception, so `except Exception` left
+            # emergency_shutdown False and the finally below called the
+            # unbounded join(), while the workers were still blocked in
+            # output_queue.join_thread() waiting to flush into a pipe nobody
+            # drains: the exact deadlock _cleanup_worker's comment warns about.
+            # Both sides then waited forever. Every early exit means workers may
+            # hold unread output, so every early exit is an emergency shutdown.
             self.emergency_shutdown = True
             raise
         finally:

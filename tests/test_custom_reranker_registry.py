@@ -7,8 +7,6 @@ with input >= batch_size raised "Model ... not supported" in the spawned worker
 (fresh interpreter with an empty registry). These tests guard the mirror fix.
 """
 
-import sys
-
 import pytest
 
 from qwen3_embed.common.model_description import BaseModelDescription, ModelSource
@@ -73,17 +71,28 @@ def test_custom_reranker_uses_custom_worker_class():
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(sys.platform == "win32", reason="multiprocessing spawn deadlock on Windows")
 def test_custom_reranker_parallel_resolves_in_workers():
     """Register a custom reranker, rerank_pairs with parallel=2 + batch_size=1
-    (forces the worker-pool path), assert no 'not supported' error + scores."""
+    (forces the worker-pool path), assert no 'not supported' error + scores.
+
+    The registered model is a plain cross-encoder, the shape CustomTextCrossEncoder
+    is built for: it inherits OnnxTextCrossEncoder._post_process_onnx_output, which
+    is `float(elem) for elem in model_output` and therefore requires one score per
+    pair. Pointing it at a Qwen3 reranker graph instead -- as this test first did --
+    hands that generic reducer the raw logits and it raises
+    "only 0-dimensional arrays can be converted to Python scalars", which says
+    nothing about the registry propagation this test exists to check.
+    Xenova/ms-marco-MiniLM-L-6-v2 is the library's own documented example of a
+    custom cross-encoder (see TextCrossEncoder.list_supported_models) and, at 80 MB,
+    a seventh of the download.
+    """
     _clear()
     model_id = "Org/Custom-Reranker"
     CustomTextCrossEncoder.add_model(
         BaseModelDescription(
             model=model_id,
-            sources=ModelSource(hf="n24q02m/Qwen3-Reranker-0.6B-ONNX"),
-            model_file="onnx/model_quantized.onnx",
+            sources=ModelSource(hf="Xenova/ms-marco-MiniLM-L-6-v2"),
+            model_file="onnx/model.onnx",
         )
     )
     try:
