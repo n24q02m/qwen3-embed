@@ -151,7 +151,22 @@ jobs:
       # the timeout could not be attributed to any test. `-v` names each test as it
       # finishes and `--durations` ranks them, which turns a future timeout into a
       # reading instead of a mystery.
+      #
+      # The two timeouts are not redundant; they fail in different ways on purpose.
+      # Run 31233596338 had unbuffered `-v` output and STILL printed no test result in
+      # 59 minutes, while the same suite finishes locally in 233s. Something blocks,
+      # and a blocked test can hold the GIL:
+      #
+      #   faulthandler_timeout dumps every thread's stack from C, so it reports even
+      #   when no Python bytecode can run -- but it only reports, it does not unblock.
+      #   --timeout aborts the test so the remaining ones still run, which is what
+      #   turns one run into a full census of what hangs instead of just the first.
+      #
+      # 300s per test is ~85x the local per-test average (233s / 69), so it accuses
+      # only a genuine block, never a slow runner.
       - name: Run integration tests
         env:
           PYTHONUNBUFFERED: "1"
-        run: uv run pytest -m integration --tb=short -v --durations=25
+        run: >-
+          uv run pytest -m integration --tb=short -v --durations=25
+          -o faulthandler_timeout=120 --timeout=300
