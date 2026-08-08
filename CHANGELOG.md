@@ -2,6 +2,217 @@
 
 <!-- version list -->
 
+## v1.13.0-beta.1 (2026-08-08)
+
+### Bug Fixes
+
+- Accept empty and whitespace-only text in check_input_length
+  ([#966](https://github.com/n24q02m/qwen3-embed/pull/966),
+  [`35a525a`](https://github.com/n24q02m/qwen3-embed/commit/35a525a02a0c0c4c9f03b0ae5cc48493946327cd))
+
+- Add regex search fast path to input sanitization
+  ([`cc6a184`](https://github.com/n24q02m/qwen3-embed/commit/cc6a1840c323023a956ec127ec729c435f52dd35))
+
+- Adopt better-semantic-release for built-in release guards
+  ([`d0427d0`](https://github.com/n24q02m/qwen3-embed/commit/d0427d03f450b97c3ffa806987d050d96c6e7ec5))
+
+- Assert the link refusal without removing tarfile.data_filter
+  ([#958](https://github.com/n24q02m/qwen3-embed/pull/958),
+  [`33ed74e`](https://github.com/n24q02m/qwen3-embed/commit/33ed74e278aa935c13eedd805c43cf94cad79344))
+
+- Clamp embedding batch size to the ONNX graph batch axis
+  ([#970](https://github.com/n24q02m/qwen3-embed/pull/970),
+  [`d9dc0be`](https://github.com/n24q02m/qwen3-embed/commit/d9dc0be2efd473d939dee650372b1b2fc06542a6))
+
+- Clear the GCS staging path whatever type it is
+  ([#963](https://github.com/n24q02m/qwen3-embed/pull/963),
+  [`f426f9c`](https://github.com/n24q02m/qwen3-embed/commit/f426f9c64128bb17e9bb33fbda9147ba361bb79e))
+
+- Correct mention gate expression (balanced parens + precedence)
+  ([#914](https://github.com/n24q02m/qwen3-embed/pull/914),
+  [`8764f0c`](https://github.com/n24q02m/qwen3-embed/commit/8764f0c4aae1be8c19b7a07506e2e036bdf0b4bd))
+
+- Document backend-only repository limitation
+  ([`26e07a5`](https://github.com/n24q02m/qwen3-embed/commit/26e07a5b571f24ba406ac8614cf1ed985f587bda))
+
+- Drop code_quality from the main ruleset ([#935](https://github.com/n24q02m/qwen3-embed/pull/935),
+  [`a9c7489`](https://github.com/n24q02m/qwen3-embed/commit/a9c74896ba586bf87599037b3e3f5e03280f34d8))
+
+- Drop rangeStrategy from update-type package rules
+  ([#929](https://github.com/n24q02m/qwen3-embed/pull/929),
+  [`3426710`](https://github.com/n24q02m/qwen3-embed/commit/342671019fc8caa926224ba091f6bdd1f04b28ba))
+
+- Enforce fix(deps) semantic commit prefix in renovate config
+  ([`4c7e45f`](https://github.com/n24q02m/qwen3-embed/commit/4c7e45f34d154b2a6ac8d14dbb2f4a2db6ad3689))
+
+- Fail the release when the computed version already exists on PyPI
+  ([#897](https://github.com/n24q02m/qwen3-embed/pull/897),
+  [`59b22ed`](https://github.com/n24q02m/qwen3-embed/commit/59b22ed7b046aacf5a87c53ba5a30c818eb02338))
+
+- Format README code blocks the way ruff 0.16 wants them
+  ([#964](https://github.com/n24q02m/qwen3-embed/pull/964),
+  [`20c8adc`](https://github.com/n24q02m/qwen3-embed/commit/20c8adc6652f47f316a7ccf4fabc18f7867c4b94))
+
+- Gate oc mention job on comment author write access
+  ([#914](https://github.com/n24q02m/qwen3-embed/pull/914),
+  [`8764f0c`](https://github.com/n24q02m/qwen3-embed/commit/8764f0c4aae1be8c19b7a07506e2e036bdf0b4bd))
+
+- Let a fixed PR title clear the title gate
+  ([#959](https://github.com/n24q02m/qwen3-embed/pull/959),
+  [`74239b3`](https://github.com/n24q02m/qwen3-embed/commit/74239b33cf7dba2258fb606358175a1b7236b591))
+
+- Let Renovate lowercase its own PR titles ([#965](https://github.com/n24q02m/qwen3-embed/pull/965),
+  [`b1b00a9`](https://github.com/n24q02m/qwen3-embed/commit/b1b00a98f4a6aed5a86cf93a9d4720c105bc9226))
+
+- Let the integration cache bootstrap itself and report its own progress
+  ([#972](https://github.com/n24q02m/qwen3-embed/pull/972),
+  [`15695bb`](https://github.com/n24q02m/qwen3-embed/commit/15695bb9990d512c1a5db1e1221f7282022f4925))
+
+- Make a hanging integration test name itself instead of dying silently
+  ([#972](https://github.com/n24q02m/qwen3-embed/pull/972),
+  [`15695bb`](https://github.com/n24q02m/qwen3-embed/commit/15695bb9990d512c1a5db1e1221f7282022f4925))
+
+- Make renovate automerge effective (isolated groups, digest+lockfile automerge, 7-day cooldown)
+  ([`722455d`](https://github.com/n24q02m/qwen3-embed/commit/722455d8caaeff01524b8264034fbe2801e034ad))
+
+- Optimize FP16 to FP32 Casting
+  ([`d26a5fe`](https://github.com/n24q02m/qwen3-embed/commit/d26a5fe79f5643354c3951cad65e88e8b72166fb))
+
+- Optimize regex substitution loops with search fast-path in gguf cross encoder
+  ([`2278801`](https://github.com/n24q02m/qwen3-embed/commit/2278801b112b13afcd79e3bd1c80405f16494110))
+
+- Pin GitHub Action references to commit SHAs
+  ([#925](https://github.com/n24q02m/qwen3-embed/pull/925),
+  [`94ccbdf`](https://github.com/n24q02m/qwen3-embed/commit/94ccbdfb647d6bb9dde350f7f4fd370978ad7bf7))
+
+- Pin rangeStrategy on delayed packageRules to fix renovate artifacts failure
+  ([#920](https://github.com/n24q02m/qwen3-embed/pull/920),
+  [`3b51822`](https://github.com/n24q02m/qwen3-embed/commit/3b51822803ac32ffbadb3d3a274407851c8bbd32))
+
+- Point the custom-reranker test at a model its code path can score
+  ([#972](https://github.com/n24q02m/qwen3-embed/pull/972),
+  [`15695bb`](https://github.com/n24q02m/qwen3-embed/commit/15695bb9990d512c1a5db1e1221f7282022f4925))
+
+- Refuse tar symlinks that escape the model cache
+  ([#958](https://github.com/n24q02m/qwen3-embed/pull/958),
+  [`33ed74e`](https://github.com/n24q02m/qwen3-embed/commit/33ed74e278aa935c13eedd805c43cf94cad79344))
+
+- Regenerate uv.lock after rebasing dependency bumps onto main
+  ([#930](https://github.com/n24q02m/qwen3-embed/pull/930),
+  [`f1b419a`](https://github.com/n24q02m/qwen3-embed/commit/f1b419aebe516927874bb587bbe24cf0ce1828c3))
+
+- Replace noise-dominated retrieval assertion in test_full_pipeline
+  ([#967](https://github.com/n24q02m/qwen3-embed/pull/967),
+  [`2894b2b`](https://github.com/n24q02m/qwen3-embed/commit/2894b2b17bf50365bea43f2249a52d06684128c2))
+
+- Restore Python 3.11 support and stop ty failing CI on warnings
+  ([#898](https://github.com/n24q02m/qwen3-embed/pull/898),
+  [`fda5944`](https://github.com/n24q02m/qwen3-embed/commit/fda594483c010372bd67f57aa34e84f0f869e20c))
+
+- Reuse mask sum in mean pooling
+  ([`261de55`](https://github.com/n24q02m/qwen3-embed/commit/261de55335d936984a5963c8b60ad50e606b33b5))
+
+- Run opencode bot on hosted runners ([#913](https://github.com/n24q02m/qwen3-embed/pull/913),
+  [`f4e300d`](https://github.com/n24q02m/qwen3-embed/commit/f4e300d067a6ab08ed79e5c7084c20d524089603))
+
+- Scope the MAX_INPUT_LENGTH override to this test module
+  ([#971](https://github.com/n24q02m/qwen3-embed/pull/971),
+  [`25b411f`](https://github.com/n24q02m/qwen3-embed/commit/25b411f6d324d4a84c47a2ab3debc6e996540969))
+
+- Stop injecting a fake llama_cpp into sys.modules for the whole session
+  ([#971](https://github.com/n24q02m/qwen3-embed/pull/971),
+  [`25b411f`](https://github.com/n24q02m/qwen3-embed/commit/25b411f6d324d4a84c47a2ab3debc6e996540969))
+
+- Stop the worker pool deadlocking when its consumer walks away
+  ([#972](https://github.com/n24q02m/qwen3-embed/pull/972),
+  [`15695bb`](https://github.com/n24q02m/qwen3-embed/commit/15695bb9990d512c1a5db1e1221f7282022f4925))
+
+- Stop two test modules from mutating global state at import time
+  ([#971](https://github.com/n24q02m/qwen3-embed/pull/971),
+  [`25b411f`](https://github.com/n24q02m/qwen3-embed/commit/25b411f6d324d4a84c47a2ab3debc6e996540969))
+
+- Sum integer masks before float cast in mean pooling
+  ([`00ef2aa`](https://github.com/n24q02m/qwen3-embed/commit/00ef2aaeba53cca2ccbadba9e0c81a0271f73164))
+
+- Trigger the integration suite on every test file that holds one
+  ([#972](https://github.com/n24q02m/qwen3-embed/pull/972),
+  [`15695bb`](https://github.com/n24q02m/qwen3-embed/commit/15695bb9990d512c1a5db1e1221f7282022f4925))
+
+- Use fixed-point string replacement for input sanitization
+  ([`6d39950`](https://github.com/n24q02m/qwen3-embed/commit/6d399504e25c854b1b266648614ee509a99b45c2))
+
+- **deps**: Lock file maintenance ([#962](https://github.com/n24q02m/qwen3-embed/pull/962),
+  [`7a19f2d`](https://github.com/n24q02m/qwen3-embed/commit/7a19f2dcbb0aa91f7cacebdb45e3140cee8c9de6))
+
+- **deps**: Lock file maintenance ([#918](https://github.com/n24q02m/qwen3-embed/pull/918),
+  [`766c765`](https://github.com/n24q02m/qwen3-embed/commit/766c765841e559d2bcf78642b03adad7a278ccca))
+
+- **deps**: Lock file maintenance ([#915](https://github.com/n24q02m/qwen3-embed/pull/915),
+  [`c7991f7`](https://github.com/n24q02m/qwen3-embed/commit/c7991f7f492ba638a2f1791fe2672aba4bd6d3f6))
+
+- **deps**: Lock file maintenance ([#911](https://github.com/n24q02m/qwen3-embed/pull/911),
+  [`f6b32b5`](https://github.com/n24q02m/qwen3-embed/commit/f6b32b56eb32420fa348fdf6a1397dd0ab93b5bf))
+
+- **deps**: Lock file maintenance ([#908](https://github.com/n24q02m/qwen3-embed/pull/908),
+  [`21adfd0`](https://github.com/n24q02m/qwen3-embed/commit/21adfd086e3ad3a9955de4c06efd7930fb76b7b1))
+
+- **deps**: Update actions/checkout action to v7
+  ([#907](https://github.com/n24q02m/qwen3-embed/pull/907),
+  [`46a7042`](https://github.com/n24q02m/qwen3-embed/commit/46a704246b33331f6870b90b12916f03e4a3debf))
+
+- **deps**: Update actions/setup-python action to v7
+  ([#931](https://github.com/n24q02m/qwen3-embed/pull/931),
+  [`24e2260`](https://github.com/n24q02m/qwen3-embed/commit/24e2260b0ceacd965fe53099ea068a9430772dc0))
+
+- **deps**: Update astral-sh/setup-uv action to v8.3.2
+  ([`8101060`](https://github.com/n24q02m/qwen3-embed/commit/8101060a40f6b46effd7d8c6f998795c275dd79c))
+
+- **deps**: Update astral-sh/setup-uv action to v9
+  ([#932](https://github.com/n24q02m/qwen3-embed/pull/932),
+  [`a2d7fec`](https://github.com/n24q02m/qwen3-embed/commit/a2d7fecd9465fe111be52865adc08d1b6ad8b71b))
+
+- **deps**: Update minor dependencies ([#930](https://github.com/n24q02m/qwen3-embed/pull/930),
+  [`f1b419a`](https://github.com/n24q02m/qwen3-embed/commit/f1b419aebe516927874bb587bbe24cf0ce1828c3))
+
+- **deps**: Update patch dependencies ([#901](https://github.com/n24q02m/qwen3-embed/pull/901),
+  [`6120505`](https://github.com/n24q02m/qwen3-embed/commit/6120505a95b2d75cd2123b8b276dd2a59c1f0829))
+
+- **deps**: Update ruff to >=0.16.1 ([#961](https://github.com/n24q02m/qwen3-embed/pull/961),
+  [`8d0e329`](https://github.com/n24q02m/qwen3-embed/commit/8d0e32996f4d5d9781a4a1445bec2a4d6a6ede74))
+
+### Features
+
+- Add bot PR governance to this repo ([#960](https://github.com/n24q02m/qwen3-embed/pull/960),
+  [`9aff668`](https://github.com/n24q02m/qwen3-embed/commit/9aff668c002a976faf91ebdb9634a7cf7068b2d6))
+
+- Add opencode github agent (responds to /oc)
+  ([`364704e`](https://github.com/n24q02m/qwen3-embed/commit/364704e6b82aba2240e77d166b5882591d5747ac))
+
+- Add PR-title conventional-commit gate + no-bump release warning
+  ([#922](https://github.com/n24q02m/qwen3-embed/pull/922),
+  [`aa47bfc`](https://github.com/n24q02m/qwen3-embed/commit/aa47bfcb815e297120f3242fde1d243c55e01231))
+
+- Add review-learnings store the automated reviewer must obey
+  ([`e3201f1`](https://github.com/n24q02m/qwen3-embed/commit/e3201f1b7f2e3e1c11464c62c717376a2c640bd4))
+
+- Auto-respond only to issues and PRs opened by outside people
+  ([`3a90360`](https://github.com/n24q02m/qwen3-embed/commit/3a903600a2f5dc5cf5ff6029df895d0614eafd1d))
+
+- Reviewer must obey .github/review-learnings.md
+  ([`cfbdd93`](https://github.com/n24q02m/qwen3-embed/commit/cfbdd9363a3ec0a5f96db7ae81d55d16831560f9))
+
+- Run the integration suite in CI ([#972](https://github.com/n24q02m/qwen3-embed/pull/972),
+  [`15695bb`](https://github.com/n24q02m/qwen3-embed/commit/15695bb9990d512c1a5db1e1221f7282022f4925))
+
+- Sync cross-promo section ([#938](https://github.com/n24q02m/qwen3-embed/pull/938),
+  [`f693e9f`](https://github.com/n24q02m/qwen3-embed/commit/f693e9f083820c97234de3b0842b0c91c44a5d14))
+
+### Performance Improvements
+
+- Optimize mean pooling sum reduction by reusing float cast mask
+  ([`261de55`](https://github.com/n24q02m/qwen3-embed/commit/261de55335d936984a5963c8b60ad50e606b33b5))
+
+
 ## v1.12.1 (2026-07-05)
 
 
