@@ -102,12 +102,17 @@ jobs:
       # transfer, the test step's is inference. Run 31232142381 could not tell them
       # apart because both happened inside one opaque 30-minute block.
       #
-      # The five model names are the ONNX models `tests/test_integration*.py`,
-      # `tests/test_export.py` and `tests/test_custom_reranker_registry.py` construct.
-      # The GGUF pair is absent because `llama-cpp-python` is not installed here (see
-      # the note on the test step), so those tests skip and their weights are never
-      # touched. Drift in this list degrades rather than breaks: a model missing here
-      # is simply downloaded by the test that needs it, inside the test step's budget.
+      # The five model names are the ONNX models `tests/test_integration*.py` and
+      # `tests/test_integration_q4f16.py` construct. The GGUF pair is absent because
+      # `llama-cpp-python` is not installed here (see the note on the test step), so
+      # those tests skip and their weights are never touched.
+      #
+      # Xenova/ms-marco-MiniLM-L-6-v2 is deliberately NOT here even though
+      # tests/test_custom_reranker_registry.py fetches it: it is not a built-in model,
+      # so pre-fetching it would mean duplicating that test's custom registration in
+      # this YAML. At 80 MB against the 2.08 GB already cached it is not worth the
+      # duplication, and drift in this list degrades rather than breaks -- a model
+      # missing here is downloaded by the test that needs it, inside the test budget.
       - name: Download model weights
         if: steps.model-cache.outputs.cache-hit != 'true'
         env:
