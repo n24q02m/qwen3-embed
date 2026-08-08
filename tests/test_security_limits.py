@@ -1,11 +1,22 @@
 import pytest
 
-# Needs to be set BEFORE modules are imported to affect MAX_INPUT_LENGTH
 import qwen3_embed.common.utils
 import qwen3_embed.rerank.cross_encoder.text_cross_encoder
 import qwen3_embed.text.text_embedding
 
-qwen3_embed.common.utils.MAX_INPUT_LENGTH = 100
+
+@pytest.fixture(autouse=True)
+def _low_max_input_length(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Lower MAX_INPUT_LENGTH for every test in this module.
+
+    check_input_length reads the module global at call time, so patching it
+    per-test (and letting monkeypatch restore it afterwards) is sufficient --
+    it does not need to be set before the modules under test are imported.
+    A low limit lets the tests below exercise the length guard without
+    allocating a huge string, and the patch does not leak into other test
+    modules collected in the same pytest session.
+    """
+    monkeypatch.setattr(qwen3_embed.common.utils, "MAX_INPUT_LENGTH", 100)
 
 
 def test_check_input_length():
