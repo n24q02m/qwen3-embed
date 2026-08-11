@@ -1,3 +1,7 @@
+> This project continues as [`fastretrieval`](https://github.com/n24q02m/fastretrieval).
+> `qwen3-embed` on PyPI keeps all published versions and still receives security fixes
+> until its consumers have migrated. New features land in `fastretrieval` only.
+
 # Qwen3 Embed
 
 **Lightweight Qwen3 text embedding and reranking via ONNX Runtime and GGUF**
