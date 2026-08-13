@@ -108,13 +108,13 @@ class TestIterBatch:
     def test_negative_batch_size(self) -> None:
         """Test with negative batch size (should raise ValueError)."""
         data = [1, 2, 3]
-        with pytest.raises(ValueError, match="Stop argument for islice"):
+        with pytest.raises(ValueError, match="Batch size must be an integer:"):
             list(iter_batch(data, -1))
 
     def test_too_large_batch_size(self) -> None:
         """Test with batch size larger than sys.maxsize (should raise ValueError)."""
         data = [1, 2, 3]
-        with pytest.raises(ValueError, match="Stop argument for islice"):
+        with pytest.raises(ValueError, match="Batch size must be an integer:"):
             list(iter_batch(data, sys.maxsize + 1))
 
     def test_empty_iterable(self) -> None:
