@@ -111,9 +111,7 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
     [[1, 2, 3], [4, 5]]
     """
     if size < 0 or size > sys.maxsize:
-        raise ValueError(
-            "Batch size must be an integer: 0 <= x <= sys.maxsize."
-        )
+        raise ValueError("Batch size must be an integer: 0 <= x <= sys.maxsize.")
     if size == 0:
         return
 
@@ -130,6 +128,7 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
 
     if sys.version_info >= (3, 12):
         from itertools import batched
+
         # ⚡ Bolt: Fast generator batching using C-level itertools.batched (~30% faster than islice+walrus)
         for b in batched(iterable, size):
             yield list(b)
