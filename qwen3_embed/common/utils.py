@@ -4,6 +4,9 @@ import sys
 from collections.abc import Iterable
 from itertools import islice
 from pathlib import Path
+
+if sys.version_info >= (3, 12):
+    from itertools import batched
 from typing import TypeVar
 
 import numpy as np
@@ -128,10 +131,14 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
             yield list(iterable[i : i + size])
         return
 
-    source_iter = iter(iterable)
-    # ⚡ Bolt: Fast chunking using walrus operator to reduce bytecode execution overhead (~16% faster)
-    while b := list(islice(source_iter, size)):
-        yield b
+    if sys.version_info >= (3, 12):
+        for b in batched(iterable, size):
+            yield list(b)
+    else:
+        source_iter = iter(iterable)
+        # ⚡ Bolt: Fast chunking using walrus operator to reduce bytecode execution overhead (~16% faster)
+        while b := list(islice(source_iter, size)):
+            yield b
 
 
 def define_cache_dir(cache_dir: str | None = None) -> Path:
