@@ -360,3 +360,17 @@ class TestPrepareGcsCacheCleanup:
         ModelManagement._prepare_gcs_cache(cache_tmp_dir, model_tmp_dir, model_tar_gz)
 
         assert not model_tar_gz.exists()
+
+    def test_removes_a_dangling_symlink_archive(self, tmp_path):
+        """A leftover dangling symlink tarball is unlinked."""
+        cache_tmp_dir = tmp_path / "cache"
+        model_tmp_dir = tmp_path / "model_tmp"
+        model_tar_gz = tmp_path / "model.tar.gz"
+
+        import os
+        os.symlink("non_existent_target", model_tar_gz)
+
+        ModelManagement._prepare_gcs_cache(cache_tmp_dir, model_tmp_dir, model_tar_gz)
+
+        assert not model_tar_gz.exists()
+        assert not model_tar_gz.is_symlink()
