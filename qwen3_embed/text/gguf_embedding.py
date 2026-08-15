@@ -7,6 +7,7 @@ Requires optional dependency: pip install qwen3-embed[gguf]
 """
 
 import itertools
+import sys
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -159,8 +160,14 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
 
         dim: int | None = kwargs.get("dim")
 
-        it = iter(documents)
-        while batch := tuple(itertools.islice(it, batch_size)):
+        if sys.version_info >= (3, 12):
+            # ⚡ Bolt: Fast chunking using itertools.batched in Python 3.12+
+            batch_iter = itertools.batched(documents, batch_size)
+        else:
+            it = iter(documents)
+            batch_iter = iter(lambda: tuple(itertools.islice(it, batch_size)), ())
+
+        for batch in batch_iter:
             # PERFORMANCE: Pass batches to create_embedding to allow llama-cpp-python parallelize processing
             result = self._llm.create_embedding(list(batch))
             for item in result["data"]:
