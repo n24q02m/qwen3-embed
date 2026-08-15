@@ -368,6 +368,7 @@ class TestPrepareGcsCacheCleanup:
         model_tar_gz = tmp_path / "model.tar.gz"
 
         import os
+
         os.symlink("non_existent_target", model_tar_gz)
 
         ModelManagement._prepare_gcs_cache(cache_tmp_dir, model_tmp_dir, model_tar_gz)
