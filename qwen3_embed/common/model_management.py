@@ -630,7 +630,7 @@ class ModelManagement(Generic[T]):
             with contextlib.suppress(OSError):
                 cache_tmp_dir.chmod(0o700)
 
-        if model_tar_gz.exists():
+        if model_tar_gz.is_symlink() or model_tar_gz.exists():
             model_tar_gz.unlink()
 
     @classmethod
