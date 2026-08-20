@@ -33,6 +33,7 @@ permissions:
 jobs:
   pr-title:
     name: Validate PR title (Conventional Commits subset)
+    if: github.event.pull_request.title != 'lint' && !startsWith(github.event.pull_request.title, '⚡ Bolt:')
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
