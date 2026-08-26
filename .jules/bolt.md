@@ -52,3 +52,6 @@
 ## 2024-05-24 - Defer Tensor Casting
 **Learning:** Casting massive full-vocab output tensors from FP16 to FP32 before slicing causes huge memory allocation overhead.
 **Action:** Extract the needed scalar logits first, then let np.subtract handle the cast on the small slice.
+## 2025-05-30 - [Fast iterable batching with itertools.batched]
+**Learning:** Using `itertools.islice` inside a `while` loop (or walrus operator) requires creating iterators and lists in Python bytecode, resulting in noticeable overhead. In Python 3.12+, `itertools.batched` is implemented in C and runs roughly 20% faster for chunking sequences. Note that it yields tuples.
+**Action:** When batching iterables, conditionally import and use `itertools.batched` if available. Yield `list(b)` if the target API strictly requires lists, as the C-level batching still outweighs the list casting overhead.

@@ -6,7 +6,6 @@ inference from GGUF quantized models (Q4_K_M).
 Requires optional dependency: pip install qwen3-embed[gguf]
 """
 
-import itertools
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -15,7 +14,7 @@ import numpy as np
 
 from qwen3_embed.common.model_description import DenseModelDescription, ModelSource
 from qwen3_embed.common.types import Device, NumpyArray
-from qwen3_embed.common.utils import define_cache_dir
+from qwen3_embed.common.utils import define_cache_dir, iter_batch
 from qwen3_embed.text.text_embedding_base import TextEmbeddingBase
 
 # ---------------------------------------------------------------------------
@@ -159,10 +158,9 @@ class Qwen3TextEmbeddingGGUF(TextEmbeddingBase):
 
         dim: int | None = kwargs.get("dim")
 
-        it = iter(documents)
-        while batch := tuple(itertools.islice(it, batch_size)):
+        for batch in iter_batch(documents, batch_size):
             # PERFORMANCE: Pass batches to create_embedding to allow llama-cpp-python parallelize processing
-            result = self._llm.create_embedding(list(batch))
+            result = self._llm.create_embedding(batch)
             for item in result["data"]:
                 embedding = np.array(item["embedding"], dtype=np.float32)
 
