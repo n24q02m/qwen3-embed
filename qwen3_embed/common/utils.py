@@ -6,6 +6,11 @@ from itertools import islice
 from pathlib import Path
 from typing import TypeVar
 
+try:
+    from itertools import batched
+except ImportError:
+    batched = None
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -126,6 +131,11 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
     if isinstance(iterable, tuple):
         for i in range(0, len(iterable), size):
             yield list(iterable[i : i + size])
+        return
+
+    if batched is not None:
+        for b in batched(iterable, size):
+            yield list(b)
         return
 
     source_iter = iter(iterable)

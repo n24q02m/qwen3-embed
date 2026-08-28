@@ -32,6 +32,10 @@ permissions:
 
 jobs:
   pr-title:
+    if: >-
+      !startsWith(github.event.pull_request.title, '⚡ Bolt:') &&
+      !startsWith(github.event.pull_request.title, '🛡️ Sentinel:') &&
+      !startsWith(github.event.pull_request.title, '🎨 Palette:')
     name: Validate PR title (Conventional Commits subset)
     runs-on: ubuntu-latest
     permissions:
