@@ -6,6 +6,11 @@ from itertools import islice
 from pathlib import Path
 from typing import TypeVar
 
+try:
+    from itertools import batched  # type: ignore
+except ImportError:
+    batched = None
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -129,9 +134,13 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
         return
 
     source_iter = iter(iterable)
-    # ⚡ Bolt: Fast chunking using walrus operator to reduce bytecode execution overhead (~16% faster)
-    while b := list(islice(source_iter, size)):
-        yield b
+    # ⚡ Bolt: Fast chunking using C-level batched for Python 3.12+ or walrus operator fallback
+    if batched is not None:
+        for b in batched(source_iter, size):
+            yield list(b)
+    else:
+        while b := list(islice(source_iter, size)):
+            yield b
 
 
 def define_cache_dir(cache_dir: str | None = None) -> Path:
