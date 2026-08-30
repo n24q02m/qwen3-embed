@@ -2,6 +2,18 @@
 
 <!-- version list -->
 
+## Unreleased
+
+### Bug Fixes
+
+- Stop creating dependency-bump issues in Wet, Mnemo, and Better Code Review
+  Graph: those consumers now depend on Fastretrieval instead of qwen3-embed.
+
+### Documentation
+
+- Record qwen3-embed as an active compatibility and rollback package; retirement
+  remains gated on completed consumer acceptance and current provenance.
+
 ## v1.13.0 (2026-08-08)
 
 
