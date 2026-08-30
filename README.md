@@ -1,6 +1,7 @@
 > This project continues as [`fastretrieval`](https://github.com/n24q02m/fastretrieval).
-> `qwen3-embed` on PyPI keeps all published versions and still receives security fixes
-> until its consumers have migrated. New features land in `fastretrieval` only.
+> `qwen3-embed` on PyPI remains an active legacy distribution for existing users and
+> continues to receive security fixes. Wet, Mnemo, and CRG have migrated their retrieval
+> runtime to `fastretrieval`; new features land in `fastretrieval` only.
 
 # Qwen3 Embed
 
@@ -304,9 +305,9 @@ uv run pytest -m "not integration" --tb=short    # Unit tests only (CI default)
 
 ## Related Projects
 
-- [wet-mcp](https://github.com/n24q02m/wet-mcp) -- MCP web search server with vector-based docs search, uses qwen3-embed for local embedding
-- [mnemo-mcp](https://github.com/n24q02m/mnemo-mcp) -- MCP memory server with semantic search powered by qwen3-embed
-- [better-code-review-graph](https://github.com/n24q02m/better-code-review-graph) -- Knowledge graph for code reviews, uses qwen3-embed for local ONNX embedding
+- [wet-mcp](https://github.com/n24q02m/wet-mcp) -- MCP web search server with vector-based docs search, uses `fastretrieval` for local embedding
+- [mnemo-mcp](https://github.com/n24q02m/mnemo-mcp) -- MCP memory server with semantic search powered by `fastretrieval`
+- [better-code-review-graph](https://github.com/n24q02m/better-code-review-graph) -- Knowledge graph for code reviews, uses `fastretrieval` for local ONNX embedding
 - [modalcom-ai-workers](https://github.com/n24q02m/modalcom-ai-workers) -- GPU-serverless workers that convert Qwen3 models to ONNX/GGUF format
 
 ## Contributing
