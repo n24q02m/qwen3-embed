@@ -4,6 +4,11 @@ import sys
 from collections.abc import Iterable
 from itertools import islice
 from pathlib import Path
+
+try:
+    from itertools import batched
+except ImportError:
+    batched = None
 from typing import TypeVar
 
 import numpy as np
@@ -129,6 +134,11 @@ def iter_batch(iterable: Iterable[T], size: int) -> Iterable[list[T]]:
         return
 
     source_iter = iter(iterable)
+    if batched is not None:
+        for b in batched(source_iter, size):
+            yield list(b)
+        return
+
     # ⚡ Bolt: Fast chunking using walrus operator to reduce bytecode execution overhead (~16% faster)
     while b := list(islice(source_iter, size)):
         yield b
