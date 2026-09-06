@@ -594,7 +594,9 @@ class ModelManagement(Generic[T]):
     def _get_gcs_model_paths(
         cls, model_name: str, cache_dir: str, deprecated_tar_struct: bool
     ) -> tuple[Path, Path, Path, Path]:
-        fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{model_name.split('/')[-1]}"
+        # SECURITY: Prevent path traversal on Windows (where Path resolves \ as separator) and POSIX
+        safe_model_name = model_name.replace('\\', '/').split('/')[-1]
+        fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{safe_model_name}"
         cache_path = Path(cache_dir)
         cache_tmp_dir = cache_path / "tmp"
         model_tmp_dir = cache_tmp_dir / fast_model_name
