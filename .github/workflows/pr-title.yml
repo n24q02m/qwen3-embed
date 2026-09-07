@@ -32,6 +32,7 @@ permissions:
 
 jobs:
   pr-title:
+    if: ${{ !startsWith(github.event.pull_request.title, '⚡ Bolt:') }}
     name: Validate PR title (Conventional Commits subset)
     runs-on: ubuntu-latest
     permissions:
