@@ -595,7 +595,9 @@ class ModelManagement(Generic[T]):
         cls, model_name: str, cache_dir: str, deprecated_tar_struct: bool
     ) -> tuple[Path, Path, Path, Path]:
         normalized_model_name = model_name.replace("\\", "/")
-        fast_model_name = f"{'fast-' if deprecated_tar_struct else ''}{normalized_model_name.split('/')[-1]}"
+        fast_model_name = (
+            f"{'fast-' if deprecated_tar_struct else ''}{normalized_model_name.split('/')[-1]}"
+        )
         cache_path = Path(cache_dir)
         cache_tmp_dir = cache_path / "tmp"
         model_tmp_dir = cache_tmp_dir / fast_model_name
