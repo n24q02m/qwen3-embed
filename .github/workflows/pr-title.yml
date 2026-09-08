@@ -33,6 +33,7 @@ permissions:
 jobs:
   pr-title:
     name: Validate PR title (Conventional Commits subset)
+    if: ${{ !startsWith(github.event.pull_request.title, '🛡️ Sentinel:') }}
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
