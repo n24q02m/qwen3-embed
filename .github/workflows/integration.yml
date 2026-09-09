@@ -96,7 +96,7 @@ jobs:
           key: qwen3-embed-models-v1
 
       - name: Install dependencies
-        run: uv sync --python 3.13 --group dev
+        run: uv sync --python 3.13 --all-groups
 
       # Downloading in its own step also splits the bill: this step's duration is
       # transfer, the test step's is inference. Run 31232142381 could not tell them
