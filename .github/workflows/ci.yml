@@ -60,7 +60,7 @@ jobs:
           python-version: "${{ matrix.python-version }}"
 
       - name: Install dependencies
-        run: uv sync --python ${{ matrix.python-version }} --all-groups
+        run: uv sync --python ${{ matrix.python-version }} --all-extras
 
       - name: Run Ruff linter
         if: matrix.python-version == '3.13' && matrix.os == 'ubuntu-latest'
