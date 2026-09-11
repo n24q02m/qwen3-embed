@@ -235,7 +235,7 @@ class ModelManagement(Generic[T]):
                 )
             os.replace(tmp_output_path, output_path)
         finally:
-            if os.path.exists(tmp_output_path):
+            if os.path.lexists(tmp_output_path):
                 with contextlib.suppress(OSError):
                     os.remove(tmp_output_path)
 
@@ -631,7 +631,7 @@ class ModelManagement(Generic[T]):
             with contextlib.suppress(OSError):
                 cache_tmp_dir.chmod(0o700)
 
-        if model_tar_gz.exists():
+        if model_tar_gz.is_symlink() or model_tar_gz.exists():
             model_tar_gz.unlink()
 
     @classmethod
