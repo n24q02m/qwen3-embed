@@ -2,6 +2,75 @@
 
 <!-- version list -->
 
+## v1.14.0 (2026-09-11)
+
+### Bug Fixes
+
+- Clarify fastretrieval migration ([#999](https://github.com/n24q02m/qwen3-embed/pull/999),
+  [`b919c91`](https://github.com/n24q02m/qwen3-embed/commit/b919c91877449887fc88ecb5dae044ec39e14d53))
+
+- Drop duplicate job-level if key that invalidated pr-title workflow
+  ([#1020](https://github.com/n24q02m/qwen3-embed/pull/1020),
+  [`e990cb6`](https://github.com/n24q02m/qwen3-embed/commit/e990cb6b455ac075d124f0aed36b19446b1c2eb9))
+
+- Normalize path separators to prevent traversal in cache filename generation
+  ([#1018](https://github.com/n24q02m/qwen3-embed/pull/1018),
+  [`e776604`](https://github.com/n24q02m/qwen3-embed/commit/e7766046d9c64f18261d3b87b438702843c698e9))
+
+- Point readers at the fastretrieval successor
+  ([`e37f57a`](https://github.com/n24q02m/qwen3-embed/commit/e37f57a071e93f6217e169c2894a44beaf4e82e7))
+
+- Retire stale downstream bump issues ([#1000](https://github.com/n24q02m/qwen3-embed/pull/1000),
+  [`23144d7`](https://github.com/n24q02m/qwen3-embed/commit/23144d79e1b5103a4a50190c1fc63e7652075440))
+
+- **deps**: Lock file maintenance ([#978](https://github.com/n24q02m/qwen3-embed/pull/978),
+  [`0b2a5a5`](https://github.com/n24q02m/qwen3-embed/commit/0b2a5a51507e82e21b07f547f96834c61a90224f))
+
+- **deps**: Lock file maintenance ([#973](https://github.com/n24q02m/qwen3-embed/pull/973),
+  [`0d50669`](https://github.com/n24q02m/qwen3-embed/commit/0d50669acf0dad64e0c05497de397036efcf722a))
+
+- **deps**: Update astral-sh/setup-uv action to v10
+  ([#977](https://github.com/n24q02m/qwen3-embed/pull/977),
+  [`a9c96a3`](https://github.com/n24q02m/qwen3-embed/commit/a9c96a31cddaa72f6f448eab0708a0ed2be0015b))
+
+- **deps**: Update minor dependencies ([#981](https://github.com/n24q02m/qwen3-embed/pull/981),
+  [`49f3ee8`](https://github.com/n24q02m/qwen3-embed/commit/49f3ee80fd2c01d2904a63ac3057c5d6705182bf))
+
+- **deps**: Update n24q02m/better-semantic-release action to v1.3.0
+  ([#974](https://github.com/n24q02m/qwen3-embed/pull/974),
+  [`e2e1874`](https://github.com/n24q02m/qwen3-embed/commit/e2e1874d95232ae1c9bd687dee5611741c730ef8))
+
+- **deps**: Update syrupy to v6 ([#989](https://github.com/n24q02m/qwen3-embed/pull/989),
+  [`1b26018`](https://github.com/n24q02m/qwen3-embed/commit/1b26018b1e10c9a55b16e4c45d139547b111e01e))
+
+### Chores
+
+- Bump better-semantic-release to v1.4.0 ([#992](https://github.com/n24q02m/qwen3-embed/pull/992),
+  [`cead177`](https://github.com/n24q02m/qwen3-embed/commit/cead17709bcc76c4e9f967abe92f6f2f10446687))
+
+- Pin BSR action to v1.6.0 stable (69319fae) - R05 fleet pin refresh
+  ([#1016](https://github.com/n24q02m/qwen3-embed/pull/1016),
+  [`af71038`](https://github.com/n24q02m/qwen3-embed/commit/af71038f0affebae3c73ac30a971542e427ed157))
+
+- **ci**: Pin better-semantic-release v1.5.0
+  ([#1006](https://github.com/n24q02m/qwen3-embed/pull/1006),
+  [`4a60482`](https://github.com/n24q02m/qwen3-embed/commit/4a604826949bc97b175145387b1151397758a6f0))
+
+### Continuous Integration
+
+- Bypass Main Ruleset for release app (merge=release ladder — BSR pushes release commits to main)
+  ([`e0e2c74`](https://github.com/n24q02m/qwen3-embed/commit/e0e2c7497d25076505abc6a3504dc6af4fb24d8d))
+
+- Wire unified merge=release ladder (push staging=beta, main=stable)
+  ([`38bbe0a`](https://github.com/n24q02m/qwen3-embed/commit/38bbe0a3e8139e2fa04b9d76bfbcf8a26087d6c6))
+
+### Features
+
+- Optimize scalar logit processing in yes/no scoring
+  ([#994](https://github.com/n24q02m/qwen3-embed/pull/994),
+  [`36b3748`](https://github.com/n24q02m/qwen3-embed/commit/36b3748a86399fa3e16af4f365e900ed14b7f301))
+
+
 ## Unreleased
 
 ### Bug Fixes
