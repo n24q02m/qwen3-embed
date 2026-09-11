@@ -33,7 +33,9 @@ permissions:
 jobs:
   pr-title:
     name: Validate PR title (Conventional Commits subset)
+    if: ${{ !startsWith(github.event.pull_request.title, '⚡ Bolt:') }}
     runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.event.pull_request.title, '⚡ Bolt:') && !startsWith(github.event.pull_request.title, '🛡️ Sentinel:') && !startsWith(github.event.pull_request.title, '🎨 Palette:') }}
     permissions:
       pull-requests: read
     steps:

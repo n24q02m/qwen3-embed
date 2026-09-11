@@ -34,3 +34,8 @@
 **Vulnerability:** Cache cleanup checks used `.exists()` which returns `False` for dangling (broken) symlinks. This causes cleanup routines to bypass deleting these symlinks, potentially leading to persistent artifacts or unexpected behavior during subsequent operations.
 **Learning:** `os.path.exists()` and `Path.exists()` follow symlinks. If a symlink points to a non-existent file, they return `False`.
 **Prevention:** Always check `Path.is_symlink()` or use `os.path.lexists()` before attempting to delete files to ensure even dangling symlinks are properly identified and removed during cleanup.
+
+## 2024-09-10 - Path Traversal via Backslash Injection
+**Vulnerability:** The cache generation code relied on `split('/')` to extract a safe filename from `model_name`.
+**Learning:** Attackers can bypass this on systems where `Path` resolves backslashes as separators (like Windows) by injecting `\` characters (e.g., `foo\..\..\etc\passwd`).
+**Prevention:** Always normalize path separators using `.replace('\\', '/')` before splitting, or explicitly validate against allowed character sets when generating filenames from untrusted input.
