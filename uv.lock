@@ -832,7 +832,7 @@ wheels = [
 
 [[package]]
 name = "qwen3-embed"
-version = "1.13.0"
+version = "1.14.0"
 source = { editable = "." }
 dependencies = [
     { name = "huggingface-hub" },
@@ -863,12 +863,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "huggingface-hub", specifier = ">=1.31.0,<2.0" },
-    { name = "llama-cpp-python", marker = "extra == 'gguf'", specifier = ">=0.3.34" },
+    { name = "llama-cpp-python", marker = "extra == 'gguf'", specifier = ">=0.3.35" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "numpy", specifier = ">=2.4.6,<2.5" },
     { name = "onnxruntime", marker = "python_full_version >= '3.11'", specifier = ">1.20.0" },
     { name = "requests", specifier = ">=2.34.2" },
-    { name = "tokenizers", specifier = ">=0.23.1,<1.0" },
+    { name = "tokenizers", specifier = ">=0.23.2,<1.0" },
     { name = "tqdm", specifier = ">=4.70.0" },
 ]
 provides-extras = ["gguf"]
@@ -879,9 +879,9 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "pytest-timeout", specifier = ">=2.4.0" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "ruff", specifier = ">=0.16.1" },
+    { name = "ruff", specifier = ">=0.16.6" },
     { name = "syrupy", specifier = ">=6.0.0" },
-    { name = "ty", specifier = ">=0.0.65" },
+    { name = "ty", specifier = ">=0.0.78" },
 ]
 
 [[package]]
